@@ -46,7 +46,12 @@ const JournalSchema = new mongoose.Schema(
         'TREASURY_REFUND',
         'FINANCE_CLOSE',
         'POLICY_BIND',
-        'RULES_ENGINE'
+        'RULES_ENGINE',
+        'COMMERCIAL_DOCS',
+        'COMMERCIAL_COGS',
+        'OPENING_STOCK',
+        'COMMERCIAL',
+        'INVENTORY'
       ],
       default: 'GL_MANUAL'
     },

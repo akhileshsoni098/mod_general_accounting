@@ -19,6 +19,7 @@ const financeCloseRoutes = require('./routes/financeCloseRoutes');
 const counterpartyRoutes = require('./routes/counterpartyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const commercialRoutes = require('./routes/commercialRoutes');
 
 const eventDefinitionRoutes = require('./routes/eventDefinitionRoutes');
 const postingRuleRoutes = require('./routes/postingRuleRoutes');
@@ -62,6 +63,7 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/counterparties', counterpartyRoutes);
 app.use('/api/v1/gl', glRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/commercial', commercialRoutes);
 app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/treasury', treasuryRoutes);
 app.use('/api/v1/commissions', commissionsRoutes);

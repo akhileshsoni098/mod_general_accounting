@@ -120,6 +120,22 @@ const StockMovementSchema = new mongoose.Schema(
     is_reversed: {
       type: Boolean,
       default: false
+    },
+    gl_status: {
+      type: String,
+      enum: ['NOT_APPLICABLE', 'PENDING', 'POSTED', 'REVERSED'],
+      default: 'PENDING',
+      index: true
+    },
+    gl_journal_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Journal',
+      default: null,
+      index: true
+    },
+    gl_posted_at: {
+      type: Date,
+      default: null
     }
   },
   {

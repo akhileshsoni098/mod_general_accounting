@@ -151,6 +151,16 @@ async function initializeCompany({
       console.warn('[Inventory Init Warning]', invInitErr.message);
     }
 
+    // 6. Seed Initial Commercial Defaults (Posting Config, GST Rates, Commercial Dynamic Rules)
+    try {
+      const { getOrCreatePostingConfig } = require('./commercialPostingConfigService');
+      const { seedDefaultCommercialRules } = require('../utils/seedCommercialRules');
+      await getOrCreatePostingConfig(tenantId, company._id, { session });
+      await seedDefaultCommercialRules(tenantId, company._id, { session });
+    } catch (commInitErr) {
+      console.warn('[Commercial Init Warning]', commInitErr.message);
+    }
+
     return {
       company,
       membership,

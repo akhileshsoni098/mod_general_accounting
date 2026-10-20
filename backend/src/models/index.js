@@ -22,6 +22,12 @@ const StockItem = require('./StockItem');
 const StockMovement = require('./StockMovement');
 const StockBalance = require('./StockBalance');
 
+// Module: Commercial Transactions, Invoicing, Tax & Posting (Phase 4 - 4 Models)
+const CommercialDocument = require('./CommercialDocument');
+const BillAllocation = require('./BillAllocation');
+const CompanyPostingConfig = require('./CompanyPostingConfig');
+const TaxRateConfig = require('./TaxRateConfig');
+
 // Module 14: Core General Ledger (7 Models)
 const LedgerAccount = require('./LedgerAccount');
 const FiscalPeriod = require('./FiscalPeriod');
@@ -110,6 +116,12 @@ module.exports = {
   StockItem,
   StockMovement,
   StockBalance,
+
+  // Commercial Transactions, Invoicing, Tax & Posting (Phase 4)
+  CommercialDocument,
+  BillAllocation,
+  CompanyPostingConfig,
+  TaxRateConfig,
 
   // Core General Ledger
   LedgerAccount,

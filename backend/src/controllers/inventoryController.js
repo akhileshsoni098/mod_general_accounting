@@ -707,7 +707,8 @@ async function createStockItem(req, res) {
       is_expiry_tracked,
       hsn_sac_code,
       tax_rate,
-      description
+      description,
+      is_stock_tracked
     } = req.body;
 
     if (!item_code || !sku || !item_name || !base_uom_id) {
@@ -835,7 +836,7 @@ async function createStockItem(req, res) {
       hsn_sac_code: hsn_sac_code || '',
       tax_rate: tax_rate !== undefined ? Number(tax_rate) : 0,
       description: description || '',
-      is_stock_tracked: true,
+      is_stock_tracked: is_stock_tracked !== undefined ? Boolean(is_stock_tracked) : true,
       status: 'ACTIVE'
     });
 

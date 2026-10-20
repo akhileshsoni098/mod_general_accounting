@@ -6,16 +6,18 @@ This document certifies the testing verification and acceptance criteria for:
 - **Phase 1: Security Hardening & Zero-Backdoor Cryptography**
 - **Phase 2: Multi-Company Architecture, Company Isolation, RBAC/ABAC, and Business Profiles**
 - **Phase 3: Core Inventory, Stock Masters, UOM and Stock Foundation**
+- **Phase 4: Commercial Transactions, Dynamic Journal Posting, Inventory-to-GL Integration, GST Foundation**
 
 All automated test suites execute natively via Node.js test runner and Vite production bundler with **100% passing results and 0 failures**.
 
 | Test Suite | File Location | Executed Tests | Passing | Failing | Execution Time |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Inventory Foundation & Isolation** | `backend/tests/inventory_foundation_and_isolation.test.js` | 29 | 29 | 0 | ~29.1s |
-| **Company Lifecycle & Isolation** | `backend/tests/company_lifecycle_and_isolation.test.js` | 18 | 18 | 0 | ~24.0s |
-| **Security & Cryptography** | `backend/tests/security_regression.test.js` | 16 | 16 | 0 | ~0.3s |
+| **Commercial Transactions & GL** | `backend/tests/commercial_transactions_and_gl.test.js` | 19 | 19 | 0 | ~51.5s |
+| **Inventory Foundation & Isolation** | `backend/tests/inventory_foundation_and_isolation.test.js` | 29 | 29 | 0 | ~34.4s |
+| **Company Lifecycle & Isolation** | `backend/tests/company_lifecycle_and_isolation.test.js` | 18 | 18 | 0 | ~39.0s |
+| **Security & Cryptography** | `backend/tests/security_regression.test.js` | 16 | 16 | 0 | ~0.6s |
 | **Frontend Production Build** | `frontend/ (npm run build)` | 1,496 modules | OK | 0 | ~2.1s |
-| **Total Automated Coverage** | | **63 Tests** | **63** | **0** | **100% Pass** |
+| **Total Automated Coverage** | | **82 Tests** | **82** | **0** | **100% Pass** |
 
 ---
 
@@ -57,19 +59,50 @@ The table below maps Phase 3 specifications from Section 11 to automated test ca
 
 ---
 
-## 3. How to Execute All Test Suites
+## 3. Phase 4 Commercial Transactions & GL Requirement Traceability Matrix
+
+The table below maps Phase 4 specifications to automated test cases in `backend/tests/commercial_transactions_and_gl.test.js`:
+
+| Requirement | Test Name / Identifier | Result | Evidence & Behavior Validated |
+| :--- | :--- | :---: | :--- |
+| **1. Company Setup & Posting Rules** | `Setup: Register Tenant A, provision main company COMM01, seed COA and commercial rules` | **PASS** | Auto-provisions primary company MAIN, provisions posting ledger config (`1201`, `5004`, `4001`), seeds commercial rules, fetches standard UOM (`PCS`) and default godown. |
+| **2. Multi-Company Isolation Setup** | `Setup: Register Tenant B and Secondary Company for isolation testing` | **PASS** | Provisions Tenant B and secondary company `SEC01` with independent ledgers and documents. |
+| **3. GST Counterparties** | `Setup: Create customer party (Intra-state GST) and supplier party (Inter-state GST)` | **PASS** | Customer created with Maharashtra state code (`27`); supplier created with Gujarat state code (`24`). |
+| **4. Stock & Service Masters** | `Setup: Create stock item (18% GST) and service item (no stock tracking)` | **PASS** | Item `WDG-001` created with tracking enabled; `SRV-INSTALL` created with `is_stock_tracked: false`. |
+| **5. Interstate Purchase Invoice** | `Purchase Invoice: Create draft and verify interstate GST (18% IGST)` | **PASS** | Inter-state supply determined; 18% IGST calculated (₹900 IGST on ₹5,000 taxable); total ₹5,900. |
+| **6. Purchase Posting & Valuation** | `Purchase Invoice: Posting increases stock, updates moving-average cost, and posts balanced GL journal` | **PASS** | Stock movement `PURCHASE_RECEIPT` created; stock balance updated to 100 PCS @ ₹50.00; balanced GL journal posted (Debit 1201 ₹5,000, Debit 1303 ₹900, Credit 2001 ₹5,900). |
+| **7. Purchase Idempotency** | `Purchase Invoice: Duplicate post attempt returns existing posted document without duplicating stock or journals` | **PASS** | Second post request returns `is_duplicate: true` without creating duplicate stock movements or GL entries. |
+| **8. Intrastate Sales & Perpetual COGS**| `Sales Invoice: Create and post credit sales invoice with intra-state GST (9% CGST + 9% SGST)` | **PASS** | Intra-state supply determined; 9% CGST (₹180) + 9% SGST (₹180); balanced primary journal posted; stock reduced to 80 PCS; perpetual COGS journal posted (Debit 5004 ₹1,000, Credit 1201 ₹1,000). |
+| **9. Negative Stock Guard** | `Sales Invoice: Oversale is rejected when negative stock is disabled` | **PASS** | Request to issue 1,000 PCS when only 80 available rejected with `422 (INSUFFICIENT_STOCK)`; stock unchanged. |
+| **10. Service Line Item Behavior** | `Sales Invoice: Service-only item does NOT create stock movements or COGS entries` | **PASS** | Non-inventory service sales invoice generates revenue/tax journal with 0 stock movements and no COGS entry. |
+| **11. Customer Receipt & Allocation**| `Receipt: Partial settlement of sales invoice creates BillAllocation and updates balance_due` | **PASS** | Customer receipt of ₹1,000 posted; `BillAllocation` created; sales invoice `balance_due` reduced from ₹2,360 to ₹1,360. |
+| **12. Supplier Payment Settlement**| `Payment: Settle supplier purchase invoice via payment transaction` | **PASS** | Supplier payment of ₹3,000 posted; purchase invoice `balance_due` reduced from ₹5,900 to ₹2,900. |
+| **13. Restockable Sales Return** | `Sales Return: Restockable return restores stock and reverses revenue & COGS` | **PASS** | Customer return of 5 PCS restores stock from 80 to 85 PCS; reverses revenue, output GST, and COGS asset entry. |
+| **14. Compensating Reversals** | `Document Reversal: Reverse a posted document and confirm compensating reversal effects` | **PASS** | Posted purchase invoice reversed; stock restored from 95 to 85 PCS; compensating reversal journal linked. |
+| **15. Opening Stock GL Preview** | `Opening Stock GL: Dry-run preview returns pending opening value without mutating records` | **PASS** | Dry-run preview calculates ₹500 opening stock valuation across eligible items without mutating records. |
+| **16. Idempotent GL Catch-up** | `Opening Stock GL: Explicit catch-up posts balanced double-entry journal idempotently` | **PASS** | Balanced catch-up journal posted (Debit 1201 ₹500, Credit 3990 ₹500); rerun returns `posted: false, count: 0`. |
+| **17. Commercial Reports & Reconcile**| `Reports: Registers, Outstanding, Tax Summary, and Stock-to-GL Reconciliation` | **PASS** | Document register, customer/supplier outstanding aging, outward/inward tax summary, and stock-to-GL valuation verified. |
+| **18. Cross-Tenant Isolation** | `Isolation: User in Tenant B cannot view Tenant A commercial documents` | **PASS** | Cross-tenant request rejected with `403 Forbidden`. |
+| **19. Multi-Company Isolation** | `Isolation: Company A queries do not expose Secondary Company documents` | **PASS** | Documents created in secondary company omitted from primary company queries. |
+
+---
+
+## 4. How to Execute All Test Suites
 
 ```powershell
-# 1. Run Core Inventory Suite (29 tests)
+# 1. Run Commercial Transactions & GL Integration Suite (19 tests)
+node backend/tests/commercial_transactions_and_gl.test.js
+
+# 2. Run Core Inventory Suite (29 tests)
 node backend/tests/inventory_foundation_and_isolation.test.js
 
-# 2. Run Company Lifecycle & Isolation Suite (18 tests)
+# 3. Run Company Lifecycle & Isolation Suite (18 tests)
 node backend/tests/company_lifecycle_and_isolation.test.js
 
-# 3. Run Security & Cryptography Regression Suite (16 tests)
+# 4. Run Security & Cryptography Regression Suite (16 tests)
 node backend/tests/security_regression.test.js
 
-# 4. Verify Frontend Production Build
+# 5. Verify Frontend Production Build
 cd frontend
-cmd /c npm run build
+cmd /c "npm run build"
 ```

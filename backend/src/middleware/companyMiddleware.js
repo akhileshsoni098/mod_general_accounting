@@ -146,18 +146,20 @@ function requireCompanyPermission(requiredPermissionCode) {
       }
 
       const roleIds = userRoles.map(ur => ur.role_id);
-      const permDoc = await Permission.findOne({ code: requiredPermissionCode });
-      if (!permDoc) {
-        return res.error(`Unknown permission requirement: ${requiredPermissionCode}`, 500);
+      const permCodes = Array.isArray(requiredPermissionCode) ? requiredPermissionCode : [requiredPermissionCode];
+      const permDocs = await Permission.find({ code: { $in: permCodes } });
+      if (!permDocs || permDocs.length === 0) {
+        return res.error(`Unknown permission requirement: ${JSON.stringify(requiredPermissionCode)}`, 500);
       }
 
+      const permIds = permDocs.map(p => p._id);
       const hasPerm = await RolePermission.exists({
         role_id: { $in: roleIds },
-        permission_id: permDoc._id
+        permission_id: { $in: permIds }
       });
 
       if (!hasPerm) {
-        return res.error(`Forbidden: Missing required company permission [${requiredPermissionCode}]`, 403);
+        return res.error(`Forbidden: Missing required company permission [${permCodes.join(', ')}]`, 403);
       }
 
       next();

@@ -51,16 +51,20 @@ const COMMERCIAL_ERP_COA = [
   { account_code: '2103', account_name: 'Output IGST Tax Payable', account_type: 'LIABILITY', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Integrated GST liability collected on interstate sales' },
 
   { account_code: '3001', account_name: 'Proprietor / Partner Capital Account', account_type: 'EQUITY', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Owner invested capital and equity' },
+  { account_code: '3990', account_name: 'Opening Stock Offset / Valuation Reserve', account_type: 'EQUITY', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Balancing reserve for inventory opening balances' },
 
   { account_code: '4001', account_name: 'Sales Revenue - Products (GST 18%)', account_type: 'REVENUE', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Revenue from standard taxable trading sales' },
   { account_code: '4002', account_name: 'Sales Revenue - Products (GST 5% / 12%)', account_type: 'REVENUE', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Revenue from reduced-rate goods sales' },
   { account_code: '4003', account_name: 'Service / Labor Sales Revenue', account_type: 'REVENUE', normal_balance: 'CREDIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Revenue from labor and professional services' },
+  { account_code: '4900', account_name: 'Sales Discounts Allowed', account_type: 'REVENUE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Discounts and concessions granted to customers' },
 
   { account_code: '5001', account_name: 'Purchase Cost of Goods (GST 18%)', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Purchases of trading merchandise and raw materials' },
   { account_code: '5002', account_name: 'Purchase Cost of Goods (GST 5% / 12%)', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Purchases of lower-slab trading goods' },
   { account_code: '5003', account_name: 'Freight, Inward Carriage & Cartage', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Inward transportation charges on purchases' },
+  { account_code: '5004', account_name: 'Cost of Goods Sold - Trading Goods', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_control_account: true, is_posting_allowed: true, subledger_type: 'NONE', description: 'Cost of stock items sold recognized upon delivery' },
   { account_code: '5101', account_name: 'Rent & Business Premises Expense', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Rent paid for shops, godowns, and offices' },
-  { account_code: '5201', account_name: 'Staff Salaries & Wages', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Employee wages, bonuses, and incentives' }
+  { account_code: '5201', account_name: 'Staff Salaries & Wages', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Employee wages, bonuses, and incentives' },
+  { account_code: '5900', account_name: 'Rounding & Transaction Differences', account_type: 'EXPENSE', normal_balance: 'DEBIT', is_fiduciary: false, is_posting_allowed: true, subledger_type: 'NONE', description: 'Fractions of rupees and invoice rounding differences' }
 ];
 
 async function seedTenantChartOfAccounts(tenantId, options = {}) {

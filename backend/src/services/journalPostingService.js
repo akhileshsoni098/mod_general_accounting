@@ -23,7 +23,8 @@ async function postJournalEntry({
   memo,
   currency = 'USD',
   accountingBasis = 'GAAP',
-  lines // [{ account_code, debit, credit, dimensions, memo }]
+  lines, // [{ account_code, debit, credit, dimensions, memo }]
+  session = null
 }) {
   if (!lines || lines.length < 2) {
     throw new Error('Double-entry journal must contain at least 2 lines');
@@ -39,7 +40,9 @@ async function postJournalEntry({
     };
     if (companyId) dupQuery.company_id = companyId;
 
-    const existing = await Journal.findOne(dupQuery);
+    let dupQ = Journal.findOne(dupQuery);
+    if (session) dupQ = dupQ.session(session);
+    const existing = await dupQ;
     if (existing) {
       throw new Error(`Duplicate posting prevented: Transaction "${referenceId}" from module "${sourceModule}" has already been posted (${existing.journal_number})`);
     }
@@ -55,7 +58,9 @@ async function postJournalEntry({
   };
   if (companyId) periodQuery.company_id = companyId;
 
-  let fiscalPeriod = await FiscalPeriod.findOne(periodQuery);
+  let pQ = FiscalPeriod.findOne(periodQuery);
+  if (session) pQ = pQ.session(session);
+  let fiscalPeriod = await pQ;
 
   if (!fiscalPeriod) {
     const periodCountQuery = { tenant_id: tenantId };
@@ -118,22 +123,28 @@ async function postJournalEntry({
   };
   if (companyId) accountLookupQuery.company_id = companyId;
 
-  let accounts = await LedgerAccount.find(accountLookupQuery);
+  let aQ = LedgerAccount.find(accountLookupQuery);
+  if (session) aQ = aQ.session(session);
+  let accounts = await aQ;
 
   if (accounts.length === 0) {
     const accCountQuery = { tenant_id: tenantId };
     if (companyId) accCountQuery.company_id = companyId;
-    const totalAccs = await LedgerAccount.countDocuments(accCountQuery);
+    let accCQ = LedgerAccount.countDocuments(accCountQuery);
+    if (session) accCQ = accCQ.session(session);
+    const totalAccs = await accCQ;
 
     if (totalAccs === 0) {
       if (companyId) {
         const { seedCompanyChartOfAccounts } = require('../utils/seedCoa');
-        await seedCompanyChartOfAccounts(tenantId, companyId, { currency });
+        await seedCompanyChartOfAccounts(tenantId, companyId, { currency, session });
       } else {
         const { seedTenantChartOfAccounts } = require('../utils/seedCoa');
-        await seedTenantChartOfAccounts(tenantId);
+        await seedTenantChartOfAccounts(tenantId, { session });
       }
-      accounts = await LedgerAccount.find(accountLookupQuery);
+      let reAQ = LedgerAccount.find(accountLookupQuery);
+      if (session) reAQ = reAQ.session(session);
+      accounts = await reAQ;
     }
   }
 
@@ -158,11 +169,13 @@ async function postJournalEntry({
   // 5. Generate Journal Number scoped to tenant and company
   const countQuery = { tenant_id: tenantId };
   if (companyId) countQuery.company_id = companyId;
-  const count = await Journal.countDocuments(countQuery);
+  let countQ = Journal.countDocuments(countQuery);
+  if (session) countQ = countQ.session(session);
+  const count = await countQ;
   const journalNumber = `JE-${pDate.getFullYear()}-${String(count + 1).padStart(5, '0')}`;
 
   // 6. Create Journal Header
-  const journal = await Journal.create({
+  const journal = new Journal({
     tenant_id: tenantId,
     company_id: companyId || null,
     journal_number: journalNumber,
@@ -179,6 +192,7 @@ async function postJournalEntry({
     posted_by_user_id: userId || null,
     posted_at: new Date()
   });
+  await journal.save(session ? { session } : undefined);
 
   // 7. Create Journal Lines & Update Account Balances atomically
   const createdLines = [];
@@ -188,7 +202,7 @@ async function postJournalEntry({
     const dr = new BigNumber(l.debit || 0);
     const cr = new BigNumber(l.credit || 0);
 
-    const entryLine = await JournalEntry.create({
+    const entryLine = new JournalEntry({
       tenant_id: tenantId,
       company_id: companyId || null,
       journal_id: journal._id,
@@ -200,6 +214,7 @@ async function postJournalEntry({
       dimensions: l.dimensions || {},
       memo: l.memo || ''
     });
+    await entryLine.save(session ? { session } : undefined);
     createdLines.push(entryLine);
 
     // Calculate balance effect based on account normal balance
@@ -215,7 +230,7 @@ async function postJournalEntry({
 
     acc.current_balance = mongoose.Types.Decimal128.fromString(newBal.toFixed(2));
     acc.row_version = (acc.row_version || 1) + 1;
-    await acc.save();
+    await acc.save(session ? { session } : undefined);
   }
 
   return {
@@ -227,11 +242,13 @@ async function postJournalEntry({
 /**
  * Reverses an existing posted journal by creating a linked opposite entry.
  */
-async function reverseJournalEntry({ tenantId, companyId = null, userId, journalId, reversalDate, reversalMemo }) {
+async function reverseJournalEntry({ tenantId, companyId = null, userId, journalId, reversalDate, reversalMemo, session = null }) {
   const query = { _id: journalId, tenant_id: tenantId };
   if (companyId) query.company_id = companyId;
 
-  const original = await Journal.findOne(query);
+  let findQ = Journal.findOne(query);
+  if (session) findQ = findQ.session(session);
+  const original = await findQ;
   if (!original) {
     throw new Error('Journal not found');
   }
@@ -241,7 +258,9 @@ async function reverseJournalEntry({ tenantId, companyId = null, userId, journal
 
   const linesQuery = { journal_id: original._id, tenant_id: tenantId };
   if (companyId) linesQuery.company_id = companyId;
-  const originalLines = await JournalEntry.find(linesQuery).sort({ line_number: 1 });
+  let linesQ = JournalEntry.find(linesQuery).sort({ line_number: 1 });
+  if (session) linesQ = linesQ.session(session);
+  const originalLines = await linesQ;
 
   // Swap debits and credits
   const reversedLines = originalLines.map(line => ({
@@ -261,18 +280,19 @@ async function reverseJournalEntry({ tenantId, companyId = null, userId, journal
     userId,
     postingDate: rDate,
     sourceModule: original.source_module,
-    referenceId: `REV-${original.journal_number}`,
+    referenceId: `REV-${original.journal_number}-${Date.now()}`,
     memo: memoText,
-    lines: reversedLines
+    lines: reversedLines,
+    session
   });
 
   // Link journals
   original.status = 'REVERSED';
   original.reversed_by_journal_id = postResult.journal._id;
-  await original.save();
+  await original.save(session ? { session } : undefined);
 
   postResult.journal.reversal_of_journal_id = original._id;
-  await postResult.journal.save();
+  await postResult.journal.save(session ? { session } : undefined);
 
   return {
     original_journal: original,

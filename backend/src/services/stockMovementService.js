@@ -53,7 +53,8 @@ async function recordStockMovement(options) {
     sourceLineId = null,
     notes = '',
     userId = null,
-    reversalOfMovementId = null
+    reversalOfMovementId = null,
+    session = null
   } = options;
 
   if (!tenantId || !companyId) {
@@ -226,18 +227,23 @@ async function recordStockMovement(options) {
     return { movement, balance, is_duplicate: false };
   };
 
+  if (session) {
+    return operation(session);
+  }
   return withOptionalTransaction(operation);
 }
 
 /**
  * Reverses a posted stock movement by recording an opposite reversal entry.
  */
-async function reverseStockMovement({ tenantId, companyId, movementId, reason = '', notes = '', userId = null }) {
-  const original = await StockMovement.findOne({
+async function reverseStockMovement({ tenantId, companyId, movementId, reason = '', notes = '', userId = null, session = null }) {
+  let findQ = StockMovement.findOne({
     _id: movementId,
     tenant_id: tenantId,
     company_id: companyId
   });
+  if (session) findQ = findQ.session(session);
+  const original = await findQ;
 
   if (!original) {
     throw new Error(`Stock movement not found: ${movementId}`);
@@ -249,9 +255,9 @@ async function reverseStockMovement({ tenantId, companyId, movementId, reason = 
   const oppositeDirection = original.direction === 'IN' ? 'OUT' : 'IN';
   const reversalKey = `REV-${original._id}-${Date.now()}`;
 
-  const operation = async (session) => {
+  const operation = async (sess) => {
     original.is_reversed = true;
-    await original.save({ session });
+    await original.save({ session: sess });
 
     const revResult = await recordStockMovement({
       tenantId,
@@ -270,12 +276,16 @@ async function reverseStockMovement({ tenantId, companyId, movementId, reason = 
       sourceDocumentId: original._id.toString(),
       notes: reason || notes || `Reversal of movement ${original._id}`,
       userId,
-      reversalOfMovementId: original._id
+      reversalOfMovementId: original._id,
+      session: sess
     });
 
     return revResult;
   };
 
+  if (session) {
+    return operation(session);
+  }
   return withOptionalTransaction(operation);
 }
 

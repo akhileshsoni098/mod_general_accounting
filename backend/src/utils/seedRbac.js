@@ -49,7 +49,28 @@ const STANDARD_PERMISSIONS = [
   { code: 'INVENTORY:MANAGE_MASTERS', module: 'INVENTORY', description: 'Create and update stock items, groups, categories, UOM, godowns' },
   { code: 'INVENTORY:OPENING_STOCK', module: 'INVENTORY', description: 'Initialize and correct opening stock balances' },
   { code: 'INVENTORY:ADJUST', module: 'INVENTORY', description: 'Record physical stock adjustments and reconciliations' },
-  { code: 'INVENTORY:ADMIN', module: 'INVENTORY', description: 'Full administrative control over inventory masters and policies' }
+  { code: 'INVENTORY:ADMIN', module: 'INVENTORY', description: 'Full administrative control over inventory masters and policies' },
+
+  // COMMERCIAL TRANSACTIONS, GST & POSTING (Phase 4)
+  { code: 'COMMERCIAL:VIEW', module: 'COMMERCIAL', description: 'View commercial documents, registers and outstanding' },
+  { code: 'SALES:VIEW', module: 'COMMERCIAL', description: 'View sales invoices, credit notes and registers' },
+  { code: 'SALES:CREATE', module: 'COMMERCIAL', description: 'Create and edit draft sales invoices' },
+  { code: 'SALES:POST', module: 'COMMERCIAL', description: 'Post sales invoices with inventory and GL integration' },
+  { code: 'SALES:REVERSE', module: 'COMMERCIAL', description: 'Reverse posted sales invoices' },
+  { code: 'PURCHASE:VIEW', module: 'COMMERCIAL', description: 'View purchase invoices, debit notes and registers' },
+  { code: 'PURCHASE:CREATE', module: 'COMMERCIAL', description: 'Create and edit draft purchase invoices' },
+  { code: 'PURCHASE:POST', module: 'COMMERCIAL', description: 'Post purchase invoices and receive inventory' },
+  { code: 'PURCHASE:RETURN', module: 'COMMERCIAL', description: 'Record purchase returns and debit notes' },
+  { code: 'RECEIPT:CREATE', module: 'COMMERCIAL', description: 'Create customer receipts and bill allocations' },
+  { code: 'PAYMENT:CREATE', module: 'COMMERCIAL', description: 'Create supplier payments and bill allocations' },
+  { code: 'TRANSACTION:APPROVE', module: 'COMMERCIAL', description: 'Approve commercial documents' },
+  { code: 'TRANSACTION:REVERSE', module: 'COMMERCIAL', description: 'Reverse posted commercial documents' },
+  { code: 'TAX:VIEW', module: 'COMMERCIAL', description: 'View tax configurations, GST rates, and tax summaries' },
+  { code: 'TAX:MANAGE', module: 'COMMERCIAL', description: 'Configure tax codes, GST rules and HSN mappings' },
+  { code: 'ACCOUNT_MAPPING:VIEW', module: 'COMMERCIAL', description: 'View company posting account configurations' },
+  { code: 'ACCOUNT_MAPPING:MANAGE', module: 'COMMERCIAL', description: 'Manage company posting account mappings' },
+  { code: 'RECONCILIATION:VIEW', module: 'COMMERCIAL', description: 'View stock-to-GL and bill-wise reconciliations' },
+  { code: 'RECONCILIATION:EXECUTE', module: 'COMMERCIAL', description: 'Execute opening stock GL catch-up and reconciliations' }
 ];
 
 const STANDARD_ROLES = [
@@ -70,13 +91,18 @@ const STANDARD_ROLES = [
   {
     code: 'FINANCE_ADMIN',
     name: 'Finance Administrator',
-    description: 'Operational and financial administrator across GL, billing, commissions, treasury and close.',
+    description: 'Operational and financial administrator across GL, billing, commissions, treasury, inventory and commercial transactions.',
     is_system_role: true,
     permissions: [
       'USER:VIEW',
       'COMPANY:VIEW', 'COMPANY:UPDATE',
       'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
       'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK', 'INVENTORY:ADJUST', 'INVENTORY:ADMIN',
+      'COMMERCIAL:VIEW', 'SALES:VIEW', 'SALES:CREATE', 'SALES:POST', 'SALES:REVERSE',
+      'PURCHASE:VIEW', 'PURCHASE:CREATE', 'PURCHASE:POST', 'PURCHASE:RETURN',
+      'RECEIPT:CREATE', 'PAYMENT:CREATE', 'TRANSACTION:APPROVE', 'TRANSACTION:REVERSE',
+      'TAX:VIEW', 'TAX:MANAGE', 'ACCOUNT_MAPPING:VIEW', 'ACCOUNT_MAPPING:MANAGE',
+      'RECONCILIATION:VIEW', 'RECONCILIATION:EXECUTE',
       'BILLING:VIEW', 'BILLING:CREATE', 'BILLING:ADMIN',
       'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -92,6 +118,10 @@ const STANDARD_ROLES = [
       'COMPANY:VIEW',
       'GL:VIEW', 'GL:POST',
       'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK',
+      'COMMERCIAL:VIEW', 'SALES:VIEW', 'SALES:CREATE', 'SALES:POST',
+      'PURCHASE:VIEW', 'PURCHASE:CREATE', 'PURCHASE:POST',
+      'RECEIPT:CREATE', 'PAYMENT:CREATE',
+      'TAX:VIEW', 'ACCOUNT_MAPPING:VIEW', 'RECONCILIATION:VIEW',
       'BILLING:VIEW',
       'COMMISSIONS:VIEW',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
