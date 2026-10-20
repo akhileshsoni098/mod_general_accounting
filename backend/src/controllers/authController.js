@@ -8,8 +8,11 @@ const {
   RolePermission,
   Permission,
   UserSession,
-  PasswordResetToken
+  PasswordResetToken,
+  Company,
+  CompanyMembership
 } = require('../models');
+const { initializeCompany } = require('../services/companyInitService');
 const {
   hashPassword,
   verifyPassword,
@@ -136,7 +139,25 @@ async function registerTenant(req, res) {
       );
     }
 
-    // 6. Generate Access & Refresh Tokens
+    // 6. Initialize Primary Company for this Tenant
+    let primaryCompany = null;
+    try {
+      const companyInit = await initializeCompany({
+        tenantId: tenant._id,
+        creatorUserId: user._id,
+        companyCode: 'MAIN',
+        companyName: `${tenant.name} Primary Company`,
+        legalName: tenant.name,
+        businessProfile: 'GENERAL_RETAIL',
+        baseCurrency: tenant.base_currency,
+        financialYearStartMonth: tenant.fiscal_year_start_month || 4
+      });
+      primaryCompany = companyInit.company;
+    } catch (cmpErr) {
+      console.warn('[Company Init Warning during Register]', cmpErr.message);
+    }
+
+    // 7. Generate Access & Refresh Tokens
     const familyId = uuidv4();
     const token = generateToken({
       userId: user._id.toString(),
@@ -173,6 +194,14 @@ async function registerTenant(req, res) {
         base_currency: tenant.base_currency,
         status: tenant.status
       },
+      company: primaryCompany ? {
+        id: primaryCompany._id.toString(),
+        company_code: primaryCompany.company_code,
+        company_name: primaryCompany.company_name,
+        business_profile: primaryCompany.business_profile,
+        base_currency: primaryCompany.base_currency,
+        status: primaryCompany.status
+      } : null,
       user: {
         id: user._id.toString(),
         email: user.email,
@@ -258,6 +287,37 @@ async function login(req, res) {
       activeTenant = workspaces[0];
     }
 
+    // Resolve companies accessible in active workspace
+    let availableCompanies = [];
+    let activeCompany = null;
+    if (activeTenant) {
+      const cmpMemberships = await CompanyMembership.find({
+        tenant_id: activeTenant.id,
+        user_id: user._id,
+        status: 'ACTIVE'
+      }).populate('company_id');
+
+      availableCompanies = cmpMemberships
+        .map(m => m.company_id)
+        .filter(c => c && c.status === 'ACTIVE')
+        .map(c => ({
+          id: c._id.toString(),
+          company_code: c.company_code,
+          company_name: c.company_name,
+          legal_name: c.legal_name,
+          business_profile: c.business_profile,
+          base_currency: c.base_currency,
+          status: c.status
+        }));
+
+      const defaultCmp = cmpMemberships.find(m => m.is_default && m.company_id && m.company_id.status === 'ACTIVE');
+      if (defaultCmp) {
+        activeCompany = availableCompanies.find(c => c.id === defaultCmp.company_id._id.toString());
+      } else if (availableCompanies.length > 0) {
+        activeCompany = availableCompanies[0];
+      }
+    }
+
     // 3. Generate Access Token & Refresh Token with Session Family
     const familyId = uuidv4();
     const token = generateToken({
@@ -295,7 +355,9 @@ async function login(req, res) {
         is_platform_admin: user.is_platform_admin
       },
       active_workspace: activeTenant,
-      available_workspaces: workspaces
+      available_workspaces: workspaces,
+      active_company: activeCompany,
+      available_companies: availableCompanies
     }, { message: 'Authentication successful' });
   } catch (err) {
     return res.error('Login failed', 500, err.message);
@@ -346,6 +408,39 @@ async function getMe(req, res) {
           is_enabled: e.is_enabled,
           config: e.config
         }));
+
+        // Get companies accessible in this workspace
+        const cmpMemberships = await CompanyMembership.find({
+          tenant_id: currentTenant._id,
+          user_id: user._id,
+          status: 'ACTIVE'
+        }).populate('company_id');
+
+        availableCompanies = cmpMemberships
+          .map(m => m.company_id)
+          .filter(c => c && c.status === 'ACTIVE')
+          .map(c => ({
+            id: c._id.toString(),
+            company_code: c.company_code,
+            company_name: c.company_name,
+            legal_name: c.legal_name,
+            business_profile: c.business_profile,
+            base_currency: c.base_currency,
+            status: c.status,
+            financial_year_start_month: c.financial_year_start_month
+          }));
+
+        const headerCompanyId = req.headers['x-company-id'];
+        if (headerCompanyId && availableCompanies.some(c => c.id === headerCompanyId)) {
+          currentCompany = availableCompanies.find(c => c.id === headerCompanyId);
+        } else {
+          const defaultCmp = cmpMemberships.find(m => m.is_default && m.company_id && m.company_id.status === 'ACTIVE');
+          if (defaultCmp) {
+            currentCompany = availableCompanies.find(c => c.id === defaultCmp.company_id._id.toString());
+          } else if (availableCompanies.length > 0) {
+            currentCompany = availableCompanies[0];
+          }
+        }
       }
     }
 
@@ -367,6 +462,8 @@ async function getMe(req, res) {
         timezone: currentTenant.timezone,
         fiscal_year_start_month: currentTenant.fiscal_year_start_month
       } : null,
+      current_company: currentCompany,
+      available_companies: availableCompanies,
       roles,
       permissions,
       entitlements,

@@ -8,6 +8,12 @@ const DimensionDefinitionSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     dimension_code: {
       type: String,
       required: true,
@@ -63,6 +69,6 @@ const DimensionDefinitionSchema = new mongoose.Schema(
   }
 );
 
-DimensionDefinitionSchema.index({ tenant_id: 1, dimension_code: 1 }, { unique: true });
+DimensionDefinitionSchema.index({ tenant_id: 1, company_id: 1, dimension_code: 1 }, { unique: true });
 
 module.exports = mongoose.model('DimensionDefinition', DimensionDefinitionSchema);

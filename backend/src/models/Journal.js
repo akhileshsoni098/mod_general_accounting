@@ -8,6 +8,12 @@ const JournalSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     journal_number: {
       type: String,
       required: true,
@@ -117,6 +123,7 @@ const JournalSchema = new mongoose.Schema(
   }
 );
 
-JournalSchema.index({ tenant_id: 1, journal_number: 1 }, { unique: true });
+JournalSchema.index({ tenant_id: 1, company_id: 1, journal_number: 1 }, { unique: true });
+JournalSchema.index({ tenant_id: 1, company_id: 1, posting_date: -1 });
 
 module.exports = mongoose.model('Journal', JournalSchema);

@@ -8,6 +8,12 @@ const LedgerAccountSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     account_code: {
       type: String,
       required: true,
@@ -88,6 +94,7 @@ const LedgerAccountSchema = new mongoose.Schema(
   }
 );
 
-LedgerAccountSchema.index({ tenant_id: 1, account_code: 1 }, { unique: true });
+LedgerAccountSchema.index({ tenant_id: 1, company_id: 1, account_code: 1 }, { unique: true });
+LedgerAccountSchema.index({ tenant_id: 1, company_id: 1, status: 1 });
 
 module.exports = mongoose.model('LedgerAccount', LedgerAccountSchema);

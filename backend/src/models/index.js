@@ -10,6 +10,8 @@ const Party = require('./Party');
 const PartyRole = require('./PartyRole');
 const UserSession = require('./UserSession');
 const PasswordResetToken = require('./PasswordResetToken');
+const Company = require('./Company');
+const CompanyMembership = require('./CompanyMembership');
 
 // Module 14: Core General Ledger (7 Models)
 const LedgerAccount = require('./LedgerAccount');
@@ -88,6 +90,8 @@ module.exports = {
   PartyRole,
   UserSession,
   PasswordResetToken,
+  Company,
+  CompanyMembership,
 
   // Core General Ledger
   LedgerAccount,

@@ -15,6 +15,7 @@ const { Journal, JournalEntry, LedgerAccount, FiscalPeriod } = require('../model
  */
 async function postJournalEntry({
   tenantId,
+  companyId = null,
   userId,
   postingDate,
   sourceModule = 'GL_MANUAL',
@@ -28,14 +29,17 @@ async function postJournalEntry({
     throw new Error('Double-entry journal must contain at least 2 lines');
   }
 
-  // 1. Prevent duplicate posting of the same source transaction
+  // 1. Prevent duplicate posting of the same source transaction within company
   if (referenceId && sourceModule !== 'GL_MANUAL') {
-    const existing = await Journal.findOne({
+    const dupQuery = {
       tenant_id: tenantId,
       source_module: sourceModule,
       reference_id: referenceId,
       status: 'POSTED'
-    });
+    };
+    if (companyId) dupQuery.company_id = companyId;
+
+    const existing = await Journal.findOne(dupQuery);
     if (existing) {
       throw new Error(`Duplicate posting prevented: Transaction "${referenceId}" from module "${sourceModule}" has already been posted (${existing.journal_number})`);
     }
@@ -44,22 +48,29 @@ async function postJournalEntry({
   const pDate = new Date(postingDate || Date.now());
 
   // 2. Check Fiscal Period Lock
-  let fiscalPeriod = await FiscalPeriod.findOne({
+  const periodQuery = {
     tenant_id: tenantId,
     start_date: { $lte: pDate },
     end_date: { $gte: pDate }
-  });
+  };
+  if (companyId) periodQuery.company_id = companyId;
+
+  let fiscalPeriod = await FiscalPeriod.findOne(periodQuery);
 
   if (!fiscalPeriod) {
-    const totalPeriods = await FiscalPeriod.countDocuments({ tenant_id: tenantId });
+    const periodCountQuery = { tenant_id: tenantId };
+    if (companyId) periodCountQuery.company_id = companyId;
+    const totalPeriods = await FiscalPeriod.countDocuments(periodCountQuery);
+
     if (totalPeriods === 0) {
-      const { seedFiscalPeriods } = require('../utils/seedFiscalPeriods');
-      await seedFiscalPeriods(tenantId, pDate.getFullYear());
-      fiscalPeriod = await FiscalPeriod.findOne({
-        tenant_id: tenantId,
-        start_date: { $lte: pDate },
-        end_date: { $gte: pDate }
-      });
+      if (companyId) {
+        const { seedCompanyFiscalPeriods } = require('../utils/seedFiscalPeriods');
+        await seedCompanyFiscalPeriods(tenantId, companyId, pDate.getFullYear());
+      } else {
+        const { seedFiscalPeriods } = require('../utils/seedFiscalPeriods');
+        await seedFiscalPeriods(tenantId, pDate.getFullYear());
+      }
+      fiscalPeriod = await FiscalPeriod.findOne(periodQuery);
     }
   }
 
@@ -99,22 +110,30 @@ async function postJournalEntry({
     );
   }
 
-  // 4. Lookup Accounts and assert active + posting enabled
+  // 4. Lookup Accounts and assert active + posting enabled within company scope
   const accountCodes = lines.map(l => l.account_code);
-  let accounts = await LedgerAccount.find({
+  const accountLookupQuery = {
     tenant_id: tenantId,
     account_code: { $in: accountCodes }
-  });
+  };
+  if (companyId) accountLookupQuery.company_id = companyId;
+
+  let accounts = await LedgerAccount.find(accountLookupQuery);
 
   if (accounts.length === 0) {
-    const totalAccs = await LedgerAccount.countDocuments({ tenant_id: tenantId });
+    const accCountQuery = { tenant_id: tenantId };
+    if (companyId) accCountQuery.company_id = companyId;
+    const totalAccs = await LedgerAccount.countDocuments(accCountQuery);
+
     if (totalAccs === 0) {
-      const { seedTenantChartOfAccounts } = require('../utils/seedCoa');
-      await seedTenantChartOfAccounts(tenantId);
-      accounts = await LedgerAccount.find({
-        tenant_id: tenantId,
-        account_code: { $in: accountCodes }
-      });
+      if (companyId) {
+        const { seedCompanyChartOfAccounts } = require('../utils/seedCoa');
+        await seedCompanyChartOfAccounts(tenantId, companyId, { currency });
+      } else {
+        const { seedTenantChartOfAccounts } = require('../utils/seedCoa');
+        await seedTenantChartOfAccounts(tenantId);
+      }
+      accounts = await LedgerAccount.find(accountLookupQuery);
     }
   }
 
@@ -126,7 +145,7 @@ async function postJournalEntry({
   for (const code of accountCodes) {
     const acc = accountMap[code];
     if (!acc) {
-      throw new Error(`Account code "${code}" does not exist for this tenant`);
+      throw new Error(`Account code "${code}" does not exist for this company set of books`);
     }
     if (acc.status !== 'ACTIVE') {
       throw new Error(`Account "${code}" (${acc.account_name}) is inactive and cannot accept postings`);
@@ -136,13 +155,16 @@ async function postJournalEntry({
     }
   }
 
-  // 5. Generate Journal Number
-  const count = await Journal.countDocuments({ tenant_id: tenantId });
+  // 5. Generate Journal Number scoped to tenant and company
+  const countQuery = { tenant_id: tenantId };
+  if (companyId) countQuery.company_id = companyId;
+  const count = await Journal.countDocuments(countQuery);
   const journalNumber = `JE-${pDate.getFullYear()}-${String(count + 1).padStart(5, '0')}`;
 
   // 6. Create Journal Header
   const journal = await Journal.create({
     tenant_id: tenantId,
+    company_id: companyId || null,
     journal_number: journalNumber,
     posting_date: pDate,
     fiscal_period_id: fiscalPeriod._id,
@@ -168,6 +190,7 @@ async function postJournalEntry({
 
     const entryLine = await JournalEntry.create({
       tenant_id: tenantId,
+      company_id: companyId || null,
       journal_id: journal._id,
       line_number: i + 1,
       ledger_account_id: acc._id,
@@ -204,8 +227,11 @@ async function postJournalEntry({
 /**
  * Reverses an existing posted journal by creating a linked opposite entry.
  */
-async function reverseJournalEntry({ tenantId, userId, journalId, reversalDate, reversalMemo }) {
-  const original = await Journal.findOne({ _id: journalId, tenant_id: tenantId });
+async function reverseJournalEntry({ tenantId, companyId = null, userId, journalId, reversalDate, reversalMemo }) {
+  const query = { _id: journalId, tenant_id: tenantId };
+  if (companyId) query.company_id = companyId;
+
+  const original = await Journal.findOne(query);
   if (!original) {
     throw new Error('Journal not found');
   }
@@ -213,7 +239,9 @@ async function reverseJournalEntry({ tenantId, userId, journalId, reversalDate, 
     throw new Error(`Cannot reverse journal with status "${original.status}". Only POSTED journals can be reversed.`);
   }
 
-  const originalLines = await JournalEntry.find({ journal_id: original._id, tenant_id: tenantId }).sort({ line_number: 1 });
+  const linesQuery = { journal_id: original._id, tenant_id: tenantId };
+  if (companyId) linesQuery.company_id = companyId;
+  const originalLines = await JournalEntry.find(linesQuery).sort({ line_number: 1 });
 
   // Swap debits and credits
   const reversedLines = originalLines.map(line => ({
@@ -229,6 +257,7 @@ async function reverseJournalEntry({ tenantId, userId, journalId, reversalDate, 
 
   const postResult = await postJournalEntry({
     tenantId,
+    companyId: companyId || original.company_id,
     userId,
     postingDate: rDate,
     sourceModule: original.source_module,
@@ -276,13 +305,27 @@ function previewJournal({ lines }) {
 
 /**
  * Computes Trial Balance as of a specified period or date.
- * Returns accounts, debits, credits, and balance verification.
+ * Scoped to active tenant and company.
  */
-async function computeTrialBalance(tenantId, periodId = null) {
-  const accounts = await LedgerAccount.find({ tenant_id: tenantId, status: 'ACTIVE' }).sort({ account_code: 1 });
+async function computeTrialBalance(tenantId, periodId = null, companyId = null) {
+  let resolvedTenantId = tenantId;
+  let resolvedPeriodId = periodId;
+  let resolvedCompanyId = companyId;
 
-  // Aggregate all journal entry postings for the tenant
-  const allEntries = await JournalEntry.find({ tenant_id: tenantId });
+  if (typeof tenantId === 'object' && tenantId !== null && !mongoose.isValidObjectId(tenantId)) {
+    resolvedTenantId = tenantId.tenantId || tenantId.tenant_id;
+    resolvedPeriodId = tenantId.periodId || tenantId.period_id || null;
+    resolvedCompanyId = tenantId.companyId || tenantId.company_id || null;
+  }
+
+  const accountQuery = { tenant_id: resolvedTenantId, status: 'ACTIVE' };
+  if (resolvedCompanyId) accountQuery.company_id = resolvedCompanyId;
+  const accounts = await LedgerAccount.find(accountQuery).sort({ account_code: 1 });
+
+  // Aggregate journal entry postings scoped to company
+  const entryQuery = { tenant_id: resolvedTenantId };
+  if (resolvedCompanyId) entryQuery.company_id = resolvedCompanyId;
+  const allEntries = await JournalEntry.find(entryQuery);
   const activityMap = {};
   let totalPeriodDebits = new BigNumber(0);
   let totalPeriodCredits = new BigNumber(0);

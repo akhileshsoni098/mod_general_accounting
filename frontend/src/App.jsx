@@ -20,6 +20,7 @@ import RuleTestCasesPage from './pages/RuleTestCasesPage';
 import ConfigBundlePage from './pages/ConfigBundlePage';
 import EventOperationsPage from './pages/EventOperationsPage';
 import DimensionsPage from './pages/DimensionsPage';
+import CompanySelector from './components/CompanySelector';
 
 import { useTheme } from './context/ThemeContext';
 import {
@@ -175,6 +176,9 @@ export default function App() {
               <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
             </button>
           </div>
+
+          {/* Active Company Selector */}
+          <CompanySelector />
         </div>
 
         {/* User Profile, Test Tools & Logout */}

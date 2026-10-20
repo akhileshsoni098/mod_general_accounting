@@ -1,22 +1,33 @@
 const { LedgerAccount, FiscalPeriod, Journal, JournalEntry, PostingRule, PostingRuleLine, ExchangeRate } = require('../models');
 const { postJournalEntry, reverseJournalEntry, previewJournal, computeTrialBalance } = require('../services/journalPostingService');
-const { seedTenantChartOfAccounts } = require('../utils/seedCoa');
-const { seedFiscalPeriods } = require('../utils/seedFiscalPeriods');
+const { seedTenantChartOfAccounts, seedCompanyChartOfAccounts } = require('../utils/seedCoa');
+const { seedFiscalPeriods, seedCompanyFiscalPeriods } = require('../utils/seedFiscalPeriods');
 const mongoose = require('mongoose');
 
-// List Chart of Accounts
+// List Chart of Accounts (Scoped to Tenant and Company)
 async function getAccounts(req, res) {
   try {
     const tenantId = req.tenantId;
-    let accounts = await LedgerAccount.find({ tenant_id: tenantId }).sort({ account_code: 1 });
+    const companyId = req.companyId;
 
-    // Auto-seed if newly onboarded tenant has 0 accounts
+    const query = { tenant_id: tenantId };
+    if (companyId) query.company_id = companyId;
+
+    let accounts = await LedgerAccount.find(query).sort({ account_code: 1 });
+
+    // Auto-seed if newly onboarded company/tenant has 0 accounts
     if (accounts.length === 0) {
-      await seedTenantChartOfAccounts(tenantId);
-      accounts = await LedgerAccount.find({ tenant_id: tenantId }).sort({ account_code: 1 });
+      if (companyId) {
+        await seedCompanyChartOfAccounts(tenantId, companyId, {
+          currency: req.company?.base_currency || 'INR'
+        });
+      } else {
+        await seedTenantChartOfAccounts(tenantId);
+      }
+      accounts = await LedgerAccount.find(query).sort({ account_code: 1 });
     }
 
-    const allEntries = await JournalEntry.find({ tenant_id: tenantId });
+    const allEntries = await JournalEntry.find(query);
     const activityMap = {};
     for (const e of allEntries) {
       const code = e.account_code;
@@ -44,30 +55,37 @@ async function getAccounts(req, res) {
   }
 }
 
-// Get single account detail with activity lines
+// Get single account detail with activity lines (Company-scoped)
 async function getAccountDetail(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { id } = req.params;
 
-    const account = await LedgerAccount.findOne({
+    const query = {
       tenant_id: tenantId,
       $or: [
         { _id: mongoose.isValidObjectId(id) ? id : null },
         { account_code: id }
       ]
-    });
+    };
+    if (companyId) query.company_id = companyId;
+
+    const account = await LedgerAccount.findOne(query);
     if (!account) {
       return res.error('Ledger account not found', 404);
     }
 
-    const activity = await JournalEntry.find({
+    const activityQuery = {
       tenant_id: tenantId,
       $or: [
         { ledger_account_id: account._id },
         { account_code: account.account_code }
       ]
-    })
+    };
+    if (companyId) activityQuery.company_id = companyId;
+
+    const activity = await JournalEntry.find(activityQuery)
       .populate('journal_id', 'journal_number posting_date status memo source_module reference_id')
       .sort({ createdAt: -1 })
       .limit(100);
@@ -92,10 +110,11 @@ async function getAccountDetail(req, res) {
   }
 }
 
-// Create custom Ledger Account
+// Create custom Ledger Account (Company-scoped)
 async function createAccount(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const {
       account_code,
       account_name,
@@ -112,20 +131,19 @@ async function createAccount(req, res) {
       return res.error('account_code, account_name, account_type, and normal_balance are required', 400);
     }
 
-    // Ensure standard COA is seeded if tenant is brand new
-    const totalCount = await LedgerAccount.countDocuments({ tenant_id: tenantId });
-    if (totalCount === 0) {
-      await seedTenantChartOfAccounts(tenantId);
-    }
+    const dupQuery = { tenant_id: tenantId, account_code: account_code.trim().toUpperCase() };
+    if (companyId) dupQuery.company_id = companyId;
 
-    const exists = await LedgerAccount.findOne({ tenant_id: tenantId, account_code: account_code.trim().toUpperCase() });
+    const exists = await LedgerAccount.findOne(dupQuery);
     if (exists) {
       return res.error(`Account code "${account_code}" already exists in this chart of accounts`, 409);
     }
 
     // Verify parent if provided
     if (parent_account_id) {
-      const parent = await LedgerAccount.findOne({ _id: parent_account_id, tenant_id: tenantId });
+      const parentQuery = { _id: parent_account_id, tenant_id: tenantId };
+      if (companyId) parentQuery.company_id = companyId;
+      const parent = await LedgerAccount.findOne(parentQuery);
       if (!parent) {
         return res.error('Parent account not found in this chart of accounts', 404);
       }
@@ -133,6 +151,7 @@ async function createAccount(req, res) {
 
     const account = await LedgerAccount.create({
       tenant_id: tenantId,
+      company_id: companyId || null,
       account_code: account_code.trim().toUpperCase(),
       account_name: account_name.trim(),
       description: description || '',
@@ -141,7 +160,8 @@ async function createAccount(req, res) {
       parent_account_id: parent_account_id || null,
       is_posting_allowed: typeof is_posting_allowed === 'boolean' ? is_posting_allowed : true,
       is_fiduciary: !!is_fiduciary,
-      subledger_type: subledger_type || 'NONE'
+      subledger_type: subledger_type || 'NONE',
+      currency: req.company?.base_currency || 'INR'
     });
 
     return res.success(account, { message: 'Ledger account created' }, 201);
@@ -154,10 +174,14 @@ async function createAccount(req, res) {
 async function updateAccount(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { id } = req.params;
     const { account_name, description, status, is_posting_allowed } = req.body;
 
-    const account = await LedgerAccount.findOne({ _id: id, tenant_id: tenantId });
+    const query = { _id: id, tenant_id: tenantId };
+    if (companyId) query.company_id = companyId;
+
+    const account = await LedgerAccount.findOne(query);
     if (!account) {
       return res.error('Ledger account not found', 404);
     }
@@ -176,16 +200,26 @@ async function updateAccount(req, res) {
   }
 }
 
-// List Fiscal Periods
+// List Fiscal Periods (Company-scoped)
 async function getFiscalPeriods(req, res) {
   try {
     const tenantId = req.tenantId;
-    let periods = await FiscalPeriod.find({ tenant_id: tenantId }).sort({ fiscal_year: 1, period_number: 1 });
+    const companyId = req.companyId;
 
-    const has2026 = periods.some(p => p.fiscal_year === 2026);
-    if (!has2026) {
-      await seedFiscalPeriods(tenantId, 2026);
-      periods = await FiscalPeriod.find({ tenant_id: tenantId }).sort({ fiscal_year: 1, period_number: 1 });
+    const query = { tenant_id: tenantId };
+    if (companyId) query.company_id = companyId;
+
+    let periods = await FiscalPeriod.find(query).sort({ fiscal_year: 1, period_number: 1 });
+
+    const currentYear = new Date().getFullYear();
+    const hasCurrent = periods.some(p => p.fiscal_year === currentYear);
+    if (!hasCurrent) {
+      if (companyId) {
+        await seedCompanyFiscalPeriods(tenantId, companyId, currentYear, req.company?.financial_year_start_month || 4);
+      } else {
+        await seedFiscalPeriods(tenantId, currentYear);
+      }
+      periods = await FiscalPeriod.find(query).sort({ fiscal_year: 1, period_number: 1 });
     }
 
     return res.success(periods);
@@ -194,17 +228,21 @@ async function getFiscalPeriods(req, res) {
   }
 }
 
-// Create custom Fiscal Period
+// Create custom Fiscal Period (Company-scoped)
 async function createFiscalPeriod(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { period_name, fiscal_year, period_number, start_date, end_date, status = 'OPEN' } = req.body;
 
     if (!period_name || !fiscal_year || !period_number || !start_date || !end_date) {
       return res.error('period_name, fiscal_year, period_number, start_date, and end_date are required', 400);
     }
 
-    const exists = await FiscalPeriod.findOne({ tenant_id: tenantId, period_name: period_name.trim() });
+    const dupQuery = { tenant_id: tenantId, period_name: period_name.trim() };
+    if (companyId) dupQuery.company_id = companyId;
+
+    const exists = await FiscalPeriod.findOne(dupQuery);
     if (exists) {
       return res.error(`Fiscal period "${period_name}" already exists`, 409);
     }
@@ -212,6 +250,7 @@ async function createFiscalPeriod(req, res) {
     const periodStatus = status ? status.toUpperCase() : 'OPEN';
     const period = await FiscalPeriod.create({
       tenant_id: tenantId,
+      company_id: companyId || null,
       period_name: period_name.trim(),
       fiscal_year: Number(fiscal_year),
       period_number: Number(period_number),
@@ -228,17 +267,21 @@ async function createFiscalPeriod(req, res) {
   }
 }
 
-// Lock / Unlock / Close Fiscal Period
+// Lock / Unlock / Close Fiscal Period (Company-scoped)
 async function updateFiscalPeriodStatus(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { period_id, status, close_notes } = req.body;
 
     if (!period_id || !status) {
       return res.error('period_id and status (OPEN / SOFT_CLOSED / HARD_CLOSED / LOCKED) are required', 400);
     }
 
-    const period = await FiscalPeriod.findOne({ _id: period_id, tenant_id: tenantId });
+    const query = { _id: period_id, tenant_id: tenantId };
+    if (companyId) query.company_id = companyId;
+
+    const period = await FiscalPeriod.findOne(query);
     if (!period) {
       return res.error('Fiscal period not found', 404);
     }
@@ -265,13 +308,15 @@ async function updateFiscalPeriodStatus(req, res) {
   }
 }
 
-// List Journals
+// List Journals (Company-scoped)
 async function getJournals(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { limit = 50, reference_id, status, source_module } = req.query;
 
     const filter = { tenant_id: tenantId };
+    if (companyId) filter.company_id = companyId;
     if (reference_id) filter.reference_id = reference_id;
     if (status) filter.status = status.toUpperCase();
     if (source_module) filter.source_module = source_module.toUpperCase();
@@ -287,18 +332,24 @@ async function getJournals(req, res) {
   }
 }
 
-// Get Journal Details with Lines
+// Get Journal Details with Lines (Company-scoped)
 async function getJournalById(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { id } = req.params;
 
-    const journal = await Journal.findOne({ _id: id, tenant_id: tenantId }).populate('fiscal_period_id');
+    const query = { _id: id, tenant_id: tenantId };
+    if (companyId) query.company_id = companyId;
+
+    const journal = await Journal.findOne(query).populate('fiscal_period_id');
     if (!journal) {
       return res.error('Journal entry not found', 404);
     }
 
-    const lines = await JournalEntry.find({ journal_id: journal._id, tenant_id: tenantId }).sort({ line_number: 1 });
+    const linesQuery = { journal_id: journal._id, tenant_id: tenantId };
+    if (companyId) linesQuery.company_id = companyId;
+    const lines = await JournalEntry.find(linesQuery).sort({ line_number: 1 });
 
     return res.success({
       journal,
@@ -320,20 +371,22 @@ async function previewJournalTotals(req, res) {
   }
 }
 
-// Post a Balanced Journal Entry
+// Post a Balanced Journal Entry (Company-scoped)
 async function postJournal(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { posting_date, source_module, reference_id, memo, lines, currency, accounting_basis } = req.body;
 
     const result = await postJournalEntry({
       tenantId,
+      companyId: companyId || null,
       userId: req.user._id,
       postingDate: posting_date,
       sourceModule: source_module || 'GL_MANUAL',
       referenceId: reference_id,
       memo,
-      currency: currency || 'USD',
+      currency: currency || req.company?.base_currency || 'INR',
       accountingBasis: accounting_basis || 'GAAP',
       lines
     });
@@ -344,15 +397,17 @@ async function postJournal(req, res) {
   }
 }
 
-// Reverse a Posted Journal
+// Reverse a Posted Journal (Company-scoped)
 async function reverseJournal(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { id } = req.params;
     const { reversal_date, reversal_memo } = req.body;
 
     const result = await reverseJournalEntry({
       tenantId,
+      companyId: companyId || null,
       userId: req.user._id,
       journalId: id,
       reversalDate: reversal_date,
@@ -365,24 +420,30 @@ async function reverseJournal(req, res) {
   }
 }
 
-// Trial Balance Report
+// Trial Balance Report (Company-scoped)
 async function getTrialBalance(req, res) {
   try {
     const tenantId = req.tenantId;
-    const tb = await computeTrialBalance(tenantId);
+    const companyId = req.companyId;
+    const tb = await computeTrialBalance(tenantId, null, companyId || null);
     return res.success(tb);
   } catch (err) {
     return res.error('Failed to compute trial balance', 500, err.message);
   }
 }
 
-// Posting Rules CRUD
+// Posting Rules CRUD (Company-scoped with tenant fallback)
 async function getPostingRules(req, res) {
   try {
     const tenantId = req.tenantId;
-    const rules = await PostingRule.find({
-      $or: [{ tenant_id: tenantId }, { tenant_id: null }]
-    }).sort({ rule_code: 1 });
+    const companyId = req.companyId;
+
+    const orClauses = [{ tenant_id: tenantId }, { tenant_id: null }];
+    if (companyId) {
+      orClauses.unshift({ tenant_id: tenantId, company_id: companyId });
+    }
+
+    const rules = await PostingRule.find({ $or: orClauses }).sort({ rule_code: 1 });
 
     const ruleIds = rules.map(r => r._id);
     const lines = await PostingRuleLine.find({ posting_rule_id: { $in: ruleIds } }).sort({ line_number: 1 });
@@ -401,19 +462,24 @@ async function getPostingRules(req, res) {
 async function createPostingRule(req, res) {
   try {
     const tenantId = req.tenantId;
+    const companyId = req.companyId;
     const { rule_code, event_type, rule_name, description, applicable_module, lines } = req.body;
 
     if (!rule_code || !event_type || !rule_name || !lines || lines.length < 2) {
       return res.error('rule_code, event_type, rule_name, and at least 2 rule lines are required', 400);
     }
 
-    const exists = await PostingRule.findOne({ tenant_id: tenantId, rule_code: rule_code.toUpperCase().trim() });
+    const dupQuery = { tenant_id: tenantId, rule_code: rule_code.toUpperCase().trim() };
+    if (companyId) dupQuery.company_id = companyId;
+
+    const exists = await PostingRule.findOne(dupQuery);
     if (exists) {
       return res.error(`Posting rule code "${rule_code}" already exists`, 409);
     }
 
     const rule = await PostingRule.create({
       tenant_id: tenantId,
+      company_id: companyId || null,
       rule_code: rule_code.toUpperCase().trim(),
       event_type: event_type.toUpperCase().trim(),
       rule_name: rule_name.trim(),

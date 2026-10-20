@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace, requireModuleEntitlement, requirePermission } = require('../middleware/tenantMiddleware');
+const { requireCompanyContext } = require('../middleware/companyMiddleware');
 
 const glController = require('../controllers/glController');
 
-// GL Module Router with Entitlement Gating
-router.use(requireAuth, requireTenantWorkspace, requireModuleEntitlement('GL'));
+// GL Module Router with Entitlement Gating and Company Context
+router.use(requireAuth, requireTenantWorkspace, requireCompanyContext, requireModuleEntitlement('GL'));
 
 // Staged endpoint for GL Chart of Accounts / Subledger inspection
 router.get('/ping', requirePermission('GL:VIEW'), (req, res) => {

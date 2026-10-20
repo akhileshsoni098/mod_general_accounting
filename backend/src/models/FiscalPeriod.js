@@ -8,6 +8,12 @@ const FiscalPeriodSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     period_name: {
       type: String,
       required: true,
@@ -65,7 +71,7 @@ const FiscalPeriodSchema = new mongoose.Schema(
   }
 );
 
-FiscalPeriodSchema.index({ tenant_id: 1, period_name: 1 }, { unique: true });
-FiscalPeriodSchema.index({ tenant_id: 1, start_date: 1, end_date: 1 });
+FiscalPeriodSchema.index({ tenant_id: 1, company_id: 1, period_name: 1 }, { unique: true });
+FiscalPeriodSchema.index({ tenant_id: 1, company_id: 1, start_date: 1, end_date: 1 });
 
 module.exports = mongoose.model('FiscalPeriod', FiscalPeriodSchema);

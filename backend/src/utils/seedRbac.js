@@ -13,10 +13,18 @@ const STANDARD_PERMISSIONS = [
   { code: 'USER:MANAGE_ROLES', module: 'TENANT_ADMIN', description: 'Assign roles to tenant users' },
   { code: 'MODULE:CONFIGURE', module: 'TENANT_ADMIN', description: 'Configure module entitlements' },
 
+  // COMPANY & BUSINESS PROFILE MANAGEMENT
+  { code: 'COMPANY:VIEW', module: 'TENANT_ADMIN', description: 'View company details and accessible companies' },
+  { code: 'COMPANY:CREATE', module: 'TENANT_ADMIN', description: 'Create and initialize a new company set of books' },
+  { code: 'COMPANY:UPDATE', module: 'TENANT_ADMIN', description: 'Update company configuration and tax settings' },
+  { code: 'COMPANY:MANAGE_MEMBERS', module: 'TENANT_ADMIN', description: 'Manage company user memberships and roles' },
+  { code: 'COMPANY:ADMIN', module: 'TENANT_ADMIN', description: 'Full administrative control over company settings and status' },
+
   // GENERAL LEDGER
   { code: 'GL:VIEW', module: 'GL', description: 'View general ledger, accounts, journals' },
   { code: 'GL:POST', module: 'GL', description: 'Post manual or automated journal entries' },
   { code: 'GL:ADMIN', module: 'GL', description: 'Manage chart of accounts and subledgers' },
+  { code: 'PERIOD:ADMIN', module: 'GL', description: 'Manage fiscal periods and period lock within company' },
 
   // BILLING & AR
   { code: 'BILLING:VIEW', module: 'BILLING_AR', description: 'View billing schedules, invoices, payments' },
@@ -59,7 +67,8 @@ const STANDARD_ROLES = [
     is_system_role: true,
     permissions: [
       'USER:VIEW',
-      'GL:VIEW', 'GL:POST', 'GL:ADMIN',
+      'COMPANY:VIEW', 'COMPANY:UPDATE',
+      'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
       'BILLING:VIEW', 'BILLING:CREATE', 'BILLING:ADMIN',
       'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -72,6 +81,7 @@ const STANDARD_ROLES = [
     description: 'General ledger journal entry creation, posting, reconciliation and audit review.',
     is_system_role: true,
     permissions: [
+      'COMPANY:VIEW',
       'GL:VIEW', 'GL:POST',
       'BILLING:VIEW',
       'COMMISSIONS:VIEW',
@@ -85,6 +95,7 @@ const STANDARD_ROLES = [
     description: 'Manages customer invoicing, payment plans, cash receipts and accounts receivable.',
     is_system_role: true,
     permissions: [
+      'COMPANY:VIEW',
       'BILLING:VIEW', 'BILLING:CREATE',
       'GL:VIEW'
     ]
@@ -95,6 +106,7 @@ const STANDARD_ROLES = [
     description: 'Manages bank statements, bank reconciliations, cash positioning and transfers.',
     is_system_role: true,
     permissions: [
+      'COMPANY:VIEW',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
       'GL:VIEW'
     ]
@@ -105,7 +117,8 @@ const STANDARD_ROLES = [
     description: 'Accounting controller with full oversight over posting, settlement, and month-end close execution.',
     is_system_role: true,
     permissions: [
-      'GL:VIEW', 'GL:POST', 'GL:ADMIN',
+      'COMPANY:VIEW', 'COMPANY:UPDATE',
+      'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
       'BILLING:VIEW', 'BILLING:CREATE',
       'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -119,6 +132,7 @@ const STANDARD_ROLES = [
     is_system_role: true,
     permissions: [
       'TENANT:VIEW',
+      'COMPANY:VIEW',
       'GL:VIEW',
       'BILLING:VIEW',
       'COMMISSIONS:VIEW',

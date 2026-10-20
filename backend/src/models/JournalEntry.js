@@ -8,6 +8,12 @@ const JournalEntrySchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     journal_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Journal',
@@ -58,5 +64,6 @@ const JournalEntrySchema = new mongoose.Schema(
 
 JournalEntrySchema.index({ tenant_id: 1, journal_id: 1, line_number: 1 }, { unique: true });
 JournalEntrySchema.index({ tenant_id: 1, ledger_account_id: 1 });
+JournalEntrySchema.index({ tenant_id: 1, company_id: 1, ledger_account_id: 1 });
 
 module.exports = mongoose.model('JournalEntry', JournalEntrySchema);

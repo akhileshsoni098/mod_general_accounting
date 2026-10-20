@@ -29,6 +29,12 @@ const PostingRuleSchema = new mongoose.Schema(
       default: null, // null = system default rule template
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null, // null = tenant-wide or system default rule template
+      index: true
+    },
     rule_code: {
       type: String,
       required: true,
@@ -150,8 +156,8 @@ const PostingRuleSchema = new mongoose.Schema(
   }
 );
 
-PostingRuleSchema.index({ tenant_id: 1, rule_code: 1, version: 1 }, { unique: true });
-PostingRuleSchema.index({ tenant_id: 1, event_code: 1, status: 1 });
-PostingRuleSchema.index({ tenant_id: 1, priority: 1 });
+PostingRuleSchema.index({ tenant_id: 1, company_id: 1, rule_code: 1, version: 1 }, { unique: true });
+PostingRuleSchema.index({ tenant_id: 1, company_id: 1, event_code: 1, status: 1 });
+PostingRuleSchema.index({ tenant_id: 1, company_id: 1, priority: 1 });
 
 module.exports = mongoose.model('PostingRule', PostingRuleSchema);

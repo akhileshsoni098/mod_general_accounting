@@ -8,6 +8,12 @@ const PartySchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true
+    },
     party_code: {
       type: String,
       required: true,
@@ -80,9 +86,9 @@ const PartySchema = new mongoose.Schema(
   }
 );
 
-// Compound tenant boundary index
-PartySchema.index({ tenant_id: 1, party_code: 1 }, { unique: true });
-PartySchema.index({ tenant_id: 1, legal_name: 1 });
-PartySchema.index({ tenant_id: 1, status: 1 });
+// Compound tenant and company boundary index
+PartySchema.index({ tenant_id: 1, company_id: 1, party_code: 1 }, { unique: true });
+PartySchema.index({ tenant_id: 1, company_id: 1, legal_name: 1 });
+PartySchema.index({ tenant_id: 1, company_id: 1, status: 1 });
 
 module.exports = mongoose.model('Party', PartySchema);

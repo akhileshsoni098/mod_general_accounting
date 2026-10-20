@@ -8,12 +8,16 @@ export async function apiRequest(endpoint, { method = 'GET', body = null, token 
 
   const storedToken = token || localStorage.getItem('veridex_token');
   const storedTenantId = tenantId || localStorage.getItem('veridex_tenant_id');
+  const storedCompanyId = customHeaders['x-company-id'] || localStorage.getItem('veridex_company_id');
 
   if (storedToken) {
     headers['Authorization'] = `Bearer ${storedToken}`;
   }
   if (storedTenantId) {
     headers['x-tenant-id'] = storedTenantId;
+  }
+  if (storedCompanyId) {
+    headers['x-company-id'] = storedCompanyId;
   }
 
   const options = {
@@ -54,6 +58,16 @@ export const authApi = {
     method: 'POST',
     headers: { 'x-confirm-destructive-reset': 'CONFIRM_RESET_ALL_DATA' }
   }),
+
+  // Company & Multi-Entity Endpoints
+  getCompanies: () => apiRequest('/companies'),
+  getCompanyDetails: (id) => apiRequest(`/companies/${id}`),
+  createCompany: (payload) => apiRequest('/companies', { method: 'POST', body: payload }),
+  updateCompany: (id, payload) => apiRequest(`/companies/${id}`, { method: 'PATCH', body: payload }),
+  switchCompany: (company_id, make_default = true) => apiRequest('/companies/switch', { method: 'POST', body: { company_id, make_default } }),
+  getCompanyMembers: (id) => apiRequest(`/companies/${id}/members`),
+  addCompanyMember: (id, payload) => apiRequest(`/companies/${id}/members`, { method: 'POST', body: payload }),
+  getBusinessProfiles: () => apiRequest('/companies/profiles'),
 
   // GL Module Endpoints
   getAccounts: () => apiRequest('/gl/accounts'),

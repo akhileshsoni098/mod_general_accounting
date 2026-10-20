@@ -8,6 +8,7 @@ const { seedPersonas } = require('./utils/seedPersonas');
 
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
+const companyRoutes = require('./routes/companyRoutes');
 const glRoutes = require('./routes/glRoutes');
 const billingRoutes = require('./routes/billingRoutes');
 const treasuryRoutes = require('./routes/treasuryRoutes');
@@ -53,6 +54,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tenant', tenantRoutes);
+app.use('/api/v1/companies', companyRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/counterparties', counterpartyRoutes);
 app.use('/api/v1/gl', glRoutes);

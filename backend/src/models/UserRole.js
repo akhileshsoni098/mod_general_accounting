@@ -20,6 +20,12 @@ const UserRoleSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    company_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null, // null represents tenant-wide role assignment
+      index: true
+    },
     row_version: {
       type: Number,
       default: 1
@@ -31,6 +37,6 @@ const UserRoleSchema = new mongoose.Schema(
   }
 );
 
-UserRoleSchema.index({ tenant_id: 1, user_id: 1, role_id: 1 }, { unique: true });
+UserRoleSchema.index({ tenant_id: 1, company_id: 1, user_id: 1, role_id: 1 }, { unique: true });
 
 module.exports = mongoose.model('UserRole', UserRoleSchema);
