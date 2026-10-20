@@ -96,6 +96,14 @@ const StockItemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Decimal128,
       default: () => mongoose.Types.Decimal128.fromString('0.00')
     },
+    standard_cost: {
+      type: Number,
+      default: 0
+    },
+    standard_selling_price: {
+      type: Number,
+      default: 0
+    },
     currency: {
       type: String,
       default: 'USD'

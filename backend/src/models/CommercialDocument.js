@@ -8,7 +8,7 @@ const CommercialDocumentLineSchema = new mongoose.Schema(
     },
     line_type: {
       type: String,
-      enum: ['ITEM', 'SERVICE', 'ACCOUNT'],
+      enum: ['ITEM', 'SERVICE', 'ACCOUNT', 'GOODS', 'SERVICES'],
       default: 'ITEM'
     },
     stock_item_id: {

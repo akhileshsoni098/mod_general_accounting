@@ -108,7 +108,7 @@ function makeAuthRequestB({ method = 'GET', path, companyId = null, body = null 
 }
 
 test.before(async () => {
-  const result = await startServer();
+  const result = await startServer(PORT);
   serverInstance = result.server;
 });
 

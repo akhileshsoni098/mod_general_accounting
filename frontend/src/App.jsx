@@ -21,6 +21,12 @@ import ConfigBundlePage from './pages/ConfigBundlePage';
 import EventOperationsPage from './pages/EventOperationsPage';
 import DimensionsPage from './pages/DimensionsPage';
 import InventoryWorkspacePage from './pages/InventoryWorkspacePage';
+import CommercialWorkspacePage from './pages/CommercialWorkspacePage';
+import RetailPosPage from './pages/RetailPosPage';
+import RestaurantWorkspacePage from './pages/RestaurantWorkspacePage';
+import HotelWorkspacePage from './pages/HotelWorkspacePage';
+import ManufacturingWorkspacePage from './pages/ManufacturingWorkspacePage';
+import PlatformAdminPage from './pages/PlatformAdminPage';
 import CompanySelector from './components/CompanySelector';
 
 import { useTheme } from './context/ThemeContext';
@@ -49,7 +55,12 @@ import {
   RotateCcw,
   Tags,
   Sun,
-  Moon
+  Moon,
+  ShoppingCart,
+  UtensilsCrossed,
+  Building,
+  Factory,
+  ShieldAlert
 } from 'lucide-react';
 import { authApi } from './services/api';
 
@@ -127,6 +138,15 @@ export default function App() {
     { id: 'counterparties', label: 'Counterparties', icon: Users2 }
   ];
 
+  // Industry & Commercial Workspaces Navigation
+  const industryNavItems = [
+    { id: 'commercial', label: 'Commercial Invoicing & GST', icon: Receipt },
+    { id: 'retail_pos', label: 'Retail POS Checkout', icon: ShoppingCart },
+    { id: 'restaurant', label: 'Restaurant & Kitchen Orders', icon: UtensilsCrossed },
+    { id: 'hotel', label: 'Hotel PMS & Hospitality', icon: Building },
+    { id: 'manufacturing', label: 'Manufacturing & Assembly', icon: Factory }
+  ];
+
   // Accounting Configuration & Rules-Driven Engine Navigation
   const rulesNavItems = [
     { id: 'event_definitions', label: 'Event Definitions', icon: FileCode },
@@ -143,7 +163,8 @@ export default function App() {
   const adminNavItems = [
     { id: 'users', label: 'Users & Roles', icon: Users },
     { id: 'settings', label: 'Organization Settings', icon: Sliders },
-    { id: 'modules', label: 'Module Configuration', icon: Layers }
+    { id: 'modules', label: 'Module Configuration', icon: Layers },
+    ...(isAdmin ? [{ id: 'platform_admin', label: 'Platform Super Admin', icon: ShieldAlert }] : [])
   ];
 
   const tenantType = currentWorkspace?.tenant_type || 'MGA';
@@ -264,6 +285,31 @@ export default function App() {
               })}
             </div>
 
+            {/* Commercial & Industry Workspaces Group */}
+            <div className="space-y-1 pt-2 border-t border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
+                Commercial & Industry
+              </div>
+              {industryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                      isActive
+                        ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/30 font-semibold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Accounting Configuration Group */}
             <div className="space-y-1 pt-2 border-t border-slate-800/80">
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
@@ -335,6 +381,11 @@ export default function App() {
           {activeTab === 'dashboard' && <TenantDashboardPage onNavigateTab={setActiveTab} />}
           {activeTab === 'gl' && <GLWorkspacePage />}
           {activeTab === 'inventory' && <InventoryWorkspacePage />}
+          {activeTab === 'commercial' && <CommercialWorkspacePage />}
+          {activeTab === 'retail_pos' && <RetailPosPage />}
+          {activeTab === 'restaurant' && <RestaurantWorkspacePage />}
+          {activeTab === 'hotel' && <HotelWorkspacePage />}
+          {activeTab === 'manufacturing' && <ManufacturingWorkspacePage />}
           {activeTab === 'billing_ar' && <BillingWorkspacePage />}
           {activeTab === 'commissions_fiduciary' && <CommissionsWorkspacePage />}
           {activeTab === 'treasury_bank_rec' && <TreasuryWorkspacePage />}
@@ -350,6 +401,7 @@ export default function App() {
           {activeTab === 'users' && <UserManagementPage />}
           {activeTab === 'settings' && <OrganizationSettingsPage />}
           {activeTab === 'modules' && <ModuleConfigPage />}
+          {activeTab === 'platform_admin' && <PlatformAdminPage />}
         </main>
       </div>
     </div>

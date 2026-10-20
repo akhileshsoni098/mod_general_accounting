@@ -61,40 +61,41 @@ async function processDocumentLines({ tenantId, companyId, party, company, lines
     let factor = '1.0';
     let baseQty = raw.quantity ? raw.quantity.toString() : '1.0000';
 
-    if (raw.stock_item_id) {
+    const itemId = raw.stock_item_id || raw.item_id;
+    if (itemId) {
       stockItem = await StockItem.findOne({
-        _id: raw.stock_item_id,
+        _id: itemId,
         tenant_id: tenantId,
         company_id: companyId
       }).populate('base_uom_id');
 
       if (!stockItem) {
-        throw new Error(`StockItem "${raw.stock_item_id}" does not exist in active company`);
+        throw new Error(`StockItem "${itemId}" does not exist in active company`);
       }
-      if (stockItem.status !== 'ACTIVE') {
+      if (stockItem.status && stockItem.status !== 'ACTIVE') {
         throw new Error(`StockItem "${stockItem.item_name}" is inactive`);
       }
 
-      const targetUomId = raw.uom_id || stockItem.base_uom_id._id;
-      uom = await UnitOfMeasurement.findOne({
-        _id: targetUomId,
-        tenant_id: tenantId,
-        company_id: companyId
-      });
-
-      if (!uom) {
-        throw new Error(`UOM "${targetUomId}" not found`);
+      const targetUomId = raw.uom_id || (stockItem.base_uom_id ? stockItem.base_uom_id._id : null);
+      if (targetUomId) {
+        uom = await UnitOfMeasurement.findOne({
+          _id: targetUomId,
+          tenant_id: tenantId,
+          company_id: companyId
+        });
       }
 
       // Convert quantity to base unit
-      const conv = await convertToBaseQuantity({
-        stockItem,
-        uom,
-        baseUom: stockItem.base_uom_id,
-        quantity: raw.quantity || '1'
-      });
-      factor = conv.factor;
-      baseQty = conv.base_quantity;
+      if (stockItem.base_uom_id && uom) {
+        const conv = await convertToBaseQuantity({
+          stockItem,
+          uom,
+          baseUom: stockItem.base_uom_id,
+          quantity: raw.quantity || '1'
+        });
+        factor = conv.factor;
+        baseQty = conv.base_quantity;
+      }
 
       if (raw.godown_id) {
         godown = await Godown.findOne({
@@ -108,20 +109,29 @@ async function processDocumentLines({ tenantId, companyId, party, company, lines
       }
     }
 
-    // Determine tax rate: line override > item tax rate > 0
+    // Determine tax rate: line override > tax_rate_code > item tax rate > 0
     let taxRate = '0.00';
     if (raw.tax_rate !== undefined && raw.tax_rate !== null) {
       taxRate = raw.tax_rate.toString();
+    } else if (raw.tax_rate_code) {
+      const match = String(raw.tax_rate_code).match(/\d+/);
+      if (match) taxRate = match[0];
     } else if (stockItem && stockItem.tax_rate !== undefined && stockItem.tax_rate !== null) {
       taxRate = stockItem.tax_rate.toString();
     }
 
-    // Determine unit rate: line input > item sales/purchase price
-    let unitRate = raw.unit_rate !== undefined ? raw.unit_rate.toString() : '0.00';
-    if (new BigNumber(unitRate).isZero() && stockItem) {
+    // Determine unit rate: line input (unit_rate / unit_price / rate) > item sales/purchase price
+    let unitRate = '0.00';
+    if (raw.unit_rate !== undefined && raw.unit_rate !== null) {
+      unitRate = raw.unit_rate.toString();
+    } else if (raw.unit_price !== undefined && raw.unit_price !== null) {
+      unitRate = raw.unit_price.toString();
+    } else if (raw.rate !== undefined && raw.rate !== null) {
+      unitRate = raw.rate.toString();
+    } else if (stockItem) {
       unitRate = raw.document_type === 'PURCHASE_INVOICE'
-        ? (stockItem.purchase_price ? stockItem.purchase_price.toString() : '0.00')
-        : (stockItem.sales_price ? stockItem.sales_price.toString() : '0.00');
+        ? (stockItem.purchase_price ? stockItem.purchase_price.toString() : (stockItem.standard_cost ? stockItem.standard_cost.toString() : '0.00'))
+        : (stockItem.sales_price ? stockItem.sales_price.toString() : (stockItem.standard_selling_price ? stockItem.standard_selling_price.toString() : '0.00'));
     }
 
     const calculatedTax = calculateLineTax({
@@ -135,7 +145,11 @@ async function processDocumentLines({ tenantId, companyId, party, company, lines
 
     processedLines.push({
       line_number: i + 1,
-      line_type: raw.line_type || (stockItem ? (stockItem.is_stock_tracked ? 'ITEM' : 'SERVICE') : 'ACCOUNT'),
+      line_type: ['SERVICE', 'SERVICES'].includes(raw.line_type)
+        ? 'SERVICE'
+        : (['ITEM', 'GOODS'].includes(raw.line_type)
+          ? 'ITEM'
+          : (raw.line_type || (stockItem ? (stockItem.is_stock_tracked ? 'ITEM' : 'SERVICE') : 'ACCOUNT'))),
       stock_item_id: stockItem ? stockItem._id : null,
       item_code: stockItem ? stockItem.item_code : (raw.item_code || ''),
       item_name: stockItem ? stockItem.item_name : (raw.item_name || raw.description || ''),

@@ -51,7 +51,13 @@ const JournalSchema = new mongoose.Schema(
         'COMMERCIAL_COGS',
         'OPENING_STOCK',
         'COMMERCIAL',
-        'INVENTORY'
+        'INVENTORY',
+        'RETAIL_POS',
+        'RESTAURANT',
+        'HOTEL_PMS',
+        'NIGHT_AUDIT',
+        'MANUFACTURING',
+        'SERVICES'
       ],
       default: 'GL_MANUAL'
     },

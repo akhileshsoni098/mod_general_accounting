@@ -36,7 +36,11 @@ const StockMovementSchema = new mongoose.Schema(
         'TRANSFER_IN',
         'TRANSFER_OUT',
         'PHYSICAL_ADJUSTMENT',
-        'REVERSAL'
+        'REVERSAL',
+        'RECIPE_CONSUMPTION',
+        'PRODUCTION_ISSUE',
+        'PRODUCTION_RECEIPT',
+        'WASTAGE'
       ],
       index: true
     },

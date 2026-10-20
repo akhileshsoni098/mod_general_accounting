@@ -161,6 +161,72 @@ async function initializeCompany({
       console.warn('[Commercial Init Warning]', commInitErr.message);
     }
 
+    // 7. Seed Industry Specific Presets based on Business Profile
+    try {
+      if (['RESTAURANT_CAFE', 'PIZZA_QSR'].includes(company.business_profile)) {
+        const { RestaurantTable } = require('../models');
+        for (let i = 1; i <= 5; i++) {
+          await RestaurantTable.findOneAndUpdate(
+            { company_id: company._id, table_number: `T-0${i}` },
+            {
+              tenant_id: tenantId,
+              company_id: company._id,
+              table_number: `T-0${i}`,
+              section: 'MAIN_HALL',
+              capacity: 4,
+              status: 'VACANT'
+            },
+            { upsert: true, session }
+          );
+        }
+      } else if (company.business_profile === 'HOTEL_HOSPITALITY') {
+        const { HotelRoomType, HotelRoom } = require('../models');
+        const deluxe = await HotelRoomType.findOneAndUpdate(
+          { company_id: company._id, type_code: 'DELUXE' },
+          {
+            tenant_id: tenantId,
+            company_id: company._id,
+            type_code: 'DELUXE',
+            type_name: 'Deluxe King Suite',
+            base_rate: 3500,
+            max_occupancy: 2,
+            is_active: true
+          },
+          { upsert: true, new: true, session }
+        );
+
+        for (const num of ['101', '102', '201', '202']) {
+          await HotelRoom.findOneAndUpdate(
+            { company_id: company._id, room_number: num },
+            {
+              tenant_id: tenantId,
+              company_id: company._id,
+              room_number: num,
+              room_type_id: deluxe._id,
+              floor: num[0],
+              status: 'CLEAN'
+            },
+            { upsert: true, session }
+          );
+        }
+      } else if (company.business_profile === 'MANUFACTURING') {
+        const { Godown } = require('../models');
+        await Godown.findOneAndUpdate(
+          { company_id: company._id, godown_code: 'FG_WH' },
+          {
+            tenant_id: tenantId,
+            company_id: company._id,
+            godown_code: 'FG_WH',
+            name: 'Finished Goods Warehouse',
+            is_active: true
+          },
+          { upsert: true, session }
+        );
+      }
+    } catch (indInitErr) {
+      console.warn('[Industry Presets Init Warning]', indInitErr.message);
+    }
+
     return {
       company,
       membership,

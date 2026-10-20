@@ -310,5 +310,79 @@ export const inventoryApi = {
   reconcileBalances: (payload = {}) => apiRequest('/inventory/reconcile', { method: 'POST', body: payload })
 };
 
+export const commercialApi = {
+  getDocuments: (params = '') => apiRequest(`/commercial/documents${params}`),
+  getDocumentById: (id) => apiRequest(`/commercial/documents/${id}`),
+  createDraftDocument: (payload) => apiRequest('/commercial/documents', { method: 'POST', body: payload }),
+  postDocument: (id) => apiRequest(`/commercial/documents/${id}/post`, { method: 'POST' }),
+  reverseDocument: (id, payload) => apiRequest(`/commercial/documents/${id}/reverse`, { method: 'POST', body: payload }),
+  getSalesRegister: (params = '') => apiRequest(`/commercial/reports/sales-register${params}`),
+  getPurchaseRegister: (params = '') => apiRequest(`/commercial/reports/purchase-register${params}`),
+  getCustomerAging: (params = '') => apiRequest(`/commercial/reports/customer-aging${params}`),
+  getSupplierAging: (params = '') => apiRequest(`/commercial/reports/supplier-aging${params}`),
+  getGstSummary: (params = '') => apiRequest(`/commercial/reports/gst-summary${params}`),
+  getOpeningStockGlPreview: () => apiRequest('/commercial/opening-stock-gl/preview'),
+  postOpeningStockGlCatchup: (payload = {}) => apiRequest('/commercial/opening-stock-gl/catch-up', { method: 'POST', body: payload })
+};
+
+export const platformApi = {
+  getPlans: () => apiRequest('/platform/plans'),
+  getTenants: () => apiRequest('/platform/tenants'),
+  getTenantSubscription: (tenantId) => apiRequest(`/platform/tenants/${tenantId}/subscription`),
+  updateTenantPlan: (tenantId, payload) => apiRequest(`/platform/tenants/${tenantId}/subscription`, { method: 'PUT', body: payload }),
+  updateTenantStatus: (tenantId, payload) => apiRequest(`/platform/tenants/${tenantId}/status`, { method: 'PUT', body: payload }),
+  getAuditLogs: () => apiRequest('/platform/audit-logs')
+};
+
+export const posApi = {
+  openShift: (payload) => apiRequest('/retail-pos/shifts/open', { method: 'POST', body: payload }),
+  getCurrentShift: () => apiRequest('/retail-pos/shifts/current'),
+  closeShift: (payload) => apiRequest('/retail-pos/shifts/close', { method: 'POST', body: payload }),
+  checkout: (payload) => apiRequest('/retail-pos/checkout', { method: 'POST', body: payload })
+};
+
+export const restaurantApi = {
+  getTables: () => apiRequest('/restaurant/tables'),
+  createTable: (payload) => apiRequest('/restaurant/tables', { method: 'POST', body: payload }),
+  saveRecipe: (payload) => apiRequest('/restaurant/recipes', { method: 'POST', body: payload }),
+  getRecipe: (menuItemId, variant = '') => apiRequest(`/restaurant/recipes/${menuItemId}${variant ? `?variant=${variant}` : ''}`),
+  getOrders: () => apiRequest('/restaurant/orders'),
+  createOrder: (payload) => apiRequest('/restaurant/orders', { method: 'POST', body: payload }),
+  sendToKitchen: (orderId) => apiRequest(`/restaurant/orders/${orderId}/kot`, { method: 'POST' }),
+  settleOrder: (orderId, payload = {}) => apiRequest(`/restaurant/orders/${orderId}/settle`, { method: 'POST', body: payload })
+};
+
+export const hotelApi = {
+  getRoomTypes: () => apiRequest('/hotel/room-types'),
+  createRoomType: (payload) => apiRequest('/hotel/room-types', { method: 'POST', body: payload }),
+  getRooms: () => apiRequest('/hotel/rooms'),
+  createRoom: (payload) => apiRequest('/hotel/rooms', { method: 'POST', body: payload }),
+  getReservations: () => apiRequest('/hotel/reservations'),
+  createReservation: (payload) => apiRequest('/hotel/reservations', { method: 'POST', body: payload }),
+  checkIn: (payload) => apiRequest('/hotel/check-in', { method: 'POST', body: payload }),
+  getFolio: (reservationId) => apiRequest(`/hotel/folios/${reservationId}`),
+  addFolioCharge: (folioId, payload) => apiRequest(`/hotel/folios/${folioId}/charges`, { method: 'POST', body: payload }),
+  checkOut: (payload) => apiRequest('/hotel/check-out', { method: 'POST', body: payload }),
+  runNightAudit: (payload) => apiRequest('/hotel/night-audit', { method: 'POST', body: payload }),
+  getMetrics: () => apiRequest('/hotel/metrics')
+};
+
+export const manufacturingApi = {
+  getBOMs: () => apiRequest('/manufacturing/boms'),
+  saveBOM: (payload) => apiRequest('/manufacturing/boms', { method: 'POST', body: payload }),
+  getWorkOrders: () => apiRequest('/manufacturing/work-orders'),
+  createWorkOrder: (payload) => apiRequest('/manufacturing/work-orders', { method: 'POST', body: payload }),
+  issueMaterials: (workOrderId) => apiRequest(`/manufacturing/work-orders/${workOrderId}/issue`, { method: 'POST' }),
+  completeProduction: (workOrderId, payload) => apiRequest(`/manufacturing/work-orders/${workOrderId}/complete`, { method: 'POST', body: payload })
+};
+
+export const dataExchangeApi = {
+  importAccounts: (payload) => apiRequest('/data-exchange/import/accounts', { method: 'POST', body: payload }),
+  importStockItems: (payload) => apiRequest('/data-exchange/import/stock-items', { method: 'POST', body: payload }),
+  exportAccounts: () => apiRequest('/data-exchange/export/accounts'),
+  exportStockBalances: () => apiRequest('/data-exchange/export/stock-balances')
+};
+
+
 
 

@@ -13,6 +13,11 @@ const PasswordResetToken = require('./PasswordResetToken');
 const Company = require('./Company');
 const CompanyMembership = require('./CompanyMembership');
 
+// SaaS Platform & Subscriptions
+const SubscriptionPlan = require('./SubscriptionPlan');
+const TenantSubscription = require('./TenantSubscription');
+const PlatformAuditLog = require('./PlatformAuditLog');
+
 // Module: Inventory & Stock Management (Phase 3 - 7 Models)
 const StockGroup = require('./StockGroup');
 const StockCategory = require('./StockCategory');
@@ -27,6 +32,18 @@ const CommercialDocument = require('./CommercialDocument');
 const BillAllocation = require('./BillAllocation');
 const CompanyPostingConfig = require('./CompanyPostingConfig');
 const TaxRateConfig = require('./TaxRateConfig');
+
+// Industry Modules: Retail, Hospitality, Food & Manufacturing
+const PosShift = require('./PosShift');
+const RecipeBOM = require('./RecipeBOM');
+const RestaurantTable = require('./RestaurantTable');
+const RestaurantOrder = require('./RestaurantOrder');
+const HotelRoomType = require('./HotelRoomType');
+const HotelRoom = require('./HotelRoom');
+const HotelReservation = require('./HotelReservation');
+const GuestFolio = require('./GuestFolio');
+const ManufacturingBOM = require('./ManufacturingBOM');
+const WorkOrder = require('./WorkOrder');
 
 // Module 14: Core General Ledger (7 Models)
 const LedgerAccount = require('./LedgerAccount');
@@ -117,11 +134,28 @@ module.exports = {
   StockMovement,
   StockBalance,
 
+  // SaaS Platform & Subscriptions
+  SubscriptionPlan,
+  TenantSubscription,
+  PlatformAuditLog,
+
   // Commercial Transactions, Invoicing, Tax & Posting (Phase 4)
   CommercialDocument,
   BillAllocation,
   CompanyPostingConfig,
   TaxRateConfig,
+
+  // Industry Modules
+  PosShift,
+  RecipeBOM,
+  RestaurantTable,
+  RestaurantOrder,
+  HotelRoomType,
+  HotelRoom,
+  HotelReservation,
+  GuestFolio,
+  ManufacturingBOM,
+  WorkOrder,
 
   // Core General Ledger
   LedgerAccount,

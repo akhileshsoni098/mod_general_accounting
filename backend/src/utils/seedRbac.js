@@ -70,7 +70,31 @@ const STANDARD_PERMISSIONS = [
   { code: 'ACCOUNT_MAPPING:VIEW', module: 'COMMERCIAL', description: 'View company posting account configurations' },
   { code: 'ACCOUNT_MAPPING:MANAGE', module: 'COMMERCIAL', description: 'Manage company posting account mappings' },
   { code: 'RECONCILIATION:VIEW', module: 'COMMERCIAL', description: 'View stock-to-GL and bill-wise reconciliations' },
-  { code: 'RECONCILIATION:EXECUTE', module: 'COMMERCIAL', description: 'Execute opening stock GL catch-up and reconciliations' }
+  { code: 'RECONCILIATION:EXECUTE', module: 'COMMERCIAL', description: 'Execute opening stock GL catch-up and reconciliations' },
+
+  // RETAIL POS
+  { code: 'POS:CHECKOUT', module: 'RETAIL_POS', description: 'Perform retail POS sales and tender payments' },
+  { code: 'POS:SHIFT_MANAGE', module: 'RETAIL_POS', description: 'Open, manage and close cashier shifts with cash reconciliation' },
+
+  // RESTAURANT, CAFE & QSR
+  { code: 'RESTAURANT:TABLE_MANAGE', module: 'RESTAURANT', description: 'Create and manage dining floor tables and sections' },
+  { code: 'RESTAURANT:ORDER', module: 'RESTAURANT', description: 'Take dine-in and takeaway food orders' },
+  { code: 'RESTAURANT:KOT', module: 'RESTAURANT', description: 'Issue and route Kitchen Order Tickets' },
+  { code: 'RESTAURANT:SETTLE', module: 'RESTAURANT', description: 'Settle restaurant bills and auto-consume recipe ingredients' },
+  { code: 'RESTAURANT:RECIPE_MANAGE', module: 'RESTAURANT', description: 'Configure dish Recipe BOM and ingredient ratios' },
+
+  // HOTEL & HOSPITALITY PMS
+  { code: 'HOTEL:RESERVATION', module: 'HOTEL_PMS', description: 'Create and manage room reservations and bookings' },
+  { code: 'HOTEL:CHECKIN', module: 'HOTEL_PMS', description: 'Check in guests and assign clean rooms' },
+  { code: 'HOTEL:CHECKOUT', module: 'HOTEL_PMS', description: 'Check out guests and settle folios' },
+  { code: 'HOTEL:FOLIO_MANAGE', module: 'HOTEL_PMS', description: 'Post room, dining, and incidental charges to folios' },
+  { code: 'HOTEL:NIGHT_AUDIT', module: 'HOTEL_PMS', description: 'Run idempotent nightly room charge audit and revenue recognition' },
+
+  // MANUFACTURING & ASSEMBLY
+  { code: 'MANUFACTURING:BOM_MANAGE', module: 'MANUFACTURING', description: 'Create and manage production Bill of Materials' },
+  { code: 'MANUFACTURING:WORK_ORDER', module: 'MANUFACTURING', description: 'Plan and schedule manufacturing work orders' },
+  { code: 'MANUFACTURING:ISSUE', module: 'MANUFACTURING', description: 'Issue raw materials to production floor' },
+  { code: 'MANUFACTURING:COMPLETE', module: 'MANUFACTURING', description: 'Complete production runs, add finished goods, and post GL costing' }
 ];
 
 const STANDARD_ROLES = [

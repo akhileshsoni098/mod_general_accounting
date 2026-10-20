@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const { connectDB } = require('./config/db');
 const { apiEnvelope } = require('./middleware/apiEnvelope');
 const { seedRbacCatalog } = require('./utils/seedRbac');
@@ -20,6 +21,12 @@ const counterpartyRoutes = require('./routes/counterpartyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const commercialRoutes = require('./routes/commercialRoutes');
+const platformAdminRoutes = require('./routes/platformAdminRoutes');
+const retailPosRoutes = require('./routes/retailPosRoutes');
+const restaurantRoutes = require('./routes/restaurantRoutes');
+const hotelPmsRoutes = require('./routes/hotelPmsRoutes');
+const manufacturingRoutes = require('./routes/manufacturingRoutes');
+const importExportRoutes = require('./routes/importExportRoutes');
 
 const eventDefinitionRoutes = require('./routes/eventDefinitionRoutes');
 const postingRuleRoutes = require('./routes/postingRuleRoutes');
@@ -31,6 +38,17 @@ const { createCorsOptions } = require('./config/corsConfig');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
 
 // CORS Configuration (Strict origin enforcement in production)
 app.use(cors(createCorsOptions()));
@@ -55,8 +73,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Readiness probe
+app.get('/ready', (req, res) => {
+  const isDbConnected = mongoose.connection.readyState === 1;
+  const topologyInfo = getDatabaseTopologyInfo();
+  if (!isDbConnected) {
+    return res.status(503).json({ status: 'NOT_READY', database: 'DISCONNECTED' });
+  }
+  return res.success({
+    status: 'READY',
+    uptime: process.uptime(),
+    memory_usage: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/platform', platformAdminRoutes);
 app.use('/api/v1/tenant', tenantRoutes);
 app.use('/api/v1/companies', companyRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
@@ -64,6 +98,11 @@ app.use('/api/v1/counterparties', counterpartyRoutes);
 app.use('/api/v1/gl', glRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/commercial', commercialRoutes);
+app.use('/api/v1/retail-pos', retailPosRoutes);
+app.use('/api/v1/restaurant', restaurantRoutes);
+app.use('/api/v1/hotel', hotelPmsRoutes);
+app.use('/api/v1/manufacturing', manufacturingRoutes);
+app.use('/api/v1/data-exchange', importExportRoutes);
 app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/treasury', treasuryRoutes);
 app.use('/api/v1/commissions', commissionsRoutes);
@@ -86,24 +125,25 @@ app.use((err, req, res, next) => {
   return res.error(err.message || 'Internal server error', 500);
 });
 
-async function startServer() {
+async function startServer(portOverride) {
   await connectDB();
   await seedRbacCatalog();
   if (process.env.ENABLE_DEMO_SEEDING === 'true') {
     await seedPersonas();
   }
 
+  const activePort = portOverride || process.env.PORT || PORT;
   const server = await new Promise((resolve, reject) => {
-    const s = app.listen(PORT, () => {
+    const s = app.listen(activePort, () => {
       console.log(`=======================================================`);
-      console.log(`  VERIDEX ONE FINANCE SAAS BACKEND LISTENING ON ${PORT}`);
+      console.log(`  VERIDEX ONE FINANCE SAAS BACKEND LISTENING ON ${activePort}`);
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`=======================================================`);
       resolve(s);
     });
     s.once('error', (err) => {
       if (err.code === 'EADDRINUSE') {
-        console.log(`[Server] Port ${PORT} already in use. Reusing existing running server.`);
+        console.log(`[Server] Port ${activePort} already in use. Reusing existing running server.`);
         resolve(null);
       } else {
         reject(err);

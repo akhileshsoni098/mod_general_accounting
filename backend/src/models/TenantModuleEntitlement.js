@@ -11,7 +11,20 @@ const TenantModuleEntitlementSchema = new mongoose.Schema(
     module_code: {
       type: String,
       required: true,
-      enum: ['GL', 'BILLING_AR', 'COMMISSIONS_FIDUCIARY', 'TREASURY_BANK_REC', 'FINANCE_CLOSE', 'INVENTORY', 'COMMERCIAL'],
+      enum: [
+        'GL',
+        'BILLING_AR',
+        'COMMISSIONS_FIDUCIARY',
+        'TREASURY_BANK_REC',
+        'FINANCE_CLOSE',
+        'INVENTORY',
+        'COMMERCIAL',
+        'RETAIL_POS',
+        'RESTAURANT',
+        'HOTEL_PMS',
+        'MANUFACTURING',
+        'SERVICES'
+      ],
       uppercase: true
     },
     is_enabled: {
