@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color-scheme: dark;
+}
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* =====================================================================
+   DARK / NIGHT THEME (DEFAULT)
+   ===================================================================== */
+:root, .dark {
+  color-scheme: dark;
+
+  /* Standard Tailwind Slate Channels (R G B) */
+  --color-slate-50: 248 250 252;
+  --color-slate-100: 241 245 249;
+  --color-slate-200: 226 232 240;
+  --color-slate-300: 203 213 225;
+  --color-slate-400: 148 163 184;
+  --color-slate-500: 100 116 139;
+  --color-slate-600: 71 85 105;
+  --color-slate-700: 51 65 85;
+  --color-slate-750: 40 53 72;
+  --color-slate-800: 30 41 59;
+  --color-slate-850: 21 30 46;
+  --color-slate-900: 15 23 42;
+  --color-slate-950: 11 15 25;
+}
+
+/* Custom scrollbars - Dark */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* =====================================================================
+   LIGHT / DAY THEME (DAY MOOD)
+   ===================================================================== */
+.light {
+  color-scheme: light;
+
+  /* Executive Light Palette Mappings */
+  --color-slate-950: 248 250 252; /* #f8fafc - App Background */
+  --color-slate-900: 255 255 255; /* #ffffff - Cards, Header, Sidebar, Modals */
+  --color-slate-850: 241 245 249; /* #f1f5f9 - Table headers, subtle hover */
+  --color-slate-800: 226 232 240; /* #e2e8f0 - Card borders, secondary buttons */
+  --color-slate-750: 203 213 225; /* #cbd5e1 - Secondary button hover */
+  --color-slate-700: 203 213 225; /* #cbd5e1 - Input borders, dividers */
+  --color-slate-600: 100 116 139; /* #64748b - Muted labels */
+  --color-slate-500: 100 116 139; /* #64748b - Subtitles, captions */
+  --color-slate-400: 71 85 105;   /* #475569 - Secondary text, high-contrast readable */
+  --color-slate-300: 51 65 85;    /* #334155 - Table cell text, body */
+  --color-slate-200: 30 41 59;    /* #1e293b - Subheadings */
+  --color-slate-100: 15 23 42;    /* #0f172a - Primary headings & text */
+  --color-slate-50: 2 6 23;       /* #020617 - Deepest dark text */
+}
+
+/* Custom scrollbars - Light */
+.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Primary text inversion for Light mode */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+/* Saturated colored buttons and badge contents retain crisp white text */
+html.light button.bg-brand-600,
+html.light button.bg-brand-500,
+html.light button.bg-emerald-600,
+html.light button.bg-rose-600,
+html.light button.bg-blue-600,
+html.light button.bg-brand-600 *,
+html.light button.bg-brand-500 *,
+html.light button.bg-emerald-600 *,
+html.light button.bg-rose-600 *,
+html.light button.bg-blue-600 *,
+html.light div.bg-brand-600,
+html.light div.bg-brand-600 *,
+html.light div.bg-brand-500,
+html.light div.bg-brand-500 *,
+html.light a.bg-brand-600,
+html.light a.bg-brand-600 * {
+  color: #ffffff !important;
+}
+
+/* High contrast financial indicators in Light mode */
+.light .text-emerald-400 {
+  color: #059669; /* Emerald-600 for sharp readability on white */
+}
+.light .text-brand-400 {
+  color: #059669;
+}
+.light .text-amber-400 {
+  color: #d97706; /* Amber-600 */
+}
+.light .text-rose-400 {
+  color: #e11d48; /* Rose-600 */
+}
+.light .text-blue-400 {
+  color: #2563eb; /* Blue-600 */
+}
+.light .text-purple-400 {
+  color: #7c3aed; /* Purple-600 */
+}
+.light .text-cyan-400 {
+  color: #0891b2; /* Cyan-600 */
+}
+
+/* Form inputs & dropdowns in Light mode */
+.light input:not([type="checkbox"]):not([type="radio"]),
+.light select,
+.light textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: #10b981 !important;
+  background-color: #ffffff !important;
+}
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #94a3b8;
+}
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Modal dark frosted backdrop in Light mode */
+.light .fixed.inset-0.bg-slate-950\/80 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* Subtle card elevation in Light mode */
+.light .bg-slate-900 {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+}
