@@ -860,7 +860,7 @@ test('Reports: Registers, Outstanding, Tax Summary, and Stock-to-GL Reconciliati
     method: 'GET',
     path: '/api/v1/commercial/reports/stock-gl-reconciliation'
   });
-  assert.strictEqual(recRes.status, 200);
+  assert.strictEqual(recRes.status, 200, JSON.stringify(recRes.body));
   assert.ok(recRes.body.data.stock_subledger_valuation);
   assert.ok(recRes.body.data.general_ledger_balance);
   assert.ok(['RECONCILED', 'VARIANCE_DETECTED'].includes(recRes.body.data.status));

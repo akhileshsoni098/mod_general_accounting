@@ -24,14 +24,14 @@ const TenantSchema = new mongoose.Schema(
     },
     tenant_type: {
       type: String,
-      enum: ['CARRIER', 'MGA', 'BROKER', 'OTHER'],
-      default: 'MGA',
+      enum: ['ENTERPRISE', 'RETAIL', 'HOSPITALITY', 'MANUFACTURING', 'SERVICES', 'WHOLESALE', 'OTHER', 'CARRIER', 'MGA', 'BROKER'],
+      default: 'ENTERPRISE',
       required: true,
       uppercase: true
     },
     base_currency: {
       type: String,
-      default: 'USD',
+      default: 'INR',
       uppercase: true,
       minlength: 3,
       maxlength: 3

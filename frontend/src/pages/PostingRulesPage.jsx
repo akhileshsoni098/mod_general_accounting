@@ -821,14 +821,14 @@ export default function PostingRulesPage() {
                         {evt.event_code} {evt.name ? `(${evt.name})` : ''}
                       </option>
                     ))}
-                    {!events.some(e => e.event_code === 'billing.invoice.issued') && (
-                      <option value="billing.invoice.issued">billing.invoice.issued (Billing Invoice Issued)</option>
+                    {!events.some(e => e.event_code === 'commercial.sales.invoice') && (
+                      <option value="commercial.sales.invoice">commercial.sales.invoice (Sales Invoice Posted)</option>
                     )}
-                    {!events.some(e => e.event_code === 'billing.payment.received') && (
-                      <option value="billing.payment.received">billing.payment.received (Billing Payment Received)</option>
+                    {!events.some(e => e.event_code === 'commercial.sales.receipt') && (
+                      <option value="commercial.sales.receipt">commercial.sales.receipt (Customer Receipt)</option>
                     )}
-                    {!events.some(e => e.event_code === 'commissions.fiduciary.sweep') && (
-                      <option value="commissions.fiduciary.sweep">commissions.fiduciary.sweep (Fiduciary Sweep)</option>
+                    {!events.some(e => e.event_code === 'commercial.purchase.invoice') && (
+                      <option value="commercial.purchase.invoice">commercial.purchase.invoice (Purchase Invoice)</option>
                     )}
                   </select>
                 </div>
@@ -885,13 +885,16 @@ export default function PostingRulesPage() {
                         ) : (
                           <>
                             <option value="1000">1000 - Operating Cash (ASSET)</option>
-                            <option value="1010">1010 - Fiduciary Premium Trust (ASSET)</option>
-                            <option value="1100">1100 - Premium Receivables (ASSET)</option>
-                            <option value="2010">2010 - Carrier Payable (LIABILITY)</option>
-                            <option value="2020">2020 - Broker Commission Payable (LIABILITY)</option>
-                            <option value="2200">2200 - Unearned Premium Reserve (LIABILITY)</option>
-                            <option value="4000">4000 - Commission Revenue (REVENUE)</option>
-                            <option value="4100">4100 - Policy Fee Income (REVENUE)</option>
+                            <option value="1001">1001 - Cash in Hand (ASSET)</option>
+                            <option value="1002">1002 - Primary Current Bank (ASSET)</option>
+                            <option value="1101">1101 - Sundry Debtors (ASSET)</option>
+                            <option value="1201">1201 - Stock-in-Hand Inventory (ASSET)</option>
+                            <option value="1301">1301 - Input CGST Credit (ASSET)</option>
+                            <option value="2001">2001 - Sundry Creditors (LIABILITY)</option>
+                            <option value="2101">2101 - Output CGST Payable (LIABILITY)</option>
+                            <option value="4001">4001 - Sales Revenue 18% (REVENUE)</option>
+                            <option value="5001">5001 - Purchase Cost of Goods (EXPENSE)</option>
+                            <option value="5004">5004 - Cost of Goods Sold (EXPENSE)</option>
                           </>
                         )}
                       </select>
@@ -1155,14 +1158,16 @@ export default function PostingRulesPage() {
                         ) : (
                           <>
                             <option value="1000">1000 - Operating Cash (ASSET)</option>
-                            <option value="1010">1010 - Fiduciary Premium Trust (ASSET)</option>
-                            <option value="1100">1100 - Premium Receivables (ASSET)</option>
-                            <option value="2010">2010 - Carrier Payable (LIABILITY)</option>
-                            <option value="2020">2020 - Broker Commission Payable (LIABILITY)</option>
-                            <option value="2190">2190 - Unapplied Cash (LIABILITY)</option>
-                            <option value="2200">2200 - Unearned Premium Reserve (LIABILITY)</option>
-                            <option value="4000">4000 - Commission Revenue (REVENUE)</option>
-                            <option value="4100">4100 - Policy Fee Income (REVENUE)</option>
+                            <option value="1001">1001 - Cash in Hand (ASSET)</option>
+                            <option value="1002">1002 - Primary Current Bank (ASSET)</option>
+                            <option value="1101">1101 - Sundry Debtors (ASSET)</option>
+                            <option value="1201">1201 - Stock-in-Hand Inventory (ASSET)</option>
+                            <option value="1301">1301 - Input CGST Credit (ASSET)</option>
+                            <option value="2001">2001 - Sundry Creditors (LIABILITY)</option>
+                            <option value="2101">2101 - Output CGST Payable (LIABILITY)</option>
+                            <option value="4001">4001 - Sales Revenue 18% (REVENUE)</option>
+                            <option value="5001">5001 - Purchase Cost of Goods (EXPENSE)</option>
+                            <option value="5004">5004 - Cost of Goods Sold (EXPENSE)</option>
                           </>
                         )}
                       </select>

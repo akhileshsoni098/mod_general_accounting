@@ -31,10 +31,6 @@ const STANDARD_PERMISSIONS = [
   { code: 'BILLING:CREATE', module: 'BILLING_AR', description: 'Generate invoices and record payments' },
   { code: 'BILLING:ADMIN', module: 'BILLING_AR', description: 'Configure billing rules and tax configurations' },
 
-  // COMMISSIONS & FIDUCIARY
-  { code: 'COMMISSIONS:VIEW', module: 'COMMISSIONS_FIDUCIARY', description: 'View commission schedules, statements' },
-  { code: 'COMMISSIONS:CALC', module: 'COMMISSIONS_FIDUCIARY', description: 'Calculate and approve commissions' },
-  { code: 'COMMISSIONS:DISBURSE', module: 'COMMISSIONS_FIDUCIARY', description: 'Disburse fiduciary settlements' },
 
   // TREASURY & BANK RECONCILIATION
   { code: 'TREASURY:VIEW', module: 'TREASURY_BANK_REC', description: 'View bank accounts, statements, cash positions' },
@@ -128,7 +124,6 @@ const STANDARD_ROLES = [
       'TAX:VIEW', 'TAX:MANAGE', 'ACCOUNT_MAPPING:VIEW', 'ACCOUNT_MAPPING:MANAGE',
       'RECONCILIATION:VIEW', 'RECONCILIATION:EXECUTE',
       'BILLING:VIEW', 'BILLING:CREATE', 'BILLING:ADMIN',
-      'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
       'CLOSE:VIEW', 'CLOSE:EXECUTE'
     ]
@@ -147,7 +142,6 @@ const STANDARD_ROLES = [
       'RECEIPT:CREATE', 'PAYMENT:CREATE',
       'TAX:VIEW', 'ACCOUNT_MAPPING:VIEW', 'RECONCILIATION:VIEW',
       'BILLING:VIEW',
-      'COMMISSIONS:VIEW',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
       'CLOSE:VIEW'
     ]
@@ -184,7 +178,6 @@ const STANDARD_ROLES = [
       'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
       'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK', 'INVENTORY:ADJUST',
       'BILLING:VIEW', 'BILLING:CREATE',
-      'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
       'CLOSE:VIEW', 'CLOSE:EXECUTE'
     ]

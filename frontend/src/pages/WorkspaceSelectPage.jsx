@@ -87,13 +87,15 @@ export default function WorkspaceSelectPage({ onProceed }) {
                         {ws.tenant_code}
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
-                        ws.tenant_type === 'CARRIER'
+                        ws.tenant_type === 'ENTERPRISE' || ws.tenant_type === 'CARRIER'
                           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                          : ws.tenant_type === 'BROKER'
+                          : ws.tenant_type === 'HOSPITALITY'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : ws.tenant_type === 'MANUFACTURING'
                           ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                           : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       }`}>
-                        {ws.tenant_type || 'MGA'}
+                        {ws.tenant_type || 'ENTERPRISE'}
                       </span>
                       <span>•</span>
                       <span>{ws.base_currency}</span>

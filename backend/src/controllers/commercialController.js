@@ -346,6 +346,7 @@ async function getInventoryToGlReport(req, res) {
     const report = await getInventoryToGlReconciliation(tenantId, companyId);
     return res.success(report);
   } catch (err) {
+    console.error('[STOCK GL RECONCILIATION ERROR]', err);
     return res.error('Failed to generate inventory to GL reconciliation', 500, err.message);
   }
 }

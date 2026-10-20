@@ -12,10 +12,8 @@ const { seedPersonas } = require('./utils/seedPersonas');
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const companyRoutes = require('./routes/companyRoutes');
+
 const glRoutes = require('./routes/glRoutes');
-const billingRoutes = require('./routes/billingRoutes');
-const treasuryRoutes = require('./routes/treasuryRoutes');
-const commissionsRoutes = require('./routes/commissionsRoutes');
 const financeCloseRoutes = require('./routes/financeCloseRoutes');
 const counterpartyRoutes = require('./routes/counterpartyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -103,9 +101,7 @@ app.use('/api/v1/restaurant', restaurantRoutes);
 app.use('/api/v1/hotel', hotelPmsRoutes);
 app.use('/api/v1/manufacturing', manufacturingRoutes);
 app.use('/api/v1/data-exchange', importExportRoutes);
-app.use('/api/v1/billing', billingRoutes);
-app.use('/api/v1/treasury', treasuryRoutes);
-app.use('/api/v1/commissions', commissionsRoutes);
+
 app.use('/api/v1/close', financeCloseRoutes);
 app.use('/api/v1/events', eventDefinitionRoutes);
 app.use('/api/v1/rules', postingRuleRoutes);

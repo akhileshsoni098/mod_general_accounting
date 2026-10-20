@@ -82,14 +82,17 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
                 <label className="block text-xs font-medium text-slate-300 mb-1">Business Tenant Type</label>
                 <select
                   name="tenant_type"
-                  value={formData.tenant_type || 'MGA'}
+                  value={formData.tenant_type || 'ENTERPRISE'}
                   onChange={handleChange}
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
-                  <option value="MGA">MGA (Managing General Agent)</option>
-                  <option value="CARRIER">Carrier (Insurance Company)</option>
-                  <option value="BROKER">Broker (Producing Agency)</option>
-                  <option value="OTHER">Other / Financial Entity</option>
+                  <option value="ENTERPRISE">Enterprise Trading / General Business</option>
+                  <option value="RETAIL">Retail POS & Supermarket Store</option>
+                  <option value="HOSPITALITY">Hotel PMS & Restaurant Hospitality</option>
+                  <option value="MANUFACTURING">Manufacturing, Assembly & BOM</option>
+                  <option value="SERVICES">Professional & Consulting Services</option>
+                  <option value="WHOLESALE">Wholesale & Distribution</option>
+                  <option value="OTHER">Other Commercial Entity</option>
                 </select>
               </div>
               <div>
@@ -174,7 +177,7 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
           <div className="p-3 bg-brand-900/20 border border-brand-800/40 rounded-lg text-xs text-brand-300 flex items-start space-x-2">
             <CheckCircle2 className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" />
             <span>
-              Onboarding automatically seeds all 5 Finance & Accounting modules (GL, Billing/AR, Commissions/Fiduciary, Treasury/Bank Rec, Finance Close) with administrative entitlements.
+              Onboarding automatically seeds Chart of Accounts, fiscal periods, and configures commercial invoicing, GST tax configurations, and inventory masters with administrative entitlements.
             </span>
           </div>
 

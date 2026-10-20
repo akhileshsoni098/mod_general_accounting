@@ -5,7 +5,8 @@ import {
   Building2,
   Receipt,
   Landmark,
-  Percent,
+  Boxes,
+  CreditCard,
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
@@ -16,14 +17,21 @@ import {
   Users2,
   RefreshCw,
   FileText,
-  Shield
+  Shield,
+  Layers
 } from 'lucide-react';
 
 const TENANT_TYPE_BADGES = {
-  CARRIER: { label: 'Underwriting Carrier', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  MGA: { label: 'Managing General Agent', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  BROKER: { label: 'Commercial Broker', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-  OTHER: { label: 'Financial Entity', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' }
+  ENTERPRISE: { label: 'Commercial Enterprise', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  RETAIL: { label: 'Retail & Supermarket', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  HOSPITALITY: { label: 'Hotel & Hospitality', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+  MANUFACTURING: { label: 'Manufacturing & Assembly', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+  SERVICES: { label: 'Services Business', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+  WHOLESALE: { label: 'Wholesale & Distribution', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
+  OTHER: { label: 'General ERP Entity', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' },
+  CARRIER: { label: 'Commercial Enterprise', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  MGA: { label: 'Trading & Services', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+  BROKER: { label: 'Retail & Distribution', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' }
 };
 
 export default function TenantDashboardPage({ onNavigateTab }) {
@@ -51,8 +59,9 @@ export default function TenantDashboardPage({ onNavigateTab }) {
     }
   }
 
-  const tenantType = metrics?.tenant?.tenant_type || currentWorkspace?.tenant_type || 'MGA';
-  const typeBadge = TENANT_TYPE_BADGES[tenantType] || TENANT_TYPE_BADGES.MGA;
+  const tenantType = metrics?.tenant?.tenant_type || currentWorkspace?.tenant_type || 'ENTERPRISE';
+  const typeBadge = TENANT_TYPE_BADGES[tenantType] || TENANT_TYPE_BADGES.ENTERPRISE;
+  const currencySymbol = (metrics?.tenant?.base_currency || currentWorkspace?.base_currency) === 'INR' ? '₹' : '$';
 
   return (
     <div className="space-y-6">
@@ -68,7 +77,7 @@ export default function TenantDashboardPage({ onNavigateTab }) {
               <span>{typeBadge.label}</span>
             </span>
             <span className="text-xs text-slate-400 font-mono">
-              Code: <span className="text-slate-200 font-semibold">{currentWorkspace?.tenant_code}</span>
+              Organization Code: <span className="text-slate-200 font-semibold">{currentWorkspace?.tenant_code}</span>
             </span>
           </div>
 
@@ -76,22 +85,22 @@ export default function TenantDashboardPage({ onNavigateTab }) {
             {currentWorkspace?.name}
           </h1>
           <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-            Tenant-scoped financial ledger, automated billing and receivables, statutory fiduciary trust, carrier settlements, and accounting close.
+            Multi-company accounting & inventory ERP: double-entry GL, GST compliance, real-time inventory valuation, point-of-sale, and operational business workflows.
           </p>
 
           <div className="flex flex-wrap items-center gap-5 mt-4 pt-4 border-t border-slate-800 text-xs font-mono text-slate-400">
             <div>
-              <span className="text-slate-500">Functional Currency:</span>{' '}
-              <span className="text-slate-200 font-semibold">{currentWorkspace?.base_currency || 'USD'}</span>
+              <span className="text-slate-500">Base Currency:</span>{' '}
+              <span className="text-slate-200 font-semibold">{currentWorkspace?.base_currency || 'INR'}</span>
             </div>
             <div>
               <span className="text-slate-500">Fiscal Period:</span>{' '}
               <span className="text-brand-300 font-semibold">
-                {metrics?.gl?.current_period ? `${metrics.gl.current_period.period_name} (${metrics.gl.current_period.status})` : 'Active 2026'}
+                {metrics?.gl?.current_period ? `${metrics.gl.current_period.period_name} (${metrics.gl.current_period.status})` : 'Active Period 2026'}
               </span>
             </div>
             <div>
-              <span className="text-slate-500">Signed In As:</span>{' '}
+              <span className="text-slate-500">Active User:</span>{' '}
               <span className="text-slate-200">{user?.first_name} {user?.last_name}</span>
               <span className="text-brand-400 ml-1 font-semibold">({roles.join(', ') || 'Staff'})</span>
             </div>
@@ -107,96 +116,96 @@ export default function TenantDashboardPage({ onNavigateTab }) {
         </div>
       </div>
 
-      {/* Real Financial Metrics Grid */}
+      {/* Real Financial & Commercial Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Receivables Card */}
+        {/* Trade Receivables Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
           <div>
             <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Outstanding Receivables</span>
+              <span>Trade Receivables (Debtors)</span>
               <Receipt className="w-4 h-4 text-brand-400" />
             </div>
             <div className="text-2xl font-bold text-white font-mono mt-1">
-              ${metrics?.receivables?.total_outstanding || '0.00'}
+              {currencySymbol}{metrics?.receivables?.total_outstanding || '0.00'}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              {metrics?.receivables?.unpaid_invoices_count || 0} unpaid invoices
+              {metrics?.receivables?.unpaid_invoices_count || 0} unpaid sales invoices
             </div>
           </div>
           <button
-            onClick={() => onNavigateTab('billing_ar')}
+            onClick={() => onNavigateTab('commercial')}
             className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-brand-400 hover:text-brand-300 flex items-center justify-between font-semibold"
           >
-            <span>Billing & AR Workspace</span>
+            <span>Commercial Sales Invoices</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Operating Cash Card */}
+        {/* Trade Payables Card */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
           <div>
             <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Operating Cash</span>
+              <span>Trade Payables (Creditors)</span>
+              <CreditCard className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="text-2xl font-bold text-purple-400 font-mono mt-1">
+              {currencySymbol}{metrics?.payables?.total_outstanding || '0.00'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              {metrics?.payables?.unpaid_purchases_count || 0} unpaid purchase bills
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigateTab('commercial')}
+            className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-purple-400 hover:text-purple-300 flex items-center justify-between font-semibold"
+          >
+            <span>Purchase Bills & Payables</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Inventory Stock Valuation Card */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Inventory Stock Valuation</span>
+              <Boxes className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-bold text-amber-400 font-mono mt-1">
+              {currencySymbol}{metrics?.inventory?.total_stock_value || '0.00'}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              {metrics?.inventory?.active_items_count || 0} active stock items
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigateTab('inventory')}
+            className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-amber-400 hover:text-amber-300 flex items-center justify-between font-semibold"
+          >
+            <span>Inventory & Stock Masters</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Liquid Cash & Bank Card */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+              <span>Cash & Bank Liquidity</span>
               <Landmark className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">
-              ${metrics?.cash?.operating_cash || '0.00'}
+              {currencySymbol}{metrics?.cash?.total_cash || '0.00'}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              GL 1000 Operating Account
+              GL 1000/1001/1002 Liquid Accounts
             </div>
           </div>
           <button
-            onClick={() => onNavigateTab('treasury_bank_rec')}
+            onClick={() => onNavigateTab('gl')}
             className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center justify-between font-semibold"
           >
-            <span>Treasury & Bank Rec</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Fiduciary Trust Cash Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
-          <div>
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Fiduciary Trust Cash</span>
-              <Shield className="w-4 h-4 text-blue-400" />
-            </div>
-            <div className="text-2xl font-bold text-blue-400 font-mono mt-1">
-              ${metrics?.cash?.fiduciary_trust_cash || '0.00'}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              GL 1010 Premium Trust (Texas § 4053)
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigateTab('commissions_fiduciary')}
-            className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-blue-400 hover:text-blue-300 flex items-center justify-between font-semibold"
-          >
-            <span>Commissions & Fiduciary</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Carrier Payables Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition">
-          <div>
-            <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-              <span>Carrier Settlements Due</span>
-              <Percent className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="text-2xl font-bold text-purple-400 font-mono mt-1">
-              ${metrics?.payables?.carrier_payable_gl || '0.00'}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              GL 2010 Due to Carrier
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigateTab('commissions_fiduciary')}
-            className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] text-purple-400 hover:text-purple-300 flex items-center justify-between font-semibold"
-          >
-            <span>Carrier Settlements</span>
+            <span>General Ledger & Cash</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -218,18 +227,18 @@ export default function TenantDashboardPage({ onNavigateTab }) {
                   : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
               }`}
             >
-              {metrics?.gl?.trial_balance_balanced ? 'TRIAL BALANCE IN BALANCE' : 'UNBALANCED'}
+              {metrics?.gl?.trial_balance_balanced ? 'TRIAL BALANCE BALANCED' : 'UNBALANCED'}
             </span>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1.5 border-b border-slate-800">
               <span className="text-slate-400">Total Posted Debits:</span>
-              <span className="font-mono text-white font-semibold">${metrics?.gl?.total_debits || '0.00'}</span>
+              <span className="font-mono text-white font-semibold">{currencySymbol}{metrics?.gl?.total_debits || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
               <span className="text-slate-400">Total Posted Credits:</span>
-              <span className="font-mono text-white font-semibold">${metrics?.gl?.total_credits || '0.00'}</span>
+              <span className="font-mono text-white font-semibold">{currencySymbol}{metrics?.gl?.total_credits || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
               <span className="text-slate-400">Active Ledger Accounts:</span>
@@ -252,68 +261,68 @@ export default function TenantDashboardPage({ onNavigateTab }) {
           </button>
         </div>
 
-        {/* Treasury & Operations Status */}
+        {/* Commercial Trading Activity */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center space-x-2">
-              <Landmark className="w-4 h-4 text-emerald-400" />
-              <span>Treasury & Reconciliations</span>
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <span>Commercial Trading Summary</span>
             </h3>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Total Payments Collected:</span>
-              <span className="font-mono text-emerald-400 font-semibold">${metrics?.cash?.total_payments_collected || '0.00'}</span>
+              <span className="text-slate-400">Total Sales Invoiced YTD:</span>
+              <span className="font-mono text-emerald-400 font-semibold">{currencySymbol}{metrics?.receivables?.total_invoiced_ytd || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Unapplied Cash (Suspense 2190):</span>
-              <span className="font-mono text-amber-400 font-semibold">${metrics?.cash?.unapplied_cash || '0.00'}</span>
+              <span className="text-slate-400">Total Purchases YTD:</span>
+              <span className="font-mono text-purple-400 font-semibold">{currencySymbol}{metrics?.payables?.total_purchases_ytd || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Unmatched Bank Statement Lines:</span>
-              <span className="font-mono text-slate-200 font-semibold">{metrics?.operations?.unmatched_bank_lines_count || 0}</span>
+              <span className="text-slate-400">Active Business Counterparties:</span>
+              <span className="font-mono text-slate-200 font-semibold">{metrics?.operations?.counterparties_count || 0} Parties</span>
             </div>
             <div className="flex justify-between py-1.5">
-              <span className="text-slate-400">Registered Business Counterparties:</span>
-              <span className="font-mono text-slate-200 font-semibold">{metrics?.operations?.counterparties_count || 0}</span>
+              <span className="text-slate-400">Total Commercial Invoices:</span>
+              <span className="font-mono text-slate-200 font-semibold">{metrics?.receivables?.total_invoices_count || 0}</span>
             </div>
           </div>
 
           <button
-            onClick={() => onNavigateTab('treasury_bank_rec')}
+            onClick={() => onNavigateTab('commercial')}
             className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition border border-slate-700"
           >
-            <span>Open Bank Reconciliation</span>
+            <span>Open Commercial Register</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Finance Close Status */}
+        {/* Multi-Industry & Financial Close */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center space-x-2">
               <Calendar className="w-4 h-4 text-purple-400" />
-              <span>Finance Close & Reports</span>
+              <span>Financial Reports & Close</span>
             </h3>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Pending Carrier Settlements:</span>
-              <span className="font-mono text-slate-200 font-semibold">{metrics?.payables?.pending_settlements_count || 0}</span>
+              <span className="text-slate-400">Inventory Items Managed:</span>
+              <span className="font-mono text-slate-200 font-semibold">{metrics?.inventory?.active_items_count || 0}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Broker Commission Payable:</span>
-              <span className="font-mono text-slate-200 font-semibold">${metrics?.payables?.commission_payable_gl || '0.00'}</span>
+              <span className="text-slate-400">Sundry Debtors GL Balance:</span>
+              <span className="font-mono text-slate-200 font-semibold">{currencySymbol}{metrics?.receivables?.sundry_debtors_gl || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5 border-b border-slate-800">
-              <span className="text-slate-400">Invoiced YTD Total:</span>
-              <span className="font-mono text-slate-200 font-semibold">${metrics?.receivables?.total_invoiced_ytd || '0.00'}</span>
+              <span className="text-slate-400">Sundry Creditors GL Balance:</span>
+              <span className="font-mono text-slate-200 font-semibold">{currencySymbol}{metrics?.payables?.sundry_creditors_gl || '0.00'}</span>
             </div>
             <div className="flex justify-between py-1.5">
-              <span className="text-slate-400">Close Subledger Status:</span>
-              <span className="font-mono text-emerald-400 font-semibold">Active & Synced</span>
+              <span className="text-slate-400">Accounting Subledgers:</span>
+              <span className="font-mono text-emerald-400 font-semibold">Active & Reconciled</span>
             </div>
           </div>
 
@@ -321,7 +330,7 @@ export default function TenantDashboardPage({ onNavigateTab }) {
             onClick={() => onNavigateTab('finance_close')}
             className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center space-x-2 transition border border-slate-700"
           >
-            <span>Explore Finance Close & Reports</span>
+            <span>View Financial Statements & Close</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -372,7 +381,7 @@ export default function TenantDashboardPage({ onNavigateTab }) {
                       {j.memo}
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-semibold text-white">
-                      ${j.total_amount}
+                      {currencySymbol}{j.total_amount}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20">

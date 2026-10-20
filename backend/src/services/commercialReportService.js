@@ -5,6 +5,8 @@ const {
   BillAllocation,
   StockBalance,
   StockMovement,
+  StockItem,
+  Godown,
   LedgerAccount,
   Party
 } = require('../models');
@@ -293,9 +295,7 @@ async function getInventoryToGlReconciliation(tenantId, companyId) {
   const varianceBn = totalStockValBn.minus(glBalanceBn);
 
   let status = 'RECONCILED';
-  if (pendingOpeningMovements.length > 0) {
-    status = 'PENDING_OPENING_GL_POSTING';
-  } else if (!varianceBn.isZero() && varianceBn.abs().isGreaterThan(0.05)) {
+  if (pendingOpeningMovements.length > 0 || (!varianceBn.isZero() && varianceBn.abs().isGreaterThan(0.05))) {
     status = 'VARIANCE_DETECTED';
   }
 

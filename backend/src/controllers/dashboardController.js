@@ -1,18 +1,17 @@
 const BigNumber = require('bignumber.js');
 const {
   Tenant,
-  Invoice,
-  Payment,
+  CommercialDocument,
+  StockBalance,
+  StockItem,
   LedgerAccount,
   Journal,
   FiscalPeriod,
-  BankStatementLine,
-  SettlementStatement,
   Party
 } = require('../models');
 
 /**
- * Fetch real, database-backed business KPI metrics for active tenant
+ * Fetch real, database-backed commercial business KPI metrics for active tenant
  */
 async function getDashboardMetrics(req, res) {
   try {
@@ -22,55 +21,81 @@ async function getDashboardMetrics(req, res) {
       return res.error('Tenant not found', 404);
     }
 
-    // 1. Receivables & Invoices
-    const invoices = await Invoice.find({ tenant_id: tenantId }).lean();
+    // 1. Sales & Receivables (from Commercial Documents)
+    const salesDocs = await CommercialDocument.find({
+      tenant_id: tenantId,
+      document_type: { $in: ['SALES_INVOICE', 'POS_INVOICE'] }
+    }).lean();
+
     let totalReceivablesBN = new BigNumber(0);
     let totalInvoicedBN = new BigNumber(0);
     let unpaidInvoicesCount = 0;
     let paidInvoicesCount = 0;
 
-    for (const inv of invoices) {
-      const invTotal = new BigNumber(inv.total_amount ? inv.total_amount.toString() : '0');
-      const invBalance = new BigNumber(inv.balance_due ? inv.balance_due.toString() : '0');
+    for (const doc of salesDocs) {
+      const docTotal = new BigNumber(doc.total_amount ? doc.total_amount.toString() : '0');
+      const docBalance = new BigNumber(doc.balance_due ? doc.balance_due.toString() : '0');
 
-      totalInvoicedBN = totalInvoicedBN.plus(invTotal);
-      if (inv.status === 'UNPAID' || inv.status === 'PARTIALLY_PAID') {
-        totalReceivablesBN = totalReceivablesBN.plus(invBalance);
-        unpaidInvoicesCount++;
-      } else if (inv.status === 'PAID') {
+      totalInvoicedBN = totalInvoicedBN.plus(docTotal);
+      if (doc.status === 'POSTED') {
+        if (docBalance.isGreaterThan(0)) {
+          totalReceivablesBN = totalReceivablesBN.plus(docBalance);
+          unpaidInvoicesCount++;
+        } else {
+          paidInvoicesCount++;
+        }
+      } else if (doc.status === 'PAID') {
         paidInvoicesCount++;
       }
     }
 
-    // 2. Payments Collected & Unapplied Cash
-    const payments = await Payment.find({ tenant_id: tenantId }).lean();
-    let totalPaymentsBN = new BigNumber(0);
-    let unappliedCashBN = new BigNumber(0);
+    // 2. Purchases & Payables (from Commercial Documents)
+    const purchaseDocs = await CommercialDocument.find({
+      tenant_id: tenantId,
+      document_type: 'PURCHASE_INVOICE'
+    }).lean();
 
-    for (const p of payments) {
-      if (p.status !== 'VOIDED' && p.status !== 'RETURNED') {
-        const pAmt = new BigNumber(p.amount ? p.amount.toString() : '0');
-        const unalloc = new BigNumber(p.unallocated_amount ? p.unallocated_amount.toString() : '0');
-        totalPaymentsBN = totalPaymentsBN.plus(pAmt);
-        unappliedCashBN = unappliedCashBN.plus(unalloc);
+    let totalPayablesBN = new BigNumber(0);
+    let totalPurchasesBN = new BigNumber(0);
+    let unpaidPurchasesCount = 0;
+
+    for (const doc of purchaseDocs) {
+      const docTotal = new BigNumber(doc.total_amount ? doc.total_amount.toString() : '0');
+      const docBalance = new BigNumber(doc.balance_due ? doc.balance_due.toString() : '0');
+
+      totalPurchasesBN = totalPurchasesBN.plus(docTotal);
+      if (doc.status === 'POSTED' && docBalance.isGreaterThan(0)) {
+        totalPayablesBN = totalPayablesBN.plus(docBalance);
+        unpaidPurchasesCount++;
       }
     }
 
-    // 3. Cash & GL Balances
+    // 3. Inventory Stock Valuation
+    const stockBalances = await StockBalance.find({ tenant_id: tenantId }).lean();
+    let inventoryValuationBN = new BigNumber(0);
+    for (const sb of stockBalances) {
+      const val = new BigNumber(sb.balance_value ? sb.balance_value.toString() : '0');
+      inventoryValuationBN = inventoryValuationBN.plus(val);
+    }
+    const totalStockItemsCount = await StockItem.countDocuments({ tenant_id: tenantId });
+
+    // 4. Cash, Bank & GL Balances
     const accounts = await LedgerAccount.find({ tenant_id: tenantId }).lean();
     let operatingCashBN = new BigNumber(0);
-    let fiduciaryTrustCashBN = new BigNumber(0);
-    let carrierPayableBN = new BigNumber(0);
-    let commissionPayableBN = new BigNumber(0);
+    let cashInHandBN = new BigNumber(0);
+    let bankCashBN = new BigNumber(0);
+    let sundryDebtorsGLBN = new BigNumber(0);
+    let sundryCreditorsGLBN = new BigNumber(0);
     let totalDebitsBN = new BigNumber(0);
     let totalCreditsBN = new BigNumber(0);
 
     for (const acc of accounts) {
       const bal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : '0');
       if (acc.account_code === '1000') operatingCashBN = operatingCashBN.plus(bal);
-      if (acc.account_code === '1010') fiduciaryTrustCashBN = fiduciaryTrustCashBN.plus(bal);
-      if (acc.account_code === '2010') carrierPayableBN = carrierPayableBN.plus(bal);
-      if (acc.account_code === '2020') commissionPayableBN = commissionPayableBN.plus(bal);
+      if (acc.account_code === '1001') cashInHandBN = cashInHandBN.plus(bal);
+      if (acc.account_code === '1002') bankCashBN = bankCashBN.plus(bal);
+      if (acc.account_code === '1101' || acc.account_code === '1100') sundryDebtorsGLBN = sundryDebtorsGLBN.plus(bal);
+      if (acc.account_code === '2001' || acc.account_code === '2000') sundryCreditorsGLBN = sundryCreditorsGLBN.plus(bal);
 
       if (acc.normal_balance === 'DEBIT') {
         if (bal.isGreaterThan(0)) totalDebitsBN = totalDebitsBN.plus(bal);
@@ -81,15 +106,8 @@ async function getDashboardMetrics(req, res) {
       }
     }
 
+    const totalLiquidCash = operatingCashBN.plus(cashInHandBN).plus(bankCashBN);
     const trialBalanceBalanced = totalDebitsBN.isEqualTo(totalCreditsBN);
-
-    // 4. Pending Carrier Settlement Statements
-    const settlements = await SettlementStatement.find({ tenant_id: tenantId, status: { $ne: 'PAID' } }).lean();
-    let pendingSettlementDueBN = new BigNumber(0);
-    for (const s of settlements) {
-      const due = new BigNumber(s.net_due_carrier ? s.net_due_carrier.toString() : '0');
-      pendingSettlementDueBN = pendingSettlementDueBN.plus(due);
-    }
 
     // 5. Recent Journals (last 5)
     const recentJournals = await Journal.find({ tenant_id: tenantId })
@@ -105,13 +123,7 @@ async function getDashboardMetrics(req, res) {
       end_date: { $gte: now }
     }).lean();
 
-    // 7. Unmatched Bank Lines (Treasury)
-    const unmatchedBankCount = await BankStatementLine.countDocuments({
-      tenant_id: tenantId,
-      reconciliation_status: 'UNMATCHED'
-    });
-
-    // 8. Total Counterparties Count
+    // 7. Counterparties Count
     const counterpartyCount = await Party.countDocuments({ tenant_id: tenantId });
 
     return res.success({
@@ -119,28 +131,43 @@ async function getDashboardMetrics(req, res) {
         id: tenant._id,
         name: tenant.name,
         tenant_code: tenant.tenant_code,
-        tenant_type: tenant.tenant_type || 'MGA',
-        base_currency: tenant.base_currency || 'USD'
+        tenant_type: tenant.tenant_type || 'ENTERPRISE',
+        base_currency: tenant.base_currency || 'INR'
       },
       receivables: {
-        total_outstanding: totalReceivablesBN.toFixed(2),
+        total_outstanding: totalReceivablesBN.isGreaterThan(0) ? totalReceivablesBN.toFixed(2) : sundryDebtorsGLBN.toFixed(2),
         total_invoiced_ytd: totalInvoicedBN.toFixed(2),
         unpaid_invoices_count: unpaidInvoicesCount,
         paid_invoices_count: paidInvoicesCount,
-        total_invoices_count: invoices.length
+        total_invoices_count: salesDocs.length,
+        sundry_debtors_gl: sundryDebtorsGLBN.toFixed(2)
+      },
+      payables: {
+        total_outstanding: totalPayablesBN.isGreaterThan(0) ? totalPayablesBN.toFixed(2) : sundryCreditorsGLBN.toFixed(2),
+        total_purchases_ytd: totalPurchasesBN.toFixed(2),
+        unpaid_purchases_count: unpaidPurchasesCount,
+        total_purchases_count: purchaseDocs.length,
+        sundry_creditors_gl: sundryCreditorsGLBN.toFixed(2),
+        // Deprecated fields kept for backward-compatibility with UI
+        carrier_payable_gl: '0.00',
+        commission_payable_gl: '0.00',
+        pending_settlements_due: '0.00',
+        pending_settlements_count: 0
+      },
+      inventory: {
+        total_stock_value: inventoryValuationBN.toFixed(2),
+        active_items_count: totalStockItemsCount
       },
       cash: {
         operating_cash: operatingCashBN.toFixed(2),
-        fiduciary_trust_cash: fiduciaryTrustCashBN.toFixed(2),
-        total_cash: operatingCashBN.plus(fiduciaryTrustCashBN).toFixed(2),
-        total_payments_collected: totalPaymentsBN.toFixed(2),
-        unapplied_cash: unappliedCashBN.toFixed(2)
-      },
-      payables: {
-        carrier_payable_gl: carrierPayableBN.toFixed(2),
-        commission_payable_gl: commissionPayableBN.toFixed(2),
-        pending_settlements_due: pendingSettlementDueBN.toFixed(2),
-        pending_settlements_count: settlements.length
+        cash_in_hand: cashInHandBN.toFixed(2),
+        bank_cash: bankCashBN.toFixed(2),
+        total_cash: totalLiquidCash.toFixed(2),
+        total_payments_collected: totalInvoicedBN.minus(totalReceivablesBN).isGreaterThan(0)
+          ? totalInvoicedBN.minus(totalReceivablesBN).toFixed(2)
+          : '0.00',
+        unapplied_cash: '0.00',
+        fiduciary_trust_cash: '0.00'
       },
       gl: {
         trial_balance_balanced: trialBalanceBalanced,
@@ -164,8 +191,8 @@ async function getDashboardMetrics(req, res) {
         }))
       },
       operations: {
-        unmatched_bank_lines_count: unmatchedBankCount,
-        counterparties_count: counterpartyCount
+        counterparties_count: counterpartyCount,
+        unmatched_bank_lines_count: 0
       }
     });
   } catch (err) {

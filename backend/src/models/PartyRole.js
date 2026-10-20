@@ -17,12 +17,20 @@ const PartyRoleSchema = new mongoose.Schema(
     role_type: {
       type: String,
       enum: [
+        'CUSTOMER',
+        'SUPPLIER',
+        'VENDOR',
+        'DEBTOR',
+        'CREDITOR',
+        'GUEST',
+        'EMPLOYEE',
+        'PARTNER',
+        'AGENT',
         'CARRIER',
         'MGA',
         'BROKER',
         'POLICYHOLDER',
         'PRODUCER',
-        'VENDOR',
         'REINSURER',
         'REGULATOR'
       ],

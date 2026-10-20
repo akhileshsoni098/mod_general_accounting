@@ -1,7 +1,7 @@
 const { EventDefinition } = require('../models');
 
 /**
- * Seeds standard system event definitions for a tenant if none exist.
+ * Seeds standard commercial ERP event definitions for a tenant if none exist.
  * Ensures strict schema contract enforcement across event publishers and posting rules.
  */
 async function seedDefaultEventDefinitions(tenantId) {
@@ -13,10 +13,10 @@ async function seedDefaultEventDefinitions(tenantId) {
   const defaultEvents = [
     {
       tenant_id: tenantId,
-      event_code: 'billing.invoice.issued',
-      display_name: 'Billing Invoice Issued',
-      description: 'Triggered when a policy invoice or installment is issued to an insured/customer',
-      source_module: 'BILLING',
+      event_code: 'commercial.sales.invoice',
+      display_name: 'Commercial Sales Invoice Posted',
+      description: 'Triggered when a commercial sales invoice is posted to recognize revenue, customer receivable, and GST',
+      source_module: 'COMMERCIAL',
       category: 'TRANSACTION',
       status: 'ACTIVE',
       current_version: '1.0.0',
@@ -24,37 +24,39 @@ async function seedDefaultEventDefinitions(tenantId) {
         {
           version: '1.0.0',
           status: 'ACTIVE',
-          description: 'Standard insurance billing invoice issue event contract',
+          description: 'Standard commercial sales invoice event contract',
           json_schema: {
             type: 'object',
             properties: {
-              invoice_id: { type: 'string' },
-              policy_id: { type: 'string' },
-              transaction_type: { type: 'string' },
-              gross_premium: { type: 'number' },
-              policy_fee: { type: 'number' },
-              commission_amount: { type: 'number' },
+              document_id: { type: 'string' },
+              document_number: { type: 'string' },
+              party_id: { type: 'string' },
+              taxable_amount: { type: 'number' },
+              cgst_amount: { type: 'number' },
+              sgst_amount: { type: 'number' },
+              igst_amount: { type: 'number' },
               total_amount: { type: 'number' }
             }
           },
           sample_payload: {
-            invoice_id: 'INV-2026-00001',
-            policy_id: 'POL-TX-8821',
-            transaction_type: 'DIRECT_BILL',
-            gross_premium: 37650,
-            policy_fee: 150,
-            commission_amount: 5647.5,
-            total_amount: 37800
+            document_id: 'DOC-2026-00001',
+            document_number: 'INV-2026-0001',
+            party_id: 'PTY-CUSTOMER-01',
+            taxable_amount: 10000,
+            cgst_amount: 900,
+            sgst_amount: 900,
+            igst_amount: 0,
+            total_amount: 11800
           }
         }
       ]
     },
     {
       tenant_id: tenantId,
-      event_code: 'billing.payment.received',
-      display_name: 'Billing Payment Received',
-      description: 'Triggered when a customer payment (ACH, Wire, Check) is captured into trust/operating cash',
-      source_module: 'BILLING',
+      event_code: 'commercial.sales.receipt',
+      display_name: 'Commercial Customer Receipt',
+      description: 'Triggered when a customer payment (Cash, Bank, UPI, NEFT) is received against invoices',
+      source_module: 'COMMERCIAL',
       category: 'TRANSACTION',
       status: 'ACTIVE',
       current_version: '1.0.0',
@@ -62,29 +64,31 @@ async function seedDefaultEventDefinitions(tenantId) {
         {
           version: '1.0.0',
           status: 'ACTIVE',
-          description: 'Payment receipt contract',
+          description: 'Customer payment receipt contract',
           json_schema: {
             type: 'object',
             properties: {
-              payment_id: { type: 'string' },
+              receipt_id: { type: 'string' },
+              party_id: { type: 'string' },
               amount: { type: 'number' },
-              payment_method: { type: 'string' }
+              payment_mode: { type: 'string' }
             }
           },
           sample_payload: {
-            payment_id: 'PMT-001',
-            amount: 9562.5,
-            payment_method: 'ACH'
+            receipt_id: 'RCPT-001',
+            party_id: 'PTY-CUSTOMER-01',
+            amount: 11800,
+            payment_mode: 'BANK_TRANSFER'
           }
         }
       ]
     },
     {
       tenant_id: tenantId,
-      event_code: 'commissions.fiduciary.sweep',
-      display_name: 'Texas § 4053 Fiduciary Sweep',
-      description: 'Triggered when earned commissions are swept from premium trust to operating bank',
-      source_module: 'COMMISSIONS',
+      event_code: 'commercial.purchase.invoice',
+      display_name: 'Commercial Purchase Invoice Posted',
+      description: 'Triggered when a vendor purchase bill is posted for inventory and supplier credit',
+      source_module: 'COMMERCIAL',
       category: 'TRANSACTION',
       status: 'ACTIVE',
       current_version: '1.0.0',
@@ -92,27 +96,35 @@ async function seedDefaultEventDefinitions(tenantId) {
         {
           version: '1.0.0',
           status: 'ACTIVE',
-          description: 'Fiduciary commission sweep contract',
+          description: 'Purchase bill event contract',
           json_schema: {
             type: 'object',
             properties: {
-              sweep_id: { type: 'string' },
-              amount: { type: 'number' }
+              document_id: { type: 'string' },
+              document_number: { type: 'string' },
+              supplier_id: { type: 'string' },
+              subtotal: { type: 'number' },
+              tax_amount: { type: 'number' },
+              total_amount: { type: 'number' }
             }
           },
           sample_payload: {
-            sweep_id: 'SWP-001',
-            amount: 500
+            document_id: 'PUR-001',
+            document_number: 'BILL-SUPP-9921',
+            supplier_id: 'PTY-SUPPLIER-01',
+            subtotal: 50000,
+            tax_amount: 9000,
+            total_amount: 59000
           }
         }
       ]
     },
     {
       tenant_id: tenantId,
-      event_code: 'treasury.payment.returned',
-      display_name: 'NSF Payment Return',
-      description: 'Triggered upon bank dishonor of a premium payment',
-      source_module: 'TREASURY',
+      event_code: 'commercial.pos.checkout',
+      display_name: 'Retail POS Checkout',
+      description: 'Triggered upon retail POS sale completion and tender settlement',
+      source_module: 'RETAIL_POS',
       category: 'TRANSACTION',
       status: 'ACTIVE',
       current_version: '1.0.0',
@@ -120,29 +132,29 @@ async function seedDefaultEventDefinitions(tenantId) {
         {
           version: '1.0.0',
           status: 'ACTIVE',
-          description: 'NSF return event schema',
+          description: 'POS retail checkout event schema',
           json_schema: {
             type: 'object',
             properties: {
-              return_id: { type: 'string' },
-              amount: { type: 'number' },
-              fee_amount: { type: 'number' }
+              pos_invoice_number: { type: 'string' },
+              net_amount: { type: 'number' },
+              tender_type: { type: 'string' }
             }
           },
           sample_payload: {
-            return_id: 'RET-001',
-            amount: 9200,
-            fee_amount: 35
+            pos_invoice_number: 'POS-2026-0001',
+            net_amount: 1450,
+            tender_type: 'CASH'
           }
         }
       ]
     },
     {
       tenant_id: tenantId,
-      event_code: 'upr.earning.requested',
-      display_name: 'UPR Earning Amortization',
-      description: 'Triggered by month-end straight-line unearned premium earning schedule',
-      source_module: 'FINANCE_CLOSE',
+      event_code: 'commercial.restaurant.bill',
+      display_name: 'Restaurant Table Settle & Recipe Consumption',
+      description: 'Triggered upon dining table bill settlement and dish ingredient consumption',
+      source_module: 'RESTAURANT',
       category: 'TRANSACTION',
       status: 'ACTIVE',
       current_version: '1.0.0',
@@ -150,17 +162,19 @@ async function seedDefaultEventDefinitions(tenantId) {
         {
           version: '1.0.0',
           status: 'ACTIVE',
-          description: 'Unearned premium amortization earning contract',
+          description: 'Restaurant order settlement event schema',
           json_schema: {
             type: 'object',
             properties: {
-              policy_id: { type: 'string' },
-              earned_amount: { type: 'number' }
+              order_id: { type: 'string' },
+              table_number: { type: 'string' },
+              bill_amount: { type: 'number' }
             }
           },
           sample_payload: {
-            policy_id: 'POL-TX-8821',
-            earned_amount: 764.38
+            order_id: 'ORD-2026-0042',
+            table_number: 'T-04',
+            bill_amount: 2200
           }
         }
       ]

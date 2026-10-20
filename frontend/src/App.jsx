@@ -7,9 +7,7 @@ import TenantDashboardPage from './pages/TenantDashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
 import ModuleConfigPage from './pages/ModuleConfigPage';
 import GLWorkspacePage from './pages/GLWorkspacePage';
-import BillingWorkspacePage from './pages/BillingWorkspacePage';
-import TreasuryWorkspacePage from './pages/TreasuryWorkspacePage';
-import CommissionsWorkspacePage from './pages/CommissionsWorkspacePage';
+
 import FinanceCloseWorkspacePage from './pages/FinanceCloseWorkspacePage';
 import CounterpartiesPage from './pages/CounterpartiesPage';
 import OrganizationSettingsPage from './pages/OrganizationSettingsPage';
@@ -65,10 +63,16 @@ import {
 import { authApi } from './services/api';
 
 const TENANT_TYPE_BADGES = {
-  CARRIER: { label: 'Carrier', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
-  MGA: { label: 'MGA', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
-  BROKER: { label: 'Broker', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
-  OTHER: { label: 'Enterprise', color: 'bg-slate-500/10 text-slate-400 border-slate-500/30' }
+  ENTERPRISE: { label: 'Enterprise', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+  RETAIL: { label: 'Retail & POS', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  HOSPITALITY: { label: 'Hospitality', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+  MANUFACTURING: { label: 'Manufacturing', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
+  SERVICES: { label: 'Services', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' },
+  WHOLESALE: { label: 'Wholesale', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
+  OTHER: { label: 'General ERP', color: 'bg-slate-500/10 text-slate-400 border-slate-500/30' },
+  CARRIER: { label: 'Enterprise', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
+  MGA: { label: 'Trading & Services', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  BROKER: { label: 'Retail & Agency', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' }
 };
 
 export default function App() {
@@ -128,19 +132,16 @@ export default function App() {
 
   // Core Financial Modules Navigation
   const financialNavItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'gl', label: 'General Ledger', icon: BookOpen },
+    { id: 'dashboard', label: 'Dashboard & Business KPIs', icon: LayoutDashboard },
+    { id: 'commercial', label: 'Commercial Sales & Purchases (GST)', icon: Receipt },
     { id: 'inventory', label: 'Inventory & Stock Masters', icon: Boxes },
-    { id: 'billing_ar', label: 'Billing & Accounts Receivable', icon: Receipt },
-    { id: 'commissions_fiduciary', label: 'Commissions & Settlements', icon: Percent },
-    { id: 'treasury_bank_rec', label: 'Treasury & Bank Reconciliation', icon: Landmark },
+    { id: 'gl', label: 'General Ledger & Double-Entry', icon: BookOpen },
     { id: 'finance_close', label: 'Finance Close & Financial Reports', icon: CalendarCheck },
-    { id: 'counterparties', label: 'Counterparties', icon: Users2 }
+    { id: 'counterparties', label: 'Customers & Vendors', icon: Users2 }
   ];
 
   // Industry & Commercial Workspaces Navigation
   const industryNavItems = [
-    { id: 'commercial', label: 'Commercial Invoicing & GST', icon: Receipt },
     { id: 'retail_pos', label: 'Retail POS Checkout', icon: ShoppingCart },
     { id: 'restaurant', label: 'Restaurant & Kitchen Orders', icon: UtensilsCrossed },
     { id: 'hotel', label: 'Hotel PMS & Hospitality', icon: Building },
@@ -386,9 +387,7 @@ export default function App() {
           {activeTab === 'restaurant' && <RestaurantWorkspacePage />}
           {activeTab === 'hotel' && <HotelWorkspacePage />}
           {activeTab === 'manufacturing' && <ManufacturingWorkspacePage />}
-          {activeTab === 'billing_ar' && <BillingWorkspacePage />}
-          {activeTab === 'commissions_fiduciary' && <CommissionsWorkspacePage />}
-          {activeTab === 'treasury_bank_rec' && <TreasuryWorkspacePage />}
+
           {activeTab === 'finance_close' && <FinanceCloseWorkspacePage />}
           {activeTab === 'counterparties' && <CounterpartiesPage />}
           {activeTab === 'event_definitions' && <EventDefinitionsPage />}

@@ -14,27 +14,24 @@ const { seedFiscalPeriods } = require('./seedFiscalPeriods');
 
 const FINANCE_MODULES = [
   'GL',
-  'BILLING_AR',
-  'COMMISSIONS_FIDUCIARY',
-  'TREASURY_BANK_REC',
-  'FINANCE_CLOSE',
   'INVENTORY',
   'COMMERCIAL',
   'RETAIL_POS',
   'RESTAURANT',
   'HOTEL_PMS',
   'MANUFACTURING',
-  'SERVICES'
+  'SERVICES',
+  'FINANCE_CLOSE'
 ];
 
 const CANONICAL_PERSONAS = [
   {
     tenant_code: 'TENANT_SUMMIT',
-    name: 'Summit National Insurance Co.',
-    tenant_type: 'CARRIER',
-    base_currency: 'USD',
-    timezone: 'America/New_York',
-    fiscal_year_start_month: 1,
+    name: 'Summit Commercial Trading Ltd',
+    tenant_type: 'ENTERPRISE',
+    base_currency: 'INR',
+    timezone: 'Asia/Kolkata',
+    fiscal_year_start_month: 4,
     admin: {
       email: 'admin@summitmutual.com',
       first_name: 'Sarah',
@@ -43,57 +40,57 @@ const CANONICAL_PERSONAS = [
     counterparties: [
       {
         party_code: 'PTY-SUMMIT-SELF',
-        legal_name: 'Summit National Insurance Co.',
-        trade_name: 'Summit Mutual Group',
+        legal_name: 'Summit Commercial Trading Ltd',
+        trade_name: 'Summit Trading Group',
         party_type: 'ORGANIZATION',
-        tax_id: '12-3456780',
-        email: 'finance@summitmutual.com',
-        phone: '212-555-0100',
-        role_type: 'CARRIER',
-        role_details: { naic_code: '23450', state_of_domicile: 'NY', am_best_rating: 'A+' }
+        tax_id: '27AABCS1429B1Z1',
+        email: 'finance@summittrading.com',
+        phone: '022-25550100',
+        role_type: 'CUSTOMER',
+        role_details: { credit_limit: 1000000, credit_days: 30 }
       },
       {
-        party_code: 'PTY-HARBOR-MGA',
-        legal_name: 'Harbor Risk Underwriting Managers',
-        trade_name: 'Harbor Specialty',
+        party_code: 'PTY-HARBOR-SUPP',
+        legal_name: 'Harbor Wholesale Suppliers LLP',
+        trade_name: 'Harbor Wholesale',
         party_type: 'ORGANIZATION',
-        tax_id: '74-1234567',
-        email: 'underwriting@harborspecialty.com',
-        phone: '512-555-0150',
-        role_type: 'MGA',
-        role_details: { underwriting_authority_limit: 5000000, agreement_ref: 'AGR-HARBOR-SUMMIT-2026' }
+        tax_id: '27AABCH2429B1Z2',
+        email: 'orders@harborwholesale.com',
+        phone: '022-25550150',
+        role_type: 'SUPPLIER',
+        role_details: { payment_terms: 'NET_30', gstin: '27AABCH2429B1Z2' }
       },
       {
-        party_code: 'PTY-BRIGHTLINE-BRK',
-        legal_name: 'Brightline Commercial Insurance Services',
-        trade_name: 'Brightline Brokers',
+        party_code: 'PTY-BRIGHTLINE-VEND',
+        legal_name: 'Brightline Industrial Hardware',
+        trade_name: 'Brightline Hardware',
         party_type: 'ORGANIZATION',
-        tax_id: '75-9876543',
-        email: 'producers@brightlinebrokers.com',
-        phone: '214-555-0180',
-        role_type: 'BROKER',
-        role_details: { license_number: 'TX-BRK-9921', producer_tier: 'PLATINUM' }
+        tax_id: '27AABCB3429B1Z3',
+        email: 'sales@brightlinehardware.com',
+        phone: '022-25550180',
+        role_type: 'VENDOR',
+        role_details: { vendor_tier: 'PREFERRED', lead_time_days: 7 }
       },
       {
-        party_code: 'PTY-LONEPINE-INS',
-        legal_name: 'Lone Pine Trucking LLC',
-        trade_name: 'Lone Pine Freight',
+        party_code: 'PTY-LONEPINE-LOG',
+        legal_name: 'Lone Pine Freight & Logistics Ltd',
+        trade_name: 'Lone Pine Express',
         party_type: 'ORGANIZATION',
-        tax_id: '74-9876543',
-        email: 'dispatch@lonepinetrucking.com',
-        phone: '432-555-0199',
-        role_type: 'POLICYHOLDER',
-        role_details: { dot_number: '3189201', industry_code: '484121' }
+        tax_id: '27AABCL4429B1Z4',
+        email: 'dispatch@lonepinefreight.com',
+        phone: '022-25550199',
+        role_type: 'VENDOR',
+        role_details: { transporter_id: 'TR-44291', fleet_type: 'HEAVY_CARRIER' }
       }
     ]
   },
   {
     tenant_code: 'TENANT_HARBOR',
-    name: 'Harbor Risk Underwriting Managers',
-    tenant_type: 'MGA',
-    base_currency: 'USD',
-    timezone: 'America/Chicago',
-    fiscal_year_start_month: 1,
+    name: 'Harbor Retail & Supermarket Mart',
+    tenant_type: 'RETAIL',
+    base_currency: 'INR',
+    timezone: 'Asia/Kolkata',
+    fiscal_year_start_month: 4,
     admin: {
       email: 'admin@harborspecialty.com',
       first_name: 'Marcus',
@@ -102,57 +99,57 @@ const CANONICAL_PERSONAS = [
     counterparties: [
       {
         party_code: 'PTY-HARBOR-SELF',
-        legal_name: 'Harbor Risk Underwriting Managers',
-        trade_name: 'Harbor Specialty Underwriters',
+        legal_name: 'Harbor Retail & Supermarket Mart',
+        trade_name: 'Harbor Supermarket',
         party_type: 'ORGANIZATION',
-        tax_id: '74-1234567',
-        email: 'operations@harborspecialty.com',
-        phone: '512-555-0150',
-        role_type: 'MGA',
-        role_details: { texas_doi_license: 'TX-MGA-4053', fiduciary_trust_bank: 'Frost Bank' }
+        tax_id: '27AABCH2429B1Z2',
+        email: 'operations@harborsupermarket.com',
+        phone: '022-25550150',
+        role_type: 'CUSTOMER',
+        role_details: { store_format: 'SUPERMARKET', billing_counter_count: 8 }
       },
       {
-        party_code: 'PTY-SUMMIT-CARR',
-        legal_name: 'Summit National Insurance Co.',
-        trade_name: 'Summit Mutual Group',
+        party_code: 'PTY-SUMMIT-DIST',
+        legal_name: 'Summit Commercial Trading Ltd',
+        trade_name: 'Summit Distributors',
         party_type: 'ORGANIZATION',
-        tax_id: '12-3456780',
-        email: 'carrier-accounting@summitmutual.com',
-        phone: '212-555-0100',
-        role_type: 'CARRIER',
-        role_details: { treaty_quota_share: 0.85, loss_escrow_required: true }
+        tax_id: '27AABCS1429B1Z1',
+        email: 'distributors@summittrading.com',
+        phone: '022-25550100',
+        role_type: 'SUPPLIER',
+        role_details: { distributor_tier: 'MASTER', discount_percent: 15 }
       },
       {
-        party_code: 'PTY-BRIGHTLINE-BRK',
-        legal_name: 'Brightline Commercial Insurance Services',
-        trade_name: 'Brightline Brokers',
+        party_code: 'PTY-BRIGHTLINE-FMCG',
+        legal_name: 'Brightline Consumer Goods Co.',
+        trade_name: 'Brightline FMCG',
         party_type: 'ORGANIZATION',
-        tax_id: '75-9876543',
-        email: 'accounting@brightlinebrokers.com',
-        phone: '214-555-0180',
-        role_type: 'BROKER',
-        role_details: { commission_schedule: 'SCHED-TX-COMMERCIAL', payment_terms: 'NET_15' }
+        tax_id: '27AABCB3429B1Z3',
+        email: 'accounts@brightlinefmcg.com',
+        phone: '022-25550180',
+        role_type: 'SUPPLIER',
+        role_details: { return_policy: 'REPLACE_DEFECTIVE', payment_terms: 'NET_15' }
       },
       {
-        party_code: 'PTY-LONEPINE-INS',
-        legal_name: 'Lone Pine Trucking LLC',
-        trade_name: 'Lone Pine Freight',
-        party_type: 'ORGANIZATION',
-        tax_id: '74-9876543',
-        email: 'billing@lonepinetrucking.com',
-        phone: '432-555-0199',
-        role_type: 'POLICYHOLDER',
-        role_details: { risk_score: 'A', primary_policy: 'POL-TX-8821' }
+        party_code: 'PTY-LONEPINE-RET',
+        legal_name: 'Lone Pine Retail Customers Club',
+        trade_name: 'Lone Pine Club',
+        party_type: 'INDIVIDUAL',
+        tax_id: '',
+        email: 'loyalty@lonepineretail.com',
+        phone: '022-25550199',
+        role_type: 'CUSTOMER',
+        role_details: { loyalty_tier: 'GOLD', reward_points_balance: 450 }
       }
     ]
   },
   {
     tenant_code: 'TENANT_BRIGHTLINE',
-    name: 'Brightline Commercial Insurance Services',
-    tenant_type: 'BROKER',
-    base_currency: 'USD',
-    timezone: 'America/Chicago',
-    fiscal_year_start_month: 1,
+    name: 'Brightline Hospitality & Dining Suites',
+    tenant_type: 'HOSPITALITY',
+    base_currency: 'INR',
+    timezone: 'Asia/Kolkata',
+    fiscal_year_start_month: 4,
     admin: {
       email: 'admin@brightlinebrokers.com',
       first_name: 'Elena',
@@ -161,54 +158,54 @@ const CANONICAL_PERSONAS = [
     counterparties: [
       {
         party_code: 'PTY-BRIGHTLINE-SELF',
-        legal_name: 'Brightline Commercial Insurance Services',
-        trade_name: 'Brightline Insurance Group',
+        legal_name: 'Brightline Hospitality & Dining Suites',
+        trade_name: 'Brightline Hotel & Suites',
         party_type: 'ORGANIZATION',
-        tax_id: '75-9876543',
-        email: 'admin@brightlinebrokers.com',
-        phone: '214-555-0180',
-        role_type: 'BROKER',
-        role_details: { agency_management_system: 'Applied Epic', producer_license: 'TX-AGT-1049' }
+        tax_id: '27AABCB3429B1Z3',
+        email: 'admin@brightlinehotel.com',
+        phone: '022-25550180',
+        role_type: 'CUSTOMER',
+        role_details: { total_rooms: 45, dining_tables: 20 }
       },
       {
-        party_code: 'PTY-HARBOR-MGA',
-        legal_name: 'Harbor Risk Underwriting Managers',
-        trade_name: 'Harbor Specialty Underwriters',
+        party_code: 'PTY-HARBOR-FOOD',
+        legal_name: 'Harbor Fresh Produce & Provisions',
+        trade_name: 'Harbor Food Supplies',
         party_type: 'ORGANIZATION',
-        tax_id: '74-1234567',
-        email: 'broker-relations@harborspecialty.com',
-        phone: '512-555-0150',
-        role_type: 'MGA',
-        role_details: { commission_split_standard: 0.10, bordereau_frequency: 'MONTHLY' }
+        tax_id: '27AABCH2429B1Z2',
+        email: 'kitchen-orders@harborfood.com',
+        phone: '022-25550150',
+        role_type: 'SUPPLIER',
+        role_details: { category: 'DAIRY_PRODUCE', delivery_frequency: 'DAILY' }
       },
       {
-        party_code: 'PTY-SUMMIT-CARR',
-        legal_name: 'Summit National Insurance Co.',
-        trade_name: 'Summit Mutual',
+        party_code: 'PTY-SUMMIT-LINEN',
+        legal_name: 'Summit Linen & Hotel Amenities Ltd',
+        trade_name: 'Summit Amenities',
         party_type: 'ORGANIZATION',
-        tax_id: '12-3456780',
-        email: 'agency-markets@summitmutual.com',
-        phone: '212-555-0100',
-        role_type: 'CARRIER',
-        role_details: { direct_appointment: false, paper_type: 'SURPLUS_LINES' }
+        tax_id: '27AABCS1429B1Z1',
+        email: 'supplies@summitamenities.com',
+        phone: '022-25550100',
+        role_type: 'SUPPLIER',
+        role_details: { category: 'ROOM_AMENITIES', contracted_rate: 'DISCOUNTED' }
       },
       {
-        party_code: 'PTY-LONEPINE-INS',
-        legal_name: 'Lone Pine Trucking LLC',
-        trade_name: 'Lone Pine Freight',
+        party_code: 'PTY-LONEPINE-CORP',
+        legal_name: 'Lone Pine Corporate Travel Group',
+        trade_name: 'Lone Pine Travel',
         party_type: 'ORGANIZATION',
-        tax_id: '74-9876543',
-        email: 'accounts@lonepinetrucking.com',
-        phone: '432-555-0199',
-        role_type: 'POLICYHOLDER',
-        role_details: { client_account_manager: 'Elena Rostova', renewal_date: '2027-07-01' }
+        tax_id: '27AABCL4429B1Z4',
+        email: 'bookings@lonepinetravel.com',
+        phone: '022-25550199',
+        role_type: 'CUSTOMER',
+        role_details: { corporate_rate_code: 'CORP-LONEPINE-2026', room_quota: 10 }
       }
     ]
   }
 ];
 
 async function seedPersonas() {
-  console.log('[SEED_PERSONAS] Initializing canonical Carrier, MGA, and Broker personas...');
+  console.log('[SEED_PERSONAS] Initializing canonical Enterprise, Retail, and Hospitality personas...');
 
   // Ensure default TENANT_ADMIN role exists
   let tenantAdminRole = await Role.findOne({ code: 'TENANT_ADMIN', tenant_id: null });
@@ -216,7 +213,7 @@ async function seedPersonas() {
     tenantAdminRole = await Role.create({
       code: 'TENANT_ADMIN',
       name: 'Tenant Administrator',
-      description: 'Full administrative access across all tenant settings and finance modules',
+      description: 'Full administrative access across all tenant settings and ERP modules',
       is_system_role: true
     });
   }
@@ -317,7 +314,7 @@ async function seedPersonas() {
       }
     }
 
-    // 5. Ensure all 5 Finance Modules are Entitled
+    // 5. Ensure all standard ERP Modules are Entitled
     for (const mod of FINANCE_MODULES) {
       await TenantModuleEntitlement.findOneAndUpdate(
         { tenant_id: tenant._id, module_code: mod },
@@ -366,10 +363,10 @@ async function seedPersonas() {
   // 8. Backfill tenant_type on any existing tenants
   await Tenant.updateMany(
     { tenant_type: { $exists: false } },
-    { $set: { tenant_type: 'MGA' } }
+    { $set: { tenant_type: 'ENTERPRISE' } }
   );
 
-  console.log('[SEED_PERSONAS] Completed successfully. 3 Canonical Personas active.');
+  console.log('[SEED_PERSONAS] Completed successfully. Commercial ERP Personas active.');
   return seededTenants;
 }
 

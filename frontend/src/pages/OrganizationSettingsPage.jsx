@@ -25,10 +25,10 @@ export default function OrganizationSettingsPage() {
 
   const [formData, setFormData] = useState({
     name: '',
-    tenant_type: 'MGA',
-    base_currency: 'USD',
-    timezone: 'America/New_York',
-    fiscal_year_start_month: 1
+    tenant_type: 'ENTERPRISE',
+    base_currency: 'INR',
+    timezone: 'Asia/Kolkata',
+    fiscal_year_start_month: 4
   });
 
   useEffect(() => {
@@ -160,53 +160,53 @@ export default function OrganizationSettingsPage() {
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div
-              onClick={() => setFormData({ ...formData, tenant_type: 'CARRIER' })}
+              onClick={() => setFormData({ ...formData, tenant_type: 'ENTERPRISE' })}
               className={`p-4 rounded-xl border cursor-pointer transition ${
-                formData.tenant_type === 'CARRIER'
+                formData.tenant_type === 'ENTERPRISE'
                   ? 'bg-blue-500/10 border-blue-500/40 text-white shadow-md shadow-blue-500/10'
                   : 'bg-slate-800/40 border-slate-750 text-slate-400 hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-xs text-blue-400">Underwriting Carrier</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">CARRIER</span>
+                <span className="font-bold text-xs text-blue-400">Commercial Enterprise</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">ENTERPRISE</span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Risk-bearing insurance company: written premium recognition, statutory unearned premium reserve (UPR), treaty reinsurance, and bordereau audit.
+                General commercial enterprise: multi-company trading, double-entry GL, GST invoicing, trade receivables/payables, and close reports.
               </p>
             </div>
 
             <div
-              onClick={() => setFormData({ ...formData, tenant_type: 'MGA' })}
+              onClick={() => setFormData({ ...formData, tenant_type: 'RETAIL' })}
               className={`p-4 rounded-xl border cursor-pointer transition ${
-                formData.tenant_type === 'MGA'
+                formData.tenant_type === 'RETAIL'
                   ? 'bg-emerald-500/10 border-emerald-500/40 text-white shadow-md shadow-emerald-500/10'
                   : 'bg-slate-800/40 border-slate-750 text-slate-400 hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-xs text-emerald-400">Managing General Agent</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">MGA</span>
+                <span className="font-bold text-xs text-emerald-400">Retail & Supermarket</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">RETAIL</span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Underwriting & servicing agency: direct/agency billing, Texas § 4053 fiduciary trust cash, commission splits, and carrier monthly settlements.
+                Fast retail operations: POS counter checkout, barcode scanner integration, cashier shift reconciliations, and instant stock deduction.
               </p>
             </div>
 
             <div
-              onClick={() => setFormData({ ...formData, tenant_type: 'BROKER' })}
+              onClick={() => setFormData({ ...formData, tenant_type: 'HOSPITALITY' })}
               className={`p-4 rounded-xl border cursor-pointer transition ${
-                formData.tenant_type === 'BROKER'
-                  ? 'bg-purple-500/10 border-purple-500/40 text-white shadow-md shadow-purple-500/10'
+                formData.tenant_type === 'HOSPITALITY'
+                  ? 'bg-amber-500/10 border-amber-500/40 text-white shadow-md shadow-amber-500/10'
                   : 'bg-slate-800/40 border-slate-750 text-slate-400 hover:border-slate-700'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-xs text-purple-400">Retail Broker / Agency</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">BROKER</span>
+                <span className="font-bold text-xs text-amber-400">Hospitality & Hotel</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">HOSPITALITY</span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Producing insurance brokerage: policyholder invoicing, retail commission receivable, producer splits, and net carrier remittances.
+                Dining and lodging: dining tables, KOT routing, recipe BOM raw material auto-consumption, hotel room reservations, and night audits.
               </p>
             </div>
           </div>
