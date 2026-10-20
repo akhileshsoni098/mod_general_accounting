@@ -3,6 +3,7 @@ const { Company, CompanyMembership, UserRole, Role, Tenant } = require('../model
 const { isValidProfile, getProfile } = require('../config/businessProfiles');
 const { seedCompanyChartOfAccounts } = require('../utils/seedCoa');
 const { seedCompanyFiscalPeriods } = require('../utils/seedFiscalPeriods');
+const { initializeCompanyInventoryDefaults } = require('./inventoryInitService');
 const { withOptionalTransaction } = require('../utils/transactionHelper');
 
 /**
@@ -142,6 +143,13 @@ async function initializeCompany({
     await seedCompanyFiscalPeriods(tenantId, company._id, currentYear, fyStartMonth, {
       session
     });
+
+    // 5. Seed Initial Inventory Masters (Default Godown, Standard UOMs, Primary Group)
+    try {
+      await initializeCompanyInventoryDefaults(tenantId, company._id, { session });
+    } catch (invInitErr) {
+      console.warn('[Inventory Init Warning]', invInitErr.message);
+    }
 
     return {
       company,

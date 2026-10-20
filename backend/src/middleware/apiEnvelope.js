@@ -32,25 +32,35 @@ function serializeValue(val) {
 
 function apiEnvelope(req, res, next) {
   res.success = (data, meta = {}, statusCode = 200) => {
-    return res.status(statusCode).json({
+    let finalMeta = meta;
+    let finalStatus = statusCode;
+    if (typeof meta === 'number') {
+      finalStatus = meta;
+      finalMeta = {};
+    }
+    return res.status(finalStatus).json({
       success: true,
       data: serializeValue(data),
       meta: {
         timestamp: new Date().toISOString(),
         tenant_id: req.tenantId || null,
         user_id: req.userId || null,
-        ...meta
+        ...finalMeta
       }
     });
   };
 
   res.error = (message, statusCode = 400, errors = null) => {
+    const errorPayload = {
+      message,
+      details: errors
+    };
+    if (errors && typeof errors === 'object' && errors.code) {
+      errorPayload.code = errors.code;
+    }
     return res.status(statusCode).json({
       success: false,
-      error: {
-        message,
-        details: errors
-      },
+      error: errorPayload,
       meta: {
         timestamp: new Date().toISOString(),
         tenant_id: req.tenantId || null,

@@ -270,5 +270,45 @@ export const dimensionsApi = {
   deleteDimension: (id) => apiRequest(`/dimensions/${id}`, { method: 'DELETE' })
 };
 
+export const inventoryApi = {
+  getGroups: (params = '') => apiRequest(`/inventory/groups${params}`),
+  getGroupById: (id) => apiRequest(`/inventory/groups/${id}`),
+  createGroup: (payload) => apiRequest('/inventory/groups', { method: 'POST', body: payload }),
+  updateGroup: (id, payload) => apiRequest(`/inventory/groups/${id}`, { method: 'PATCH', body: payload }),
+  deleteGroup: (id) => apiRequest(`/inventory/groups/${id}`, { method: 'DELETE' }),
+
+  getCategories: (params = '') => apiRequest(`/inventory/categories${params}`),
+  getCategoryById: (id) => apiRequest(`/inventory/categories/${id}`),
+  createCategory: (payload) => apiRequest('/inventory/categories', { method: 'POST', body: payload }),
+  updateCategory: (id, payload) => apiRequest(`/inventory/categories/${id}`, { method: 'PATCH', body: payload }),
+  deleteCategory: (id) => apiRequest(`/inventory/categories/${id}`, { method: 'DELETE' }),
+
+  getUnits: (params = '') => apiRequest(`/inventory/uom${params}`),
+  getUnitById: (id) => apiRequest(`/inventory/uom/${id}`),
+  createUnit: (payload) => apiRequest('/inventory/uom', { method: 'POST', body: payload }),
+  updateUnit: (id, payload) => apiRequest(`/inventory/uom/${id}`, { method: 'PATCH', body: payload }),
+  simulateConversion: (payload) => apiRequest('/inventory/uom/convert', { method: 'POST', body: payload }),
+
+  getGodowns: (params = '') => apiRequest(`/inventory/godowns${params}`),
+  getGodownById: (id) => apiRequest(`/inventory/godowns/${id}`),
+  createGodown: (payload) => apiRequest('/inventory/godowns', { method: 'POST', body: payload }),
+  updateGodown: (id, payload) => apiRequest(`/inventory/godowns/${id}`, { method: 'PATCH', body: payload }),
+
+  getItems: (params = '') => apiRequest(`/inventory/items${params}`),
+  getItemById: (id) => apiRequest(`/inventory/items/${id}`),
+  createItem: (payload) => apiRequest('/inventory/items', { method: 'POST', body: payload }),
+  updateItem: (id, payload) => apiRequest(`/inventory/items/${id}`, { method: 'PATCH', body: payload }),
+
+  postOpeningStock: (payload) => apiRequest('/inventory/opening-stock', { method: 'POST', body: payload }),
+
+  getBalances: (params = '') => apiRequest(`/inventory/balances${params}`),
+  getSummary: () => apiRequest('/inventory/summary'),
+
+  getMovements: (params = '') => apiRequest(`/inventory/movements${params}`),
+  reverseMovement: (id, payload) => apiRequest(`/inventory/movements/${id}/reverse`, { method: 'POST', body: payload }),
+
+  reconcileBalances: (payload = {}) => apiRequest('/inventory/reconcile', { method: 'POST', body: payload })
+};
+
 
 

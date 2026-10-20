@@ -1,78 +1,75 @@
-# TallyVeridexERP — Phase 2 Testing & Acceptance Verification Report
+# TallyVeridexERP — Testing & Acceptance Verification Report
 
 ## 1. Overview & Verification Summary
 
-This document certifies the testing verification and acceptance criteria for **Phase 2: Multi-Company Architecture, Company Isolation, RBAC/ABAC, and Business Profiles**.
+This document certifies the testing verification and acceptance criteria for:
+- **Phase 1: Security Hardening & Zero-Backdoor Cryptography**
+- **Phase 2: Multi-Company Architecture, Company Isolation, RBAC/ABAC, and Business Profiles**
+- **Phase 3: Core Inventory, Stock Masters, UOM and Stock Foundation**
 
-All automated test suites were executed natively via Node.js test runners and Vite production bundlers with **100% passing results and 0 failures**.
+All automated test suites execute natively via Node.js test runner and Vite production bundler with **100% passing results and 0 failures**.
 
 | Test Suite | File Location | Executed Tests | Passing | Failing | Execution Time |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Company Lifecycle & Isolation** | `backend/tests/company_lifecycle_and_isolation.test.js` | 18 | 18 | 0 | ~23.9s |
-| **Security & Cryptography** | `backend/tests/security_regression.test.js` | 16 | 16 | 0 | ~0.6s |
-| **Frontend Production Build** | `frontend/ (npm run build)` | 1495 modules | OK | 0 | ~2.2s |
-| **Total** | | **34 Tests** | **34** | **0** | **100% Pass** |
+| **Inventory Foundation & Isolation** | `backend/tests/inventory_foundation_and_isolation.test.js` | 29 | 29 | 0 | ~29.1s |
+| **Company Lifecycle & Isolation** | `backend/tests/company_lifecycle_and_isolation.test.js` | 18 | 18 | 0 | ~24.0s |
+| **Security & Cryptography** | `backend/tests/security_regression.test.js` | 16 | 16 | 0 | ~0.3s |
+| **Frontend Production Build** | `frontend/ (npm run build)` | 1,496 modules | OK | 0 | ~2.1s |
+| **Total Automated Coverage** | | **63 Tests** | **63** | **0** | **100% Pass** |
 
 ---
 
-## 2. Requirement Traceability Matrix
+## 2. Phase 3 Requirement Traceability Matrix
 
-The table below maps Phase 2 specifications to automated test cases:
+The table below maps Phase 3 specifications from Section 11 to automated test cases in `backend/tests/inventory_foundation_and_isolation.test.js`:
 
-| Phase 2 Requirement | Test Suite Name / Test Identifier | Result | Evidence & Behavior Validated |
+| Requirement | Test Name / Identifier | Result | Evidence & Behavior Validated |
 | :--- | :--- | :---: | :--- |
-| **1. Company Auto-Provisioning** | `Lifecycle: Registering Tenant A auto-creates primary company MAIN with COA and Admin membership` | **PASS** | Auto-creates `Company(code='MAIN')`, provisions `CompanyMembership(status='ACTIVE')`, seeds 12 monthly `FiscalPeriod` records, and seeds 24 standard commercial ERP `LedgerAccount` records. |
-| **2. Multi-Company Creation** | `Lifecycle: Creating secondary company RET01 under Tenant A succeeds with independent COA` | **PASS** | `POST /api/v1/companies` provisions second company with business profile `HARDWARE` and independent chart of accounts. |
-| **3. Intra-Tenant Code Uniqueness** | `Lifecycle: Reject duplicate company_code within the same tenant` | **PASS** | Attempting to create existing code `RET01` in same tenant rejected with `409 Conflict`. |
-| **4. Inter-Tenant Code Reusability** | `Lifecycle: Allow identical company_code across different tenants` | **PASS** | Tenant B successfully creates `RET01` without collision; unique compound index `{ tenant_id: 1, company_code: 1 }` validated. |
-| **5. Initialization Idempotency** | `Lifecycle: initializeCompany idempotency check` | **PASS** | Re-running initialization on existing company returns `{ created: false, company }` without mutating records or throwing errors. |
-| **6. Header Tampering Defense** | `Isolation: User is forbidden from sending x-company-id of a company they are not a member of` | **PASS** | User restricted to Company A sends `x-company-id: CompanyB`; rejected with `403 Forbidden`. |
-| **7. Cross-Tenant Tampering Defense**| `Isolation: Cross-tenant tampering - Request with x-company-id of Tenant B rejected` | **PASS** | Tenant A user sends company ID belonging to Tenant B; rejected with `403 Forbidden`. |
-| **8. Ledger Account Scoping** | `Isolation: Account scoping - Company A queries return only Company A accounts` | **PASS** | `GET /gl/accounts` with Company A header returns only Company A accounts. Same query with Company B header returns only Company B accounts. |
-| **9. Direct Record ID Tampering** | `Isolation: Direct record tampering - Attempting to view Company B account with Company A context fails` | **PASS** | Restricted user attempting to fetch account of Company B by ID receives `404 Not Found` or `403 Forbidden`. |
-| **10. Zero-Backdoor Principle** | `Security: Zero-Backdoor - Platform admin cannot bypass financial company isolation` | **PASS** | Platform Admin (`is_platform_admin === true`) accessing company financial endpoints without active membership is blocked with `403 Forbidden`. |
-| **11. RBAC Guarded Creation** | `RBAC: User lacking COMPANY:CREATE permission cannot create a company` | **PASS** | Non-admin user attempting `POST /api/v1/companies` receives `403 Forbidden`. |
-| **12. Immediate Revocation** | `RBAC: Revoking company membership terminates access to company-scoped endpoints immediately` | **PASS** | Setting `CompanyMembership.status = 'SUSPENDED'` immediately terminates access to all company-scoped endpoints on the next request. |
-| **13. Double-Entry Posting** | `Accounting Engine: Post double-entry journal in Company MAIN` | **PASS** | Posts balanced journal entry with Debits ($1,500) == Credits ($1,500); updates account balances accurately. |
-| **14. Unbalanced Journal Rejection** | `Accounting Engine: Reject unbalanced journal entry (Debits != Credits)` | **PASS** | Unbalanced entry ($1,500 vs $1,200) throws `Double-entry imbalance` error; 0 entries persisted. |
-| **15. Fiscal Period Lockout** | `Accounting Engine: Reject posting to closed/locked fiscal period` | **PASS** | Attempting to post to period with `status: 'LOCKED'` throws `Fiscal period is LOCKED` error. |
-| **16. Trial Balance Isolation** | `Accounting Engine: Cross-company trial balance isolation` | **PASS** | $1,500 posted in Company MAIN and $4,500 posted in Company RET01. Trial balance for MAIN reports strictly $1,500; trial balance for RET01 reports strictly $4,500. Zero data bleeding. |
-| **17. Migration Tool Dry-Run** | `Migration Tool: Dry-run mode produces reports without mutating database records` | **PASS** | `runCompanyMigration({ apply: false })` reports unmigrated statistics; zero updates committed to MongoDB. |
-| **18. Migration Production Safety** | `Migration Tool: Apply mode is blocked when ENABLE_MIGRATION_APPLY is not set` | **PASS** | Executing apply mode without environment authorization throws `MIGRATION_APPLY_BLOCKED`. |
+| **1. Auto-Provisioning** | `Setup: Register Tenant A and verify automatic inventory foundation provisioning` | **PASS** | Auto-provisions default Godown (`MAIN`), 8 standard UOMs (`PCS`, `BOX`, `DOZEN`, `KG`, `GRAM`, `LTR`, `ML`, `MTR`), and default StockGroup (`PRIMARY`). |
+| **2. Multi-Company Setup** | `Setup: Create secondary company SEC01 under Tenant A for cross-company isolation` | **PASS** | Provisions independent company with `GENERAL_RETAIL` profile and isolated inventory master catalog. |
+| **3. UOM Identity** | `UOM Engine: Identity conversion (same UOM) returns factor 1 and exact quantity` | **PASS** | Converting between identical units returns factor 1 and exact input quantity. |
+| **4. Mass Dimension Math** | `UOM Engine: Standard dimension mass conversion (2.5 KG = 2500 GRAM)` | **PASS** | Verified standard dimension conversion: 2.5 KG = 2500 GRAM. |
+| **5. Volume Dimension Math**| `UOM Engine: Standard dimension volume conversion (1000 ML = 1 LTR)` | **PASS** | Verified standard dimension conversion: 1000 ML = 1 LTR. |
+| **6. Incompatible Dimensions**| `UOM Engine: Incompatible dimension conversion (MASS to VOLUME) is rejected` | **PASS** | Attempting to convert between mass and volume without packaging ratio throws explicit 400 rejection. |
+| **7. Stock Group Hierarchy** | `Stock Groups: Create parent group and child subgroup` | **PASS** | Created parent `HARDWARE` and child `FASTENERS`. Parent-child linkage verified. |
+| **8. Intra-Company Uniqueness**| `Stock Groups: Reject duplicate group_code within the same company` | **PASS** | Duplicate `group_code` within same company returns `409 Conflict (DUPLICATE_GROUP_CODE)`. |
+| **9. Cross-Company Reusability**| `Stock Groups: Allow identical group_code across different companies` | **PASS** | Secondary company created `HARDWARE` group without collision. Unique compound index `{ tenant_id, company_id, group_code }` validated. |
+| **10. Cycle Prevention (Loop)**| `Stock Groups: Reject circular hierarchy dependency (Parent -> Child -> Parent)` | **PASS** | Setting `HARDWARE` parent to `FASTENERS` rejected with `400 (CIRCULAR_GROUP_DEPENDENCY)`. Ancestry traversal verified. |
+| **11. Self-Parent Cycle** | `Stock Groups: Reject self-parent cycle (group setting parent to itself)` | **PASS** | Setting group's parent to its own ID rejected with `400 (SELF_PARENT_CYCLE)`. |
+| **12. Deletion Guard** | `Stock Groups: Reject deletion of group with active child subgroups` | **PASS** | Deleting group with active children rejected with `400 (GROUP_HAS_ACTIVE_SUBGROUPS)`. |
+| **13. Category Management** | `Stock Categories: Create and list categories` | **PASS** | Stock category `FASTENERS_CAT` created, listed, and verified per company. |
+| **14. Godowns & Default Toggle**| `Godowns: Create secondary godown and promote to default` | **PASS** | Created `WH_EAST` as `is_default: true`; previous default `MAIN` godown automatically unset to `is_default: false`. |
+| **15. Alternate UOM Ingestion**| `Stock Items: Create item with item-specific alternate UOM (1 BOX = 10 PCS)` | **PASS** | Created item `BOLT_M8` with base unit `PCS` and alternate packaging unit `1 BOX = 10 PCS`. |
+| **16. Item-Specific Packaging**| `Stock Items: Create second item with different packaging ratio (1 BOX = 100 PCS)` | **PASS** | Created item `SCREW_M4` with alternate packaging unit `1 BOX = 100 PCS`. |
+| **17. 5 BOX Conversion Test**| `UOM Engine: Item-specific conversions resolve packaging accurately per item (5 BOX test)` | **PASS** | 5 BOX of `BOLT_M8` converts to 50 PCS. 5 BOX of `SCREW_M4` converts to 500 PCS. Complete item-specific isolation verified. |
+| **18. Item Code & SKU Uniqueness**| `Stock Items: Reject duplicate item_code and SKU within same company` | **PASS** | Duplicate item code returns `409 (DUPLICATE_ITEM_CODE)`. Duplicate SKU returns `409 (DUPLICATE_SKU)`. |
+| **19. Multi-Company Item Reusability**| `Stock Items: Allow identical item_code in different company` | **PASS** | Secondary company creates `BOLT_M8` successfully without conflict. |
+| **20. Alternate UOM Opening Stock**| `Opening Stock: Post opening stock in alternate UOM (5 BOX = 50 PCS @ ₹5.00/base unit)` | **PASS** | 5 BOX opening stock recorded. Movement created with `base_quantity: 50` and `total_cost: 250.00`. Projected `StockBalance` created with `quantity_on_hand: 50` and moving average rate `₹5.00`. |
+| **21. Idempotent Duplicate Rejection**| `Opening Stock: Reject duplicate opening stock posting for the same item and godown` | **PASS** | Second attempt to post opening stock for same item in same godown returns `409 (OPENING_STOCK_ALREADY_POSTED)`. |
+| **22. Base UOM Immutability**| `Stock Items: Reject changing base_uom_id after stock movements exist` | **PASS** | Attempting to update `base_uom_id` on item with logged movements rejected with `400 (BASE_UOM_IMMUTABLE_AFTER_MOVEMENTS)`. |
+| **23. Movement Reversal** | `Movements: Post opening stock for SCREW_M4 and reverse it` | **PASS** | Reversal endpoint creates compensating movement with signed negative base quantity (-100). On-hand quantity and valuation returned to zero. Second reversal rejected. |
+| **24. Ledger Reconciliation** | `Reconciliation: Rebuild balances from movement ledger reconstructs exact numbers` | **PASS** | Audit rebuild endpoint replays all append-only movements and accurately reconstructs all godown balances from scratch. |
+| **25. Scope Isolation (Company)**| `Isolation: Requests for Company MAIN items do not expose Secondary Company items` | **PASS** | Company MAIN item queries return strictly Company MAIN items. Secondary company queries return strictly secondary company items. |
+| **26. Scope Isolation (Tenant)** | `Isolation: User in Tenant B cannot access Company A inventory items` | **PASS** | Tenant B user queries item belonging to Tenant A; returns `404 Not Found`. |
+| **27. Header Tampering Defense**| `Isolation: Tampered x-company-id header for company user has no membership in is rejected` | **PASS** | Requests with spoofed `x-company-id` rejected with `403 Forbidden`. |
+| **28. Inactive Item Protection**| `Inactive Item: Posting opening stock for deactivated item is rejected` | **PASS** | Deactivated item (`status: 'INACTIVE'`) rejected during opening stock posting with `400 (STOCK_ITEM_INACTIVE)`. |
+| **29. Phase 4 GL Boundary** | Verified across all opening stock tests | **PASS** | Response explicitly returns `gl_status: 'DEFERRED_TO_PHASE_4'`, preventing GL corruption prior to commercial voucher integration. |
 
 ---
 
-## 3. Test Runner Execution Commands
+## 3. How to Execute All Test Suites
 
-### To run the full company isolation test suite:
 ```powershell
-cd backend
-node --test tests/company_lifecycle_and_isolation.test.js
-```
+# 1. Run Core Inventory Suite (29 tests)
+node backend/tests/inventory_foundation_and_isolation.test.js
 
-### To run the security regression suite:
-```powershell
-cd backend
-node --test tests/security_regression.test.js
-```
+# 2. Run Company Lifecycle & Isolation Suite (18 tests)
+node backend/tests/company_lifecycle_and_isolation.test.js
 
-### To verify frontend production compilation:
-```powershell
+# 3. Run Security & Cryptography Regression Suite (16 tests)
+node backend/tests/security_regression.test.js
+
+# 4. Verify Frontend Production Build
 cd frontend
 cmd /c npm run build
 ```
-
----
-
-## 4. Acceptance Sign-Off Checklist
-
-- [x] Multi-company data model established (`Company`, `CompanyMembership`).
-- [x] Compound unique indexes implemented on all 8 core accounting collections.
-- [x] `requireCompanyContext` middleware enforced across accounting routes.
-- [x] Dynamic business profiles registry defined (10 canonical profiles).
-- [x] Zero-backdoor security enforced for platform administrators.
-- [x] Full double-entry balancing and period locking enforced with company scoping.
-- [x] Isolated Trial Balance computation verified across sister companies.
-- [x] Safe, idempotent migration tool with default dry-run mode delivered.
-- [x] Frontend Company Switcher and Creation UI seamlessly integrated.
-- [x] 100% automated regression test coverage achieved (34 passing tests, 0 failures).

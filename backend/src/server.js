@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -16,6 +18,7 @@ const commissionsRoutes = require('./routes/commissionsRoutes');
 const financeCloseRoutes = require('./routes/financeCloseRoutes');
 const counterpartyRoutes = require('./routes/counterpartyRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 const eventDefinitionRoutes = require('./routes/eventDefinitionRoutes');
 const postingRuleRoutes = require('./routes/postingRuleRoutes');
@@ -58,6 +61,7 @@ app.use('/api/v1/companies', companyRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/counterparties', counterpartyRoutes);
 app.use('/api/v1/gl', glRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/billing', billingRoutes);
 app.use('/api/v1/treasury', treasuryRoutes);
 app.use('/api/v1/commissions', commissionsRoutes);

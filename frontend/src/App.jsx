@@ -20,10 +20,12 @@ import RuleTestCasesPage from './pages/RuleTestCasesPage';
 import ConfigBundlePage from './pages/ConfigBundlePage';
 import EventOperationsPage from './pages/EventOperationsPage';
 import DimensionsPage from './pages/DimensionsPage';
+import InventoryWorkspacePage from './pages/InventoryWorkspacePage';
 import CompanySelector from './components/CompanySelector';
 
 import { useTheme } from './context/ThemeContext';
 import {
+  Boxes,
   ShieldCheck,
   Building2,
   Users,
@@ -117,6 +119,7 @@ export default function App() {
   const financialNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'gl', label: 'General Ledger', icon: BookOpen },
+    { id: 'inventory', label: 'Inventory & Stock Masters', icon: Boxes },
     { id: 'billing_ar', label: 'Billing & Accounts Receivable', icon: Receipt },
     { id: 'commissions_fiduciary', label: 'Commissions & Settlements', icon: Percent },
     { id: 'treasury_bank_rec', label: 'Treasury & Bank Reconciliation', icon: Landmark },
@@ -331,6 +334,7 @@ export default function App() {
         <main className="flex-1 p-8 overflow-y-auto max-w-7xl">
           {activeTab === 'dashboard' && <TenantDashboardPage onNavigateTab={setActiveTab} />}
           {activeTab === 'gl' && <GLWorkspacePage />}
+          {activeTab === 'inventory' && <InventoryWorkspacePage />}
           {activeTab === 'billing_ar' && <BillingWorkspacePage />}
           {activeTab === 'commissions_fiduciary' && <CommissionsWorkspacePage />}
           {activeTab === 'treasury_bank_rec' && <TreasuryWorkspacePage />}

@@ -42,7 +42,14 @@ const STANDARD_PERMISSIONS = [
 
   // FINANCE CLOSE & REPORTING
   { code: 'CLOSE:VIEW', module: 'FINANCE_CLOSE', description: 'View accounting periods and close runbooks' },
-  { code: 'CLOSE:EXECUTE', module: 'FINANCE_CLOSE', description: 'Lock periods, run close, and generate trial balance' }
+  { code: 'CLOSE:EXECUTE', module: 'FINANCE_CLOSE', description: 'Lock periods, run close, and generate trial balance' },
+
+  // INVENTORY & STOCK MANAGEMENT (Phase 3)
+  { code: 'INVENTORY:VIEW', module: 'INVENTORY', description: 'View stock items, groups, categories, balances, movements' },
+  { code: 'INVENTORY:MANAGE_MASTERS', module: 'INVENTORY', description: 'Create and update stock items, groups, categories, UOM, godowns' },
+  { code: 'INVENTORY:OPENING_STOCK', module: 'INVENTORY', description: 'Initialize and correct opening stock balances' },
+  { code: 'INVENTORY:ADJUST', module: 'INVENTORY', description: 'Record physical stock adjustments and reconciliations' },
+  { code: 'INVENTORY:ADMIN', module: 'INVENTORY', description: 'Full administrative control over inventory masters and policies' }
 ];
 
 const STANDARD_ROLES = [
@@ -69,6 +76,7 @@ const STANDARD_ROLES = [
       'USER:VIEW',
       'COMPANY:VIEW', 'COMPANY:UPDATE',
       'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
+      'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK', 'INVENTORY:ADJUST', 'INVENTORY:ADMIN',
       'BILLING:VIEW', 'BILLING:CREATE', 'BILLING:ADMIN',
       'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -83,6 +91,7 @@ const STANDARD_ROLES = [
     permissions: [
       'COMPANY:VIEW',
       'GL:VIEW', 'GL:POST',
+      'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK',
       'BILLING:VIEW',
       'COMMISSIONS:VIEW',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -119,6 +128,7 @@ const STANDARD_ROLES = [
     permissions: [
       'COMPANY:VIEW', 'COMPANY:UPDATE',
       'GL:VIEW', 'GL:POST', 'GL:ADMIN', 'PERIOD:ADMIN',
+      'INVENTORY:VIEW', 'INVENTORY:MANAGE_MASTERS', 'INVENTORY:OPENING_STOCK', 'INVENTORY:ADJUST',
       'BILLING:VIEW', 'BILLING:CREATE',
       'COMMISSIONS:VIEW', 'COMMISSIONS:CALC', 'COMMISSIONS:DISBURSE',
       'TREASURY:VIEW', 'TREASURY:RECONCILE',
@@ -134,6 +144,7 @@ const STANDARD_ROLES = [
       'TENANT:VIEW',
       'COMPANY:VIEW',
       'GL:VIEW',
+      'INVENTORY:VIEW',
       'BILLING:VIEW',
       'COMMISSIONS:VIEW',
       'TREASURY:VIEW',

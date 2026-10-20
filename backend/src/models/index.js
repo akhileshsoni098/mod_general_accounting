@@ -13,6 +13,15 @@ const PasswordResetToken = require('./PasswordResetToken');
 const Company = require('./Company');
 const CompanyMembership = require('./CompanyMembership');
 
+// Module: Inventory & Stock Management (Phase 3 - 7 Models)
+const StockGroup = require('./StockGroup');
+const StockCategory = require('./StockCategory');
+const UnitOfMeasurement = require('./UnitOfMeasurement');
+const Godown = require('./Godown');
+const StockItem = require('./StockItem');
+const StockMovement = require('./StockMovement');
+const StockBalance = require('./StockBalance');
+
 // Module 14: Core General Ledger (7 Models)
 const LedgerAccount = require('./LedgerAccount');
 const FiscalPeriod = require('./FiscalPeriod');
@@ -92,6 +101,15 @@ module.exports = {
   PasswordResetToken,
   Company,
   CompanyMembership,
+
+  // Inventory & Stock Management
+  StockGroup,
+  StockCategory,
+  UnitOfMeasurement,
+  Godown,
+  StockItem,
+  StockMovement,
+  StockBalance,
 
   // Core General Ledger
   LedgerAccount,
