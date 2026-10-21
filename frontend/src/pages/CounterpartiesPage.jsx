@@ -204,7 +204,7 @@ export default function CounterpartiesPage() {
             <h2 className="text-xl font-bold text-white tracking-tight">Counterparties & Business Roles</h2>
           </div>
           <p className="text-xs text-slate-400 max-w-3xl">
-            Directory of insurance business participants: Underwriting Carriers, MGAs, Producing Brokers, Policyholders, and Reinsurers. Scoped to the active tenant workspace.
+            Directory of commercial business counterparties: Sundry Debtors (Customers), Sundry Creditors (Vendors/Suppliers), Financial Institutions, and Partners. Scoped to the active company workspace.
           </p>
         </div>
 
@@ -436,7 +436,7 @@ export default function CounterpartiesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. PTY-LONEPINE-01"
+                    placeholder="e.g. PTY-CUST-001"
                     value={formData.party_code}
                     onChange={(e) => setFormData({ ...formData, party_code: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
@@ -449,13 +449,13 @@ export default function CounterpartiesPage() {
                     onChange={(e) => setFormData({ ...formData, initial_role_type: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="POLICYHOLDER">Policyholder (Insured)</option>
-                    <option value="BROKER">Broker / Retail Agent</option>
-                    <option value="CARRIER">Underwriting Carrier</option>
-                    <option value="MGA">Managing General Agent</option>
-                    <option value="PRODUCER">Producer / Sub-agent</option>
-                    <option value="REINSURER">Reinsurance Carrier</option>
-                    <option value="VENDOR">Claims / Service Vendor</option>
+                    <option value="POLICYHOLDER">Customer / Sundry Debtor</option>
+                    <option value="VENDOR">Supplier / Sundry Creditor</option>
+                    <option value="BROKER">Sales Agent / Distributor</option>
+                    <option value="CARRIER">Commercial Partner</option>
+                    <option value="MGA">Wholesale / Regional Agent</option>
+                    <option value="PRODUCER">Service Provider</option>
+                    <option value="REINSURER">Financial Institution / Bank</option>
                   </select>
                 </div>
               </div>

@@ -2,6 +2,7 @@ const { Role, Permission, RolePermission } = require('../models');
 
 const STANDARD_PERMISSIONS = [
   // PLATFORM & SAAS ADMIN
+  { code: 'TENANT:ADMIN', module: 'TENANT_ADMIN', description: 'Full tenant administrative control and reset' },
   { code: 'TENANT:CREATE', module: 'PLATFORM', description: 'Create and register new tenants' },
   { code: 'TENANT:VIEW', module: 'PLATFORM', description: 'View tenant details' },
   { code: 'TENANT:UPDATE', module: 'PLATFORM', description: 'Update tenant configuration' },
@@ -192,8 +193,8 @@ const STANDARD_ROLES = [
       'COMPANY:VIEW',
       'GL:VIEW',
       'INVENTORY:VIEW',
+      'COMMERCIAL:VIEW',
       'BILLING:VIEW',
-      'COMMISSIONS:VIEW',
       'TREASURY:VIEW',
       'CLOSE:VIEW'
     ]

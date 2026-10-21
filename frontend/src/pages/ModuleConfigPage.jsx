@@ -104,10 +104,10 @@ export default function ModuleConfigPage() {
       <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl">
         <div className="flex items-center space-x-2 mb-2 text-xs font-semibold text-brand-400 uppercase tracking-wider">
           <Layers className="w-4 h-4" />
-          <span>Veridex One 5-Module Finance Ecosystem</span>
+          <span>TallyVeridex Multi-Module SaaS ERP Ecosystem</span>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Each tenant can license and activate independent submodules or run the unified insurance accounting suite.
+          Each tenant can license and activate independent submodules or run the unified commercial accounting & inventory suite.
           Disabling an entitlement immediately locks the corresponding subledgers, routes, and API endpoints for non-platform users.
         </p>
       </div>

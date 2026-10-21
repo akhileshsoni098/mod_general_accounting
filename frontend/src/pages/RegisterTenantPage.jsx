@@ -5,12 +5,13 @@ import { ShieldCheck, ArrowRight, ArrowLeft, Building, Lock, Mail, User, AlertCi
 export default function RegisterTenantPage({ onSwitchToLogin }) {
   const { registerTenant } = useAuth();
   const [formData, setFormData] = useState({
-    tenant_code: 'LONEPINE_TRUCK',
-    tenant_name: 'Lone Pine Trucking Insurance Ecosystem',
-    base_currency: 'USD',
-    admin_first_name: 'Arturo',
-    admin_last_name: 'Gatti',
-    admin_email: 'arturo_lonepine@veridex.com',
+    tenant_code: 'APEX_TRADING',
+    tenant_name: 'Apex Commercial Trading Enterprises Ltd',
+    base_currency: 'INR',
+    tenant_type: 'ENTERPRISE',
+    admin_first_name: 'Akhilesh',
+    admin_last_name: 'Soni',
+    admin_email: 'admin@apexcommercial.com',
     admin_password: 'Password123!'
   });
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +44,7 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white">Onboard New Tenant Workspace</h1>
-              <p className="text-xs text-slate-400 font-medium">Veridex One Multi-Tenant Insurance Finance</p>
+              <p className="text-xs text-slate-400 font-medium">TallyVeridex Multi-Tenant Cloud ERP</p>
             </div>
           </div>
           <button
@@ -74,7 +75,7 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
                   name="tenant_code"
                   value={formData.tenant_code}
                   onChange={handleChange}
-                  placeholder="e.g. LONEPINE"
+                  placeholder="e.g. APEX_TRADING"
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono uppercase"
                 />
               </div>
@@ -103,10 +104,11 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
                   onChange={handleChange}
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono"
                 >
-                  <option value="USD">USD - United States Dollar</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
+                  <option value="INR">INR - Indian Rupee (₹)</option>
+                  <option value="USD">USD - United States Dollar ($)</option>
+                  <option value="EUR">EUR - Euro (€)</option>
+                  <option value="GBP">GBP - British Pound (£)</option>
+                  <option value="AED">AED - UAE Dirham (د.إ)</option>
                 </select>
               </div>
               <div className="md:col-span-3">
@@ -117,7 +119,7 @@ export default function RegisterTenantPage({ onSwitchToLogin }) {
                   name="tenant_name"
                   value={formData.tenant_name}
                   onChange={handleChange}
-                  placeholder="e.g. Lone Pine Trucking Insurance Ecosystem"
+                  placeholder="e.g. Apex Commercial Trading Enterprises Ltd"
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>

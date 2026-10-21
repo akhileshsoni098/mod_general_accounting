@@ -47,10 +47,10 @@ export default function ManufacturingWorkspacePage() {
         inventoryApi.getItems(),
         inventoryApi.getGodowns()
       ]);
-      setWorkOrders(woRes.data || []);
-      setBoms(bomRes.data || []);
-      setItems(itemRes.data || []);
-      setGodowns(godownRes.data || []);
+      setWorkOrders(Array.isArray(woRes.data) ? woRes.data : (woRes.data?.work_orders || []));
+      setBoms(Array.isArray(bomRes.data) ? bomRes.data : (bomRes.data?.boms || []));
+      setItems(Array.isArray(itemRes.data) ? itemRes.data : (itemRes.data?.items || []));
+      setGodowns(Array.isArray(godownRes.data) ? godownRes.data : (godownRes.data?.godowns || []));
     } catch (err) {
       setError(err.message);
     } finally {

@@ -47,7 +47,16 @@ const {
   CommissionDispute,
   DelinquencyCase,
   DunningAction,
-  CollectionAssignment
+  CollectionAssignment,
+  CommercialDocument,
+  BillAllocation,
+  StockMovement,
+  StockBalance,
+  PosShift,
+  RestaurantOrder,
+  HotelReservation,
+  GuestFolio,
+  WorkOrder
 } = require('../models');
 const { hashPassword } = require('../utils/crypto');
 const { generateToken } = require('../middleware/authMiddleware');
@@ -287,7 +296,7 @@ async function updateOrganizationSettings(req, res) {
     const { name, tenant_type, timezone, base_currency, fiscal_year_start_month, metadata, settings } = req.body;
     if (name) tenant.name = name.trim();
     if (tenant_type) {
-      const validTypes = ['CARRIER', 'MGA', 'BROKER', 'OTHER'];
+      const validTypes = ['ENTERPRISE', 'RETAIL', 'HOSPITALITY', 'MANUFACTURING', 'SERVICES', 'WHOLESALE', 'COMMERCIAL', 'OTHER', 'CARRIER', 'MGA', 'BROKER'];
       const normalized = tenant_type.toUpperCase().trim();
       if (!validTypes.includes(normalized)) {
         return res.error(`Invalid tenant_type. Must be one of: ${validTypes.join(', ')}`, 400);
@@ -353,6 +362,15 @@ async function resetDevData(req, res) {
     }
 
     await Promise.all([
+      CommercialDocument.deleteMany({ tenant_id: tenantId }),
+      BillAllocation.deleteMany({ tenant_id: tenantId }),
+      StockMovement.deleteMany({ tenant_id: tenantId }),
+      StockBalance.deleteMany({ tenant_id: tenantId }),
+      PosShift.deleteMany({ tenant_id: tenantId }),
+      RestaurantOrder.deleteMany({ tenant_id: tenantId }),
+      HotelReservation.deleteMany({ tenant_id: tenantId }),
+      GuestFolio.deleteMany({ tenant_id: tenantId }),
+      WorkOrder.deleteMany({ tenant_id: tenantId }),
       Invoice.deleteMany({ tenant_id: tenantId }),
       InvoiceLine.deleteMany({ tenant_id: tenantId }),
       Payment.deleteMany({ tenant_id: tenantId }),

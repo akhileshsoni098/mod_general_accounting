@@ -50,7 +50,8 @@ export default function CommercialWorkspacePage() {
     setError('');
     try {
       const res = await commercialApi.getDocuments();
-      setDocuments(res.data || []);
+      const docList = Array.isArray(res.data) ? res.data : (res.data?.documents || []);
+      setDocuments(docList);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -273,14 +274,14 @@ export default function CommercialWorkspacePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                {documents.length === 0 ? (
+                {(!Array.isArray(documents) || documents.length === 0) ? (
                   <tr>
                     <td colSpan="8" className="p-6 text-center text-slate-500">
                       No commercial vouchers created yet. Click "New Voucher" above to begin.
                     </td>
                   </tr>
                 ) : (
-                  documents.map((doc) => (
+                  (Array.isArray(documents) ? documents : []).map((doc) => (
                     <tr key={doc._id} className="hover:bg-slate-850/50 transition">
                       <td className="p-3 font-mono font-semibold text-brand-300">{doc.document_number}</td>
                       <td className="p-3">

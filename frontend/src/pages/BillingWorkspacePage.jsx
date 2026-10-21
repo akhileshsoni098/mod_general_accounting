@@ -1054,7 +1054,7 @@ export default function BillingWorkspacePage() {
                 <label className="text-slate-400 block mb-1">Customer Email (Optional)</label>
                 <input
                   type="email"
-                  placeholder="e.g. billing@lonepine.com"
+                  placeholder="e.g. billing@apexcommercial.com"
                   value={newAccount.customer_email}
                   onChange={(e) => setNewAccount({ ...newAccount, customer_email: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"

@@ -85,7 +85,7 @@ export default function App() {
 
   const handleClearTestData = async () => {
     const confirmed = window.confirm(
-      `⚠️ Clear Test Data for "${currentWorkspace?.name || 'this workspace'}"?\n\nThis will remove all test Invoices, Payments, Installment Schedules, Billing Accounts, Journals, and Counterparties for this tenant.\n\nYour user account and workspace login will remain active.`
+      `⚠️ Clear Test Data for "${currentWorkspace?.name || 'this workspace'}"?\n\nThis will remove all test commercial vouchers, sales & purchase invoices, stock movements, bills, journals, and balances for this tenant.\n\nYour user account and workspace login will remain active.`
     );
     if (!confirmed) return;
 
@@ -105,7 +105,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p className="text-xs font-mono">Initializing Veridex One SaaS Session...</p>
+        <p className="text-xs font-mono">Initializing TallyVeridex Cloud ERP Session...</p>
       </div>
     );
   }
@@ -168,8 +168,8 @@ export default function App() {
     ...(isAdmin ? [{ id: 'platform_admin', label: 'Platform Super Admin', icon: ShieldAlert }] : [])
   ];
 
-  const tenantType = currentWorkspace?.tenant_type || 'MGA';
-  const typeBadge = TENANT_TYPE_BADGES[tenantType] || TENANT_TYPE_BADGES.MGA;
+  const tenantType = currentWorkspace?.tenant_type || 'ENTERPRISE';
+  const typeBadge = TENANT_TYPE_BADGES[tenantType] || TENANT_TYPE_BADGES.ENTERPRISE;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -181,7 +181,7 @@ export default function App() {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight text-white">Veridex One</span>
+              <span className="font-bold text-sm tracking-tight text-white">TallyVeridex ERP</span>
               <span className="text-[10px] ml-2 px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">v4.6</span>
             </div>
           </div>
@@ -232,7 +232,7 @@ export default function App() {
             onClick={handleClearTestData}
             disabled={clearingData}
             className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 text-xs font-medium transition cursor-pointer"
-            title="Reset test data for this tenant workspace (Invoices, Payments, Schedules, Journals, Counterparties)"
+            title="Reset test transactional data for this tenant workspace (Commercial documents, stock movements, journals, bills)"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${clearingData ? 'animate-spin' : ''}`} />
             <span>{clearingData ? 'Clearing...' : 'Clear Test Data'}</span>

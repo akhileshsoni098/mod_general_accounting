@@ -54,13 +54,22 @@ function requirePermission(requiredPermissionCode) {
       const userRoles = await UserRole.find({
         tenant_id: tenantId,
         user_id: req.user._id
-      });
+      }).populate('role_id');
 
       if (!userRoles || userRoles.length === 0) {
         return res.error(`Forbidden: No roles assigned in this workspace`, 403);
       }
 
-      const roleIds = userRoles.map(ur => ur.role_id);
+      // If user has TENANT_ADMIN or PLATFORM_SUPER_ADMIN role, grant access across tenant-level operations
+      const isTenantAdmin = userRoles.some(ur => {
+        const code = ur.role_id?.code;
+        return code === 'TENANT_ADMIN' || code === 'PLATFORM_SUPER_ADMIN';
+      });
+      if (isTenantAdmin) {
+        return next();
+      }
+
+      const roleIds = userRoles.map(ur => ur.role_id?._id || ur.role_id);
       const permDoc = await Permission.findOne({ code: requiredPermissionCode });
       if (!permDoc) {
         return res.error(`Unknown permission requirement: ${requiredPermissionCode}`, 500);

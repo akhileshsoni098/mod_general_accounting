@@ -847,7 +847,7 @@ export default function GLWorkspacePage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <h3 className="text-sm font-semibold text-white mb-2">Event-Driven Accounting Posting Rules</h3>
             <p className="text-xs text-slate-400">
-              Posting rules translate operational insurance lifecycle events (e.g., Policy Bound, Direct Invoice, Down Payment) into double-entry balanced journals without arbitrary scripts.
+              Posting rules translate operational commercial events (e.g., Sales Invoicing, Commercial Receipt, Goods Purchase, Stock Adjustments) into double-entry balanced journals without arbitrary scripts.
             </p>
           </div>
 

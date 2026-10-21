@@ -144,7 +144,7 @@ export default function ModuleWorkspaceStub({
             </div>
 
             <p className="text-xs text-slate-400 mb-3">
-              Standard insurance domain data models:
+              Standard ERP domain data models:
             </p>
 
             <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">

@@ -61,9 +61,9 @@ export default function HotelWorkspacePage() {
         hotelApi.getReservations(),
         hotelApi.getMetrics()
       ]);
-      setRooms(roomRes.data || []);
-      setRoomTypes(typeRes.data || []);
-      setReservations(resRes.data || []);
+      setRooms(Array.isArray(roomRes.data) ? roomRes.data : (roomRes.data?.rooms || []));
+      setRoomTypes(Array.isArray(typeRes.data) ? typeRes.data : (typeRes.data?.room_types || []));
+      setReservations(Array.isArray(resRes.data) ? resRes.data : (resRes.data?.reservations || []));
       setMetrics(metricRes.data || null);
     } catch (err) {
       setError(err.message);

@@ -6,7 +6,7 @@ import { ShieldCheck, ArrowRight, Building, Lock, Mail, AlertCircle, Sun, Moon }
 export default function LoginPage({ onSwitchToRegister }) {
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const [email, setEmail] = useState('arturo_lonepine@veridex.com');
+  const [email, setEmail] = useState('admin@apexcommercial.com');
   const [password, setPassword] = useState('Password123!');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -52,14 +52,14 @@ export default function LoginPage({ onSwitchToRegister }) {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Veridex One</h1>
-            <p className="text-xs text-slate-400 font-medium">Finance & Accounting SaaS Platform</p>
+            <h1 className="text-xl font-bold tracking-tight text-white">TallyVeridex ERP</h1>
+            <p className="text-xs text-slate-400 font-medium">Commercial Accounting & Inventory Platform</p>
           </div>
         </div>
 
         <h2 className="text-lg font-semibold text-white mb-2">Sign in to your Workspace</h2>
         <p className="text-xs text-slate-400 mb-6">
-          Authenticate with your tenant user credentials to access general ledger, billing, fiduciary, treasury, and close.
+          Authenticate with your tenant user credentials to access General Ledger, Commercial Invoicing, Inventory, GST, and Operations.
         </p>
 
         {errorMsg && (

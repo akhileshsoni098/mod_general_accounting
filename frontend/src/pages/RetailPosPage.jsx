@@ -55,7 +55,8 @@ export default function RetailPosPage() {
   const loadCatalog = async () => {
     try {
       const res = await inventoryApi.getItems();
-      setItems(res.data || []);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      setItems(list);
     } catch (err) {
       console.warn('Catalog load error:', err.message);
     }

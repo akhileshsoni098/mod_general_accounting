@@ -12,7 +12,22 @@ const PermissionSchema = new mongoose.Schema(
     module: {
       type: String,
       required: true,
-      enum: ['PLATFORM', 'TENANT_ADMIN', 'GL', 'BILLING_AR', 'COMMISSIONS_FIDUCIARY', 'TREASURY_BANK_REC', 'FINANCE_CLOSE'],
+      enum: [
+        'PLATFORM',
+        'TENANT_ADMIN',
+        'GL',
+        'BILLING_AR',
+        'TREASURY_BANK_REC',
+        'FINANCE_CLOSE',
+        'INVENTORY',
+        'COMMERCIAL',
+        'RETAIL_POS',
+        'RESTAURANT',
+        'HOTEL_PMS',
+        'MANUFACTURING',
+        'GENERAL',
+        'COMMISSIONS_FIDUCIARY'
+      ],
       uppercase: true
     },
     description: {

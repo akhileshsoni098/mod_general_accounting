@@ -54,9 +54,9 @@ export default function RestaurantWorkspacePage() {
         restaurantApi.getOrders(),
         inventoryApi.getItems()
       ]);
-      setTables(tableRes.data || []);
-      setOrders(orderRes.data || []);
-      setMenuItems(itemRes.data || []);
+      setTables(Array.isArray(tableRes.data) ? tableRes.data : (tableRes.data?.tables || []));
+      setOrders(Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.orders || []));
+      setMenuItems(Array.isArray(itemRes.data) ? itemRes.data : (itemRes.data?.items || []));
     } catch (err) {
       setError(err.message);
     } finally {
