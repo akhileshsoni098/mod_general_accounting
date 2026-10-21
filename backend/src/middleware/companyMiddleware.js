@@ -176,7 +176,8 @@ const { isCoreModule, getModuleDefinition } = require('../config/moduleRegistry'
  * If the module is a Core Module (GL, BANKING_CASH, PARTIES, REPORTS), it is always permitted.
  * If the module is disabled for the company, returns HTTP 403 with code MODULE_DISABLED.
  */
-function requireCompanyModule(requiredModuleKey) {
+function requireCompanyModule(requiredModuleKey, options = {}) {
+  const { optionalCompany = false } = options;
   return async (req, res, next) => {
     try {
       if (!requiredModuleKey) return next();
@@ -202,6 +203,9 @@ function requireCompanyModule(requiredModuleKey) {
       }
 
       if (!company) {
+        if (optionalCompany) {
+          return next();
+        }
         return res.error('Active company context is required to verify module access', 400, {
           code: 'COMPANY_CONTEXT_REQUIRED',
           required_module: normKey

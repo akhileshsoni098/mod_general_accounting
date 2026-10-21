@@ -32,6 +32,7 @@ const ruleTestCaseRoutes = require('./routes/ruleTestCaseRoutes');
 const configBundleRoutes = require('./routes/configBundleRoutes');
 const eventPipelineRoutes = require('./routes/eventPipelineRoutes');
 const dimensionRoutes = require('./routes/dimensionRoutes');
+const commissionsRoutes = require('./routes/commissionsRoutes');
 const { createCorsOptions } = require('./config/corsConfig');
 
 const app = express();
@@ -109,6 +110,7 @@ app.use('/api/v1/rule-tests', ruleTestCaseRoutes);
 app.use('/api/v1/config-bundle', configBundleRoutes);
 app.use('/api/v1/event-pipeline', eventPipelineRoutes);
 app.use('/api/v1/dimensions', dimensionRoutes);
+app.use('/api/v1/commissions', commissionsRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -57,7 +57,9 @@ const JournalSchema = new mongoose.Schema(
         'HOTEL_PMS',
         'NIGHT_AUDIT',
         'MANUFACTURING',
-        'SERVICES'
+        'SERVICES',
+        'BANKING_CASH',
+        'BANKING_CONTRA'
       ],
       default: 'GL_MANUAL'
     },

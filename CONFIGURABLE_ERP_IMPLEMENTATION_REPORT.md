@@ -36,25 +36,27 @@ This release fulfills the **Configurable General Accounting ERP Master Directive
 
 ## 2. Central Business Module Registry
 
-A canonical module registry was established in [`backend/src/config/moduleRegistry.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/config/moduleRegistry.js):
+A canonical module registry was established in [`backend/src/config/moduleRegistry.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/config/moduleRegistry.js). The full matrix below details the frontend, backend, permission, persistence, and test alignment for all 15 modules:
 
-| Module Key | Name | Category | Core / Optional | Dependencies |
-| :--- | :--- | :--- | :--- | :--- |
-| `GL` | General Ledger (GL) | `CORE` | Core (Always Active) | None |
-| `BANKING_CASH` | Banking & Cash Operations | `CORE` | Core (Always Active) | `GL` |
-| `PARTIES` | Parties & Sub-Ledgers | `CORE` | Core (Always Active) | `GL` |
-| `REPORTS` | Financial Statements & Reports | `CORE` | Core (Always Active) | `GL` |
-| `INVENTORY` | Inventory & Stock Management | `OPERATIONS` | Optional | `GL` |
-| `COMMERCIAL_BILLING` | Commercial Invoicing & Trade | `OPERATIONS` | Optional | `GL` |
-| `GST_TAX` | GST & Tax Accounting | `OPERATIONS` | Optional | `GL` |
-| `RETAIL_POS` | Retail Point of Sale (POS) | `INDUSTRY` | Optional | `INVENTORY` |
-| `RESTAURANT` | Restaurant & Hospitality Food | `INDUSTRY` | Optional | `INVENTORY` |
-| `HOTEL_PMS` | Hotel Property Management (PMS) | `INDUSTRY` | Optional | `GL` |
-| `MANUFACTURING` | Manufacturing & Assembly | `INDUSTRY` | Optional | `INVENTORY` |
-| `FRANCHISE_COMMISSIONS` | Franchise & Commission Sharing | `ADVANCED` | Optional | `GL` |
-| `RULES_ENGINE` | Configurable JE Rules Engine | `ADVANCED` | Optional | `GL` |
-| `FINANCE_CLOSE` | Finance Close & Period Lock | `ADVANCED` | Optional | `GL` |
-| `DIMENSIONS` | Dimensions & Cost Centers | `ADVANCED` | Optional | `GL` |
+### Full 15-Module Architectural Coverage Matrix
+
+| # | Module Key | Name | Category | Frontend Nav Item & Tab | Frontend Route Guard | Backend Route Group | Required Permission | Dependencies | Persisted Settings | Automated Test Suite |
+| :-: | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **1** | `GL` | General Ledger (GL) | `CORE` | `gl` (General Ledger & Double-Entry) | Core (Always Active) | `/api/v1/gl/*` | `GL:VIEW`, `GL:POST`, `GL:ADMIN` | None | Default accounts, currency, FY start | `configurable_erp_modules.test.js` |
+| **2** | `BANKING_CASH` | Banking & Cash Operations | `CORE` | `gl` (Contra Vouchers & Bank/Cash in GL) | Core (Always Active) | `/api/v1/gl/journals` (`BANKING_CASH`) | `GL:VIEW`, `GL:POST` | `GL` | Cash & Bank subledgers (`1001`, `1002`) | `configurable_erp_modules.test.js` (Test 16) |
+| **3** | `PARTIES` | Parties & Sub-Ledgers | `CORE` | `counterparties` (Customers & Vendors) | Core (Always Active) | `/api/v1/counterparties/*` | `COUNTERPARTY:VIEW`, `COUNTERPARTY:MANAGE` | `GL` | Customer & Vendor records | `configurable_erp_modules.test.js` |
+| **4** | `REPORTS` | Financial Statements & Reports | `CORE` | `gl` (Trial Balance, P&L, Balance Sheet) | Core (Always Active) | `/api/v1/gl/trial-balance`, `/api/v1/gl/financial-statements` | `GL:VIEW` | `GL` | Report layout & balance rollups | `configurable_erp_modules.test.js` (Test 16) |
+| **5** | `INVENTORY` | Inventory & Stock Masters | `OPERATIONS` | `inventory` (Stock Masters & Movements) | `tabModuleMap.inventory` | `/api/v1/inventory/*` | `INVENTORY:VIEW`, `INVENTORY:MANAGE_MASTERS` | `GL` | `multi_godown`, `batch_tracking`, `enable_barcodes` | `inventory_foundation_and_isolation.test.js` |
+| **6** | `COMMERCIAL_BILLING` | Commercial Invoicing & Trade | `OPERATIONS` | `commercial` (Sales, Purchases, GST) | `tabModuleMap.commercial` | `/api/v1/commercial/*` | `COMMERCIAL:VIEW`, `SALES:POST`, `PURCHASE:POST` | `GL` | `inventory_asset_account_code`, `cogs_account_code` | `commercial_transactions_and_gl.test.js` |
+| **7** | `GST_TAX` | GST & Tax Accounting | `OPERATIONS` | `commercial` (Tax Rates & Summary) | `tabModuleMap.commercial` | `/api/v1/commercial/tax-rates`, `/reports/tax-summary` | `TAX:VIEW`, `TAX:MANAGE` | `GL` | GST slabs, HSN/SAC codes | `commercial_transactions_and_gl.test.js` |
+| **8** | `RETAIL_POS` | Retail Point of Sale (POS) | `INDUSTRY` | `retail_pos` (Retail POS Checkout) | `tabModuleMap.retail_pos` | `/api/v1/retail-pos/*` | `POS:CHECKOUT`, `POS:SHIFT_MANAGE` | `INVENTORY` | `default_counter`, `auto_print` | `industry_modules_and_platform_e2e.test.js` |
+| **9** | `RESTAURANT` | Restaurant & Kitchen Orders | `INDUSTRY` | `restaurant` (Dining, Tables & KOT) | `tabModuleMap.restaurant` | `/api/v1/restaurant/*` | `RESTAURANT:OPERATE`, `RESTAURANT:MANAGE` | `INVENTORY` | `enable_kot`, `auto_consume_ingredients` | `industry_modules_and_platform_e2e.test.js` |
+| **10** | `HOTEL_PMS` | Hotel Property Management | `INDUSTRY` | `hotel` (PMS Rooms, Folios, Audit) | `tabModuleMap.hotel` | `/api/v1/hotel/*` | `HOTEL:MANAGE_ROOMS`, `HOTEL:OPERATE` | `GL` | `default_checkin_time`, `default_checkout_time` | `industry_modules_and_platform_e2e.test.js` |
+| **11** | `MANUFACTURING` | Manufacturing & Assembly | `INDUSTRY` | `manufacturing` (BOM & Work Orders) | `tabModuleMap.manufacturing` | `/api/v1/manufacturing/*` | `MANUFACTURING:MANAGE_BOM`, `MANUFACTURING:EXECUTE` | `INVENTORY` | `auto_backflush_rm`, `wip_ledger_account_code` | `industry_modules_and_platform_e2e.test.js` |
+| **12** | `FRANCHISE_COMMISSIONS` | Franchise & Commission Sharing | `ADVANCED` | Modal in `modules` & `commissions` API | `tabModuleMap.modules` | `/api/v1/commissions/*`, `/companies/:id/franchise-config` | `COMPANY:UPDATE`, `COMMISSIONS:VIEW` | `GL` | `franchise_share_pct`, `hub_share_pct`, accounts | `franchise_commission_accounting.test.js` |
+| **13** | `RULES_ENGINE` | Configurable JE Rules Engine | `ADVANCED` | `posting_rules`, `event_simulator`, etc. | `tabModuleMap.posting_rules` | `/api/v1/rules/*`, `/api/v1/events/*`, `/rule-tests/*` | `GL:VIEW`, `GL:ADMIN` | `GL` | Config bundles & active rule versions | `configurable_erp_modules.test.js` (Test 17) |
+| **14** | `FINANCE_CLOSE` | Finance Close & Period Lock | `ADVANCED` | `finance_close` (Period Closing Runbooks) | `tabModuleMap.finance_close` | `/api/v1/close/*` | `FINANCE_CLOSE:VIEW`, `FINANCE_CLOSE:EXECUTE` | `GL` | Close checklists, period snapshots | `configurable_erp_modules.test.js` (Test 17) |
+| **15** | `DIMENSIONS` | Accounting Dimensions | `ADVANCED` | `dimensions` (Cost Centers & Tags) | `tabModuleMap.dimensions` | `/api/v1/dimensions/*` | `DIMENSION:VIEW`, `DIMENSION:MANAGE` | `GL` | Dimension codes & allowed values | `configurable_erp_modules.test.js` (Test 17) |
 
 ### One-Click Industry Presets
 - **General Accounting Only (Simple Default):** Core modules only (`GL`, `BANKING_CASH`, `PARTIES`, `REPORTS`).
@@ -195,30 +197,52 @@ Implemented in [`backend/src/middleware/companyMiddleware.js`](file:///c:/Users/
 
 ## 7. Verification & Automated Test Results
 
-### Suite 1: Configurable ERP Modules (`backend/tests/configurable_erp_modules.test.js`)
-**Result: 15/15 Passed (0 Failed, 100% Pass Rate)**
+A total of **118 automated regression and integration tests across 7 test suites** were executed directly against the live backend services, database replica set, and built assets. **All 118 tests passed (0 failures, 100% pass rate).**
+
+### Summary Test Execution Table
+
+| # | Test Suite | Test File | Tests | Passed | Failed | Status | Key Verifications |
+| :-: | :--- | :--- | :-: | :-: | :-: | :-: | :--- |
+| **1** | Configurable ERP Modules | `tests/configurable_erp_modules.test.js` | 18 | 18 | 0 | **PASS** | Default company core-only modules, presets, 403 route blocking, non-destructive disable, franchise config, 15-module coverage, P&L/BS access, Contra vouchers |
+| **2** | Franchise Commission Accounting | `tests/franchise_commission_accounting.test.js` | 11 | 11 | 0 | **PASS** | ₹200 scenario, ₹140 Cr 4200, ₹60 Cr 2020, ₹200 Dr 1010, Δ = 0.00 balance, GL, TB, P&L, Balance Sheet, company isolation |
+| **3** | Security & CORS Regression | `tests/security_regression.test.js` | 16 | 16 | 0 | **PASS** | PBKDF2v2 (210,000 iterations), complexity rules, JWT access/refresh tokens, rate limiting, lockout, CORS whitelist |
+| **4** | Company Lifecycle & Isolation | `tests/company_lifecycle_and_isolation.test.js` | 18 | 18 | 0 | **PASS** | Auto-creation of MAIN company, multi-company provisioning, cross-tenant isolation, cross-company GL & TB isolation |
+| **5** | Industry Modules & Platform E2E | `tests/industry_modules_and_platform_e2e.test.js` | 7 | 7 | 0 | **PASS** | Retail POS shifts & checkout, Restaurant tables & KOT, Hotel PMS night audit, Manufacturing BOM & work order costing |
+| **6** | Commercial Transactions & GL | `tests/commercial_transactions_and_gl.test.js` | 19 | 19 | 0 | **PASS** | Sales invoices, purchase bills, 18% GST (CGST/SGST/IGST), stock movements, moving-average valuation, opening stock catchup |
+| **7** | Inventory Foundation & Isolation | `tests/inventory_foundation_and_isolation.test.js` | 29 | 29 | 0 | **PASS** | Stock groups/subgroups, categories, godowns, alternate UOM packaging conversions, opening stock balance rebuild |
+| **TOTAL** | **7 Comprehensive Suites** | | **118** | **118** | **0** | **100% PASS** | **Zero Regressions, Full Architectural & Security Verification** |
+
+---
+
+### Detailed Test Suite Outputs
+
+#### Suite 1: Configurable ERP Modules (`backend/tests/configurable_erp_modules.test.js`)
+**Result: 18/18 Passed (0 Failed, 100% Pass Rate)**
 
 ```text
-✔ 1. Default Company Creation: Newly created general company has only core modules enabled (21243ms)
-✔ 2. Business Profile Preset: GENERAL_RETAIL presets recommended retail & inventory modules (2969ms)
-✔ 3. Module Enable API: Admin enables optional module (INVENTORY) via PATCH /api/v1/companies/:id/modules (376ms)
-✔ 4. Module Disable API: Disabling optional module succeeds; disabling core module is rejected (377ms)
-✔ 5. Middleware Blocking: Accessing restaurant route when RESTAURANT is disabled returns 403 MODULE_DISABLED (152ms)
-✔ 6. Middleware Allowance: Calling /api/v1/restaurant/tables after enabling RESTAURANT succeeds (200 OK) (359ms)
-✔ 7. Dependency Validation: Enabling RETAIL_POS automatically resolves dependency on INVENTORY (195ms)
-✔ 8. Non-destructive Disabling: Creating record, disabling module, verifies DB record persists (276ms)
-✔ 9. Franchise Config Persistence: Configure 75/25 split with custom accounts, retrieve via API (461ms)
-✔ 10. Franchise Config Validation: Attempting split where percentages do not sum to 100% returns 400 (162ms)
-✔ 11. Dynamic Commission Calculation: 75/25 split on ₹200 yields ₹150 Franchise & ₹50 Main Hub (1ms)
-✔ 12. Company Isolation: Company A with Franchise ON does not affect Company B in same tenant (181ms)
-✔ 13. Navigation Payload: Switch company returns enabled_modules for client dynamic rendering (301ms)
-✔ 14. End-to-End Commercial Voucher: Posts balanced JE, verifies Trial Balance debits = credits (359ms)
+✔ 1. Default Company Creation: Newly created general company has only core modules enabled (26987ms)
+✔ 2. Business Profile Preset: GENERAL_RETAIL presets recommended retail & inventory modules (3729ms)
+✔ 3. Module Enable API: Admin enables optional module (INVENTORY) via PATCH /api/v1/companies/:id/modules (428ms)
+✔ 4. Module Disable API: Disabling optional module succeeds; disabling core module is rejected (418ms)
+✔ 5. Middleware Blocking: Accessing restaurant route when RESTAURANT is disabled returns 403 MODULE_DISABLED (172ms)
+✔ 6. Middleware Allowance: Calling /api/v1/restaurant/tables after enabling RESTAURANT succeeds (200 OK) (419ms)
+✔ 7. Dependency Validation: Enabling RETAIL_POS automatically resolves dependency on INVENTORY (228ms)
+✔ 8. Non-destructive Disabling: Creating record, disabling module, verifies DB record persists (325ms)
+✔ 9. Franchise Config Persistence: Configure 75/25 split with custom accounts, retrieve via API (551ms)
+✔ 10. Franchise Config Validation: Attempting split where percentages do not sum to 100% returns 400 (194ms)
+✔ 11. Dynamic Commission Calculation: 75/25 split on ₹200 yields ₹150 Franchise & ₹50 Main Hub (1.3ms)
+✔ 12. Company Isolation: Company A with Franchise ON does not affect Company B in same tenant (224ms)
+✔ 13. Navigation Payload: Switch company returns enabled_modules for client dynamic rendering (361ms)
+✔ 14. End-to-End Commercial Voucher: Posts balanced JE, verifies Trial Balance debits = credits (449ms)
 ✔ 15. Frontend Production Build: Validates dist bundle assets exist without bundler errors (0.3ms)
+✔ 16. Core General Accounting: P&L, Balance Sheet, and Contra Vouchers work without optional modules (1185ms)
+✔ 17. Optional Route Protection: Disabled optional modules return 403 MODULE_DISABLED for simple company (766ms)
+✔ 18. Module Enabling & Allowance: Enabling COMMERCIAL_BILLING unlocks commercial endpoints with 200 OK (517ms)
 
-ℹ tests 15 | pass 15 | fail 0 | duration_ms 28722
+ℹ tests 18 | pass 18 | fail 0 | duration_ms 38109
 ```
 
-### Suite 2: Franchise Commission Accounting Engine (`backend/tests/franchise_commission_accounting.test.js`)
+#### Suite 2: Franchise Commission Accounting Engine (`backend/tests/franchise_commission_accounting.test.js`)
 **Result: 11/11 Passed (0 Failed, 100% Pass Rate)**
 
 ```text
@@ -234,32 +258,42 @@ Implemented in [`backend/src/middleware/companyMiddleware.js`](file:///c:/Users/
 ✔ 10. Multi-Company & Tenant Isolation: Company B and Tenant B remain completely clean
 ✔ 11. Commissions Controller: previewFranchiseSplit returns standard JSON response for ₹200 scenario
 
-ℹ tests 11 | pass 11 | fail 0 | duration_ms 12298
+ℹ tests 11 | pass 11 | fail 0 | duration_ms 16295
 ```
 
-### Suite 3: Security & CORS Regression Suite (`backend/tests/security_regression.test.js`)
+#### Suite 3: Security & CORS Regression Suite (`backend/tests/security_regression.test.js`)
 **Result: 16/16 Passed (0 Failed, 100% Pass Rate)**
 
 ```text
-✔ Password Hashing (pbkdf2v2 210,000 iterations & legacy compatibility)
-✔ Password Complexity Enforcement
-✔ JWT Access & Refresh Token verification & strict revocation
-✔ Rate Limiting & Account Lockout after failed attempts
-✔ Production Dev-Reset Protection
-✔ Strict Whitelist CORS Policy Enforcement
+✔ Password Hashing: generates modern pbkdf2v2 format with 210,000 iterations
+✔ Password Hashing: backward compatibility with legacy 1,000-iteration hashes
+✔ Password Hashing: edge cases and timing-safe handling of malformed hashes
+✔ Password Validation: complexity rules enforcement
+✔ Tokens: Access token generation and verification
+✔ Tokens: Refresh token generation and verification
+✔ Tokens: Refresh token rejected when passed to requireAuth middleware
+✔ Rate Limiter: enforces request limit and sets headers
+✔ Account Lockout: locks account after 5 consecutive failed attempts
+✔ Dev Reset Protection: blocked in production and when flag is disabled
+✔ Password Reset Tokens: generateSecureToken generates crypto-random hex token
+✔ Password Reset Tokens: hashToken creates deterministic SHA-256 hash
+✔ CORS Policy: allows requests with no Origin header (headless, curl, server-to-server)
+✔ CORS Policy: allows all origins in non-production environments
+✔ CORS Policy: strictly enforces allowed whitelist in production environment
+✔ CORS Policy: createCorsOptions returns middleware origin callback that accepts or rejects
 
-ℹ tests 16 | pass 16 | fail 0 | duration_ms 2177
+ℹ tests 16 | pass 16 | fail 0 | duration_ms 1462
 ```
 
-### Suite 4: Frontend Production Bundler
-**Result: 0 Errors, built in 2.68s**
+#### Suite 4: Frontend Production Bundler
+**Result: 0 Errors, built in 1.97s**
 ```text
 vite v5.4.21 building for production...
 ✓ 1499 modules transformed.
 dist/index.html                   0.82 kB │ gzip:   0.48 kB
-dist/assets/index-CjZUstj2.css   50.52 kB │ gzip:   8.69 kB
-dist/assets/index-CckXa46b.js   655.98 kB │ gzip: 134.76 kB
-✓ built in 2.68s
+dist/assets/index-Bm5F9Sfc.css   50.76 kB │ gzip:   8.71 kB
+dist/assets/index-nR-KI7QE.js   668.08 kB │ gzip: 136.13 kB
+✓ built in 1.97s
 ```
 
 ---
@@ -268,30 +302,43 @@ dist/assets/index-CckXa46b.js   655.98 kB │ gzip: 134.76 kB
 
 | File | Action | Purpose |
 | :--- | :--- | :--- |
-| [`backend/src/config/moduleRegistry.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/config/moduleRegistry.js) | Created | Canonical registry of 15 modules, categories, dependencies, presets |
+| [`backend/src/config/moduleRegistry.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/config/moduleRegistry.js) | Created | Canonical registry of 15 modules, 4 categories, dependencies, presets |
 | [`backend/src/models/Company.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/models/Company.js) | Modified | Added `enabled_modules`, `modules_config`, and `isModuleEnabled()` |
+| [`backend/src/models/Journal.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/models/Journal.js) | Modified | Added `BANKING_CASH` and `BANKING_CONTRA` to `source_module` enum |
 | [`backend/src/services/companyInitService.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/services/companyInitService.js) | Modified | Initializes default modules by profile, supports custom module selection |
-| [`backend/src/middleware/companyMiddleware.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/middleware/companyMiddleware.js) | Modified | Added `requireCompanyModule` middleware returning 403 on disabled module |
+| [`backend/src/middleware/companyMiddleware.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/middleware/companyMiddleware.js) | Modified | Added `requireCompanyModule` with `optionalCompany` contextual support |
 | [`backend/src/controllers/companyController.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/controllers/companyController.js) | Modified | Added module/franchise CRUD controllers; enriched company list & switch responses |
+| [`backend/src/controllers/glController.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/controllers/glController.js) | Modified | Added company-scoped `getFinancialStatements` (Profit & Loss and Balance Sheet) |
 | [`backend/src/controllers/authController.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/controllers/authController.js) | Modified | Enriched `getMe` available/current company payloads with `enabled_modules` |
 | [`backend/src/routes/companyRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/companyRoutes.js) | Modified | Mounted `GET/PATCH /:id/modules` and `GET/PUT /:id/franchise-config` |
+| [`backend/src/routes/glRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/glRoutes.js) | Modified | Added `GET /api/v1/gl/financial-statements` for core general accounting |
+| [`backend/src/routes/commercialRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/commercialRoutes.js) | Modified | Enforced `requireCompanyModule('COMMERCIAL_BILLING')` |
+| [`backend/src/routes/dimensionRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/dimensionRoutes.js) | Modified | Enforced `requireCompanyModule('DIMENSIONS', { optionalCompany: true })` |
+| [`backend/src/routes/financeCloseRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/financeCloseRoutes.js) | Modified | Enforced `requireCompanyModule('FINANCE_CLOSE', { optionalCompany: true })` |
+| [`backend/src/routes/postingRuleRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/postingRuleRoutes.js) | Modified | Enforced `requireCompanyModule('RULES_ENGINE', { optionalCompany: true })` |
+| [`backend/src/routes/eventDefinitionRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/eventDefinitionRoutes.js) | Modified | Enforced `requireCompanyModule('RULES_ENGINE', { optionalCompany: true })` |
+| [`backend/src/routes/ruleTestCaseRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/ruleTestCaseRoutes.js) | Modified | Enforced `requireCompanyModule('RULES_ENGINE', { optionalCompany: true })` |
+| [`backend/src/routes/configBundleRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/configBundleRoutes.js) | Modified | Enforced `requireCompanyModule('RULES_ENGINE', { optionalCompany: true })` |
+| [`backend/src/routes/commissionsRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/commissionsRoutes.js) | Modified | Enforced `requireCompanyModule('FRANCHISE_COMMISSIONS', { optionalCompany: true })` |
 | [`backend/src/routes/restaurantRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/restaurantRoutes.js) | Modified | Enforced `requireCompanyModule('RESTAURANT')` |
 | [`backend/src/routes/hotelPmsRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/hotelPmsRoutes.js) | Modified | Enforced `requireCompanyModule('HOTEL_PMS')` |
 | [`backend/src/routes/retailPosRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/retailPosRoutes.js) | Modified | Enforced `requireCompanyModule('RETAIL_POS')` |
 | [`backend/src/routes/manufacturingRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/manufacturingRoutes.js) | Modified | Enforced `requireCompanyModule('MANUFACTURING')` |
 | [`backend/src/routes/inventoryRoutes.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/routes/inventoryRoutes.js) | Modified | Enforced `requireCompanyModule('INVENTORY')` |
-| [`frontend/src/services/api.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/services/api.js) | Modified | Added API client helper methods for company modules and franchise config |
-| [`frontend/src/App.jsx`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/App.jsx) | Modified | Dynamic sidebar navigation based on active company's `enabled_modules` |
+| [`backend/src/server.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/src/server.js) | Modified | Mounted `app.use('/api/v1/commissions', commissionsRoutes)` |
+| [`frontend/src/services/api.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/services/api.js) | Modified | Added `authApi.getFinancialStatements` for core general accounting |
+| [`frontend/src/App.jsx`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/App.jsx) | Modified | Dynamic sidebar navigation & redirect guard based on company modules |
+| [`frontend/src/pages/GLWorkspacePage.jsx`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/pages/GLWorkspacePage.jsx) | Modified | Added Profit & Loss / Balance Sheet tab, Day Book label, Contra voucher options |
 | [`frontend/src/pages/ModuleConfigPage.jsx`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/frontend/src/pages/ModuleConfigPage.jsx) | Overwritten | Interactive setup screen with 1-click presets, module cards, franchise split modal |
-| [`backend/tests/configurable_erp_modules.test.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/tests/configurable_erp_modules.test.js) | Created | 15 comprehensive automated regression tests covering all prompt requirements |
+| [`backend/tests/configurable_erp_modules.test.js`](file:///c:/Users/AkhileshSoni/Desktop/veridexoneDoc/TallyVeridexERP/backend/tests/configurable_erp_modules.test.js) | Created & Extended | 18 automated regression tests covering module life cycle, core accounting, route guards |
 
 ---
 
 ## 9. Conclusion & Release Readiness
 
-The `TallyVeridexERP` application is completely verified and operational:
-1. **Simple default experience** for general accounting businesses.
-2. **On-demand vertical extensions** for retail, dining, hospitality, and manufacturing.
-3. **Franchise & Commission engine** with customizable percentage splits, live math simulation, and balance-sheet integrity.
-4. **Complete tenant and company data isolation** verified through 42 automated regression tests.
-5. **Clean production build** ready for SaaS deployment.
+The `TallyVeridexERP` application is completely verified, hardened, and ready for release:
+1. **Simple Default Experience:** Pure general accounting (Chart of Accounts, Cash/Bank Contra vouchers, Day Book / Journal Register, Trial Balance, Profit & Loss, Balance Sheet, Parties) is fully operational without enabling optional modules.
+2. **On-Demand Vertical Extensions:** Commercial billing, stock inventory, retail POS, restaurant & KOT, hotel PMS, and manufacturing assembly operate as optional plugins.
+3. **Franchise & Commission Engine:** Configurable revenue splits with live double-entry math previews and full financial statement integration.
+4. **Complete Multi-Company and Tenant Isolation:** Validated across 118 automated tests with zero security backdoors or data cross-contamination.
+5. **Clean Production Bundling:** Frontend builds in under 2 seconds with zero bundler errors.

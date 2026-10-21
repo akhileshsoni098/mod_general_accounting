@@ -3,8 +3,9 @@ const router = express.Router();
 const eventDefCtrl = require('../controllers/eventDefinitionController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace, requireModuleEntitlement, requirePermission } = require('../middleware/tenantMiddleware');
+const { requireCompanyModule } = require('../middleware/companyMiddleware');
 
-router.use(requireAuth, requireTenantWorkspace, requireModuleEntitlement('GL'));
+router.use(requireAuth, requireTenantWorkspace, requireModuleEntitlement('GL'), requireCompanyModule('RULES_ENGINE', { optionalCompany: true }));
 
 // List / Get
 router.get('/', requirePermission('GL:VIEW'), eventDefCtrl.getEventDefinitions);

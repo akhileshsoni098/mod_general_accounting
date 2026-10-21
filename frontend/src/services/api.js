@@ -87,6 +87,7 @@ export const authApi = {
   postJournal: (payload) => apiRequest('/gl/journals', { method: 'POST', body: payload }),
   reverseJournal: (id, payload) => apiRequest(`/gl/journals/${id}/reverse`, { method: 'POST', body: payload }),
   getTrialBalance: () => apiRequest('/gl/trial-balance'),
+  getFinancialStatements: () => apiRequest('/gl/financial-statements'),
   getPostingRules: () => apiRequest('/gl/posting-rules'),
   createPostingRule: (payload) => apiRequest('/gl/posting-rules', { method: 'POST', body: payload }),
   getExchangeRates: () => apiRequest('/gl/exchange-rates'),

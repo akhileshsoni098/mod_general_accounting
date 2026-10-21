@@ -3,11 +3,13 @@ const router = express.Router();
 const commissionsController = require('../controllers/commissionsController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace, requireModuleEntitlement } = require('../middleware/tenantMiddleware');
+const { requireCompanyModule } = require('../middleware/companyMiddleware');
 
 // Protect all commission routes with auth, tenant context, and entitlement
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireModuleEntitlement('COMMISSIONS_FIDUCIARY'));
+router.use(requireCompanyModule('FRANCHISE_COMMISSIONS', { optionalCompany: true }));
 
 // Overview & KPIs
 router.get('/overview', commissionsController.getOverview);

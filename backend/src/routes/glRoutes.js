@@ -37,8 +37,9 @@ router.post('/journals/preview', requirePermission('GL:VIEW'), glController.prev
 router.post('/journals', requirePermission('GL:POST'), glController.postJournal);
 router.post('/journals/:id/reverse', requirePermission('GL:POST'), glController.reverseJournal);
 
-// Trial Balance
+// Trial Balance & Financial Statements
 router.get('/trial-balance', requirePermission('GL:VIEW'), glController.getTrialBalance);
+router.get('/financial-statements', requirePermission('GL:VIEW'), glController.getFinancialStatements);
 
 // Posting Rules
 router.get('/posting-rules', requirePermission('GL:VIEW'), glController.getPostingRules);

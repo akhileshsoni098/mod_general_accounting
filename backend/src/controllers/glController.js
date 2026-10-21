@@ -563,6 +563,22 @@ async function createExchangeRate(req, res) {
   }
 }
 
+// Financial Statements (Profit & Loss and Balance Sheet - Company-scoped)
+async function getFinancialStatements(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const companyId = req.companyId;
+    const financeCloseService = require('../services/financeCloseService');
+    const statements = await financeCloseService.generateFinancialReports({
+      tenantId,
+      companyId: companyId || null
+    });
+    return res.success(statements);
+  } catch (err) {
+    return res.error('Failed to generate financial statements', 500, err.message);
+  }
+}
+
 module.exports = {
   getAccounts,
   getAccountDetail,
@@ -577,6 +593,7 @@ module.exports = {
   postJournal,
   reverseJournal,
   getTrialBalance,
+  getFinancialStatements,
   getPostingRules,
   createPostingRule,
   getExchangeRates,

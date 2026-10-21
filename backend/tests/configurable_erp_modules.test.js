@@ -557,3 +557,167 @@ test('15. Frontend Production Build: Validates dist bundle assets exist without 
   const distIndex = path.resolve(__dirname, '../../frontend/dist/index.html');
   assert.ok(fs.existsSync(distIndex), 'frontend/dist/index.html should exist from production build');
 });
+
+// ==========================================
+// Test 16: Core General Accounting Experience (P&L, Balance Sheet, Contra Voucher)
+// ==========================================
+test('16. Core General Accounting: P&L, Balance Sheet, and Contra Vouchers work without optional modules', async () => {
+  // 1. Post a Cash/Bank Contra Voucher (source_module: 'BANKING_CASH')
+  const contraPost = await makeRequest({
+    method: 'POST',
+    path: '/api/v1/gl/journals',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    },
+    body: {
+      posting_date: new Date().toISOString().slice(0, 10),
+      source_module: 'BANKING_CASH',
+      reference_id: `CONTRA_${runId}`,
+      memo: 'Cash deposit into operating bank account (Contra Voucher)',
+      lines: [
+        { account_code: '1002', debit: '1500.00', credit: '0.00', memo: 'Bank debit' },
+        { account_code: '1001', debit: '0.00', credit: '1500.00', memo: 'Cash credit' }
+      ]
+    }
+  });
+
+  assert.equal(contraPost.status, 201, `Contra journal posting failed: ${JSON.stringify(contraPost.body)}`);
+  assert.equal(contraPost.body.data.journal.status, 'POSTED');
+  assert.equal(contraPost.body.data.journal.source_module, 'BANKING_CASH');
+
+  // 2. Fetch Trial Balance from core GL endpoint
+  const tbRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/gl/trial-balance',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+
+  assert.equal(tbRes.status, 200, 'Trial balance must be reachable on core GL router');
+  assert.equal(tbRes.body.data.is_balanced, true);
+
+  // 3. Fetch Financial Statements (P&L and Balance Sheet) from core GL endpoint
+  const stmtRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/gl/financial-statements',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+
+  assert.equal(stmtRes.status, 200, `Financial statements failed: ${JSON.stringify(stmtRes.body)}`);
+  const { balanceSheet, incomeStatement } = stmtRes.body.data;
+
+  assert.ok(balanceSheet, 'Balance sheet must exist');
+  assert.ok(incomeStatement, 'Income statement (P&L) must exist');
+  assert.equal(balanceSheet.is_balanced, true, 'Balance sheet must maintain exact assets == liabilities + equity equilibrium');
+  assert.ok(Array.isArray(balanceSheet.assets), 'Assets array must exist');
+  assert.ok(Array.isArray(incomeStatement.revenue), 'Revenue array must exist');
+});
+
+// ==========================================
+// Test 17: Route Protection for Optional Modules
+// ==========================================
+test('17. Optional Route Protection: Disabled optional modules return 403 MODULE_DISABLED for simple company', async () => {
+  const compHeaders = {
+    Authorization: `Bearer ${token}`,
+    'x-tenant-id': tenant._id.toString(),
+    'x-company-id': companySimple._id.toString()
+  };
+
+  // 1. Commercial Documents (COMMERCIAL_BILLING)
+  const commRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/commercial/documents',
+    headers: compHeaders
+  });
+  assert.equal(commRes.status, 403, 'Commercial route should be blocked when COMMERCIAL_BILLING is disabled');
+  assert.equal(commRes.body.error?.details?.code, 'MODULE_DISABLED');
+  assert.equal(commRes.body.error?.details?.required_module, 'COMMERCIAL_BILLING');
+
+  // 2. Accounting Dimensions (DIMENSIONS)
+  const dimRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/dimensions',
+    headers: compHeaders
+  });
+  assert.equal(dimRes.status, 403, 'Dimensions route should be blocked when DIMENSIONS is disabled');
+  assert.equal(dimRes.body.error?.details?.code, 'MODULE_DISABLED');
+  assert.equal(dimRes.body.error?.details?.required_module, 'DIMENSIONS');
+
+  // 3. Finance Close (FINANCE_CLOSE)
+  const closeRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/close/checklist',
+    headers: compHeaders
+  });
+  assert.equal(closeRes.status, 403, 'Finance close checklist should be blocked when FINANCE_CLOSE is disabled');
+  assert.equal(closeRes.body.error?.details?.code, 'MODULE_DISABLED');
+  assert.equal(closeRes.body.error?.details?.required_module, 'FINANCE_CLOSE');
+
+  // 4. Posting Rules Engine (RULES_ENGINE)
+  const rulesRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/rules',
+    headers: compHeaders
+  });
+  assert.equal(rulesRes.status, 403, 'Rules engine should be blocked when RULES_ENGINE is disabled');
+  assert.equal(rulesRes.body.error?.details?.code, 'MODULE_DISABLED');
+  assert.equal(rulesRes.body.error?.details?.required_module, 'RULES_ENGINE');
+
+  // 5. Franchise Commissions (FRANCHISE_COMMISSIONS disabled on companyRetail)
+  const commsRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/commissions/overview',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companyRetail._id.toString()
+    }
+  });
+  assert.equal(commsRes.status, 403, 'Commissions should be blocked when FRANCHISE_COMMISSIONS is disabled');
+  assert.equal(commsRes.body.error?.details?.code, 'MODULE_DISABLED');
+  assert.equal(commsRes.body.error?.details?.required_module, 'FRANCHISE_COMMISSIONS');
+});
+
+// ==========================================
+// Test 18: Enable Optional Module & Allowance
+// ==========================================
+test('18. Module Enabling & Allowance: Enabling COMMERCIAL_BILLING unlocks commercial endpoints with 200 OK', async () => {
+  // 1. Enable COMMERCIAL_BILLING on companySimple
+  const patchRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['COMMERCIAL_BILLING']
+    }
+  });
+
+  assert.equal(patchRes.status, 200);
+  assert.ok(patchRes.body.data.enabled_modules.includes('COMMERCIAL_BILLING'));
+
+  // 2. Commercial route now succeeds
+  const commRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/commercial/documents',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+
+  assert.equal(commRes.status, 200, 'Commercial route should return 200 OK after enabling COMMERCIAL_BILLING');
+  assert.ok(Array.isArray(commRes.body.data.documents));
+});

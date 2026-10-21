@@ -22,12 +22,13 @@ import {
 
 export default function GLWorkspacePage() {
   const { currentWorkspace } = useAuth();
-  const [activeTab, setActiveTab] = useState('journals'); // 'journals' | 'coa' | 'trial_balance' | 'periods' | 'rules' | 'fx'
+  const [activeTab, setActiveTab] = useState('journals'); // 'journals' | 'coa' | 'trial_balance' | 'statements' | 'periods' | 'rules' | 'fx'
 
   // Data states
   const [accounts, setAccounts] = useState([]);
   const [journals, setJournals] = useState([]);
   const [trialBalance, setTrialBalance] = useState(null);
+  const [financialStatements, setFinancialStatements] = useState(null);
   const [periods, setPeriods] = useState([]);
   const [postingRules, setPostingRules] = useState([]);
   const [exchangeRates, setExchangeRates] = useState([]);
@@ -140,6 +141,9 @@ export default function GLWorkspacePage() {
       } else if (activeTab === 'trial_balance') {
         const res = await authApi.getTrialBalance();
         if (res.success) setTrialBalance(res.data);
+      } else if (activeTab === 'statements') {
+        const res = await authApi.getFinancialStatements();
+        if (res.success) setFinancialStatements(res.data);
       } else if (activeTab === 'periods') {
         const res = await authApi.getPeriods();
         if (res.success) setPeriods(res.data);
@@ -438,7 +442,7 @@ export default function GLWorkspacePage() {
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
-          <span>Journal Register</span>
+          <span>Journal Register & Day Book</span>
         </button>
 
         <button
@@ -451,6 +455,18 @@ export default function GLWorkspacePage() {
         >
           <DollarSign className="w-3.5 h-3.5" />
           <span>Trial Balance</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('statements')}
+          className={`pb-2.5 px-3 text-xs font-semibold transition border-b-2 flex items-center space-x-1.5 shrink-0 ${
+            activeTab === 'statements'
+              ? 'border-brand-500 text-brand-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Profit & Loss / Balance Sheet</span>
         </button>
 
         <button
@@ -690,6 +706,212 @@ export default function GLWorkspacePage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Financial Statements (Profit & Loss / Balance Sheet) */}
+      {activeTab === 'statements' && (
+        <div className="space-y-6">
+          {/* Summary KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-slate-400 text-xs font-medium">Balance Sheet Status</div>
+              <div className="text-base font-bold text-emerald-400 flex items-center space-x-1.5 mt-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{financialStatements?.balanceSheet?.is_balanced ? 'Equilibrium Maintained' : 'Variance Detected'}</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">Assets = Liabilities + Equity</div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-slate-400 text-xs font-medium">Total Assets</div>
+              <div className="text-lg font-bold text-emerald-400 font-mono mt-1">
+                ${parseFloat(financialStatements?.balanceSheet?.total_assets || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                Liabilities: ${parseFloat(financialStatements?.balanceSheet?.total_liabilities || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-slate-400 text-xs font-medium">Total Operating Revenue</div>
+              <div className="text-lg font-bold text-brand-400 font-mono mt-1">
+                ${parseFloat(financialStatements?.incomeStatement?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                Expenses: ${parseFloat(financialStatements?.incomeStatement?.total_expenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+              <div className="text-slate-400 text-xs font-medium">Net Profit / Income</div>
+              <div className={`text-lg font-bold font-mono mt-1 ${parseFloat(financialStatements?.incomeStatement?.net_income || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                ${parseFloat(financialStatements?.incomeStatement?.net_income || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono mt-0.5">Retained into Owner's Equity</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Profit & Loss Statement */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
+              <div className="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-850/50">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Profit & Loss Statement (Income Statement)</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Operational revenues recognized minus cost of sales and expenses</p>
+                </div>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Net: ${parseFloat(financialStatements?.incomeStatement?.net_income || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="p-5 space-y-4 text-xs font-mono">
+                {/* Revenue Section */}
+                <div>
+                  <div className="font-bold text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-2">
+                    Operating Revenue & Income (4000 series)
+                  </div>
+                  {loading || !financialStatements ? (
+                    <div className="py-4 text-center text-slate-500">Loading revenues...</div>
+                  ) : (!financialStatements.incomeStatement?.revenue || financialStatements.incomeStatement.revenue.length === 0) ? (
+                    <div className="py-2 text-slate-500 italic">No revenue activity recorded</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {financialStatements.incomeStatement.revenue.map((r) => (
+                        <div key={r.account_code} className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                          <span className="text-slate-300">{r.account_code} - {r.account_name}</span>
+                          <span className="text-emerald-400 font-semibold">${parseFloat(r.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-slate-200 border-t border-slate-800 pt-1.5 mt-2 px-2">
+                    <span>Total Revenue</span>
+                    <span className="text-emerald-400">${parseFloat(financialStatements?.incomeStatement?.total_revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Expenses Section */}
+                <div className="pt-2">
+                  <div className="font-bold text-rose-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-2">
+                    Operating Expenses & COGS (5000 series)
+                  </div>
+                  {loading || !financialStatements ? (
+                    <div className="py-4 text-center text-slate-500">Loading expenses...</div>
+                  ) : (!financialStatements.incomeStatement?.expenses || financialStatements.incomeStatement.expenses.length === 0) ? (
+                    <div className="py-2 text-slate-500 italic">No expenses recorded</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {financialStatements.incomeStatement.expenses.map((e) => (
+                        <div key={e.account_code} className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                          <span className="text-slate-300">{e.account_code} - {e.account_name}</span>
+                          <span className="text-rose-400 font-semibold">${parseFloat(e.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-slate-200 border-t border-slate-800 pt-1.5 mt-2 px-2">
+                    <span>Total Expenses</span>
+                    <span className="text-rose-400">${parseFloat(financialStatements?.incomeStatement?.total_expenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Net Profit Summary */}
+                <div className="p-3 bg-slate-850 rounded-lg border border-slate-800 flex justify-between items-center font-bold text-sm">
+                  <span className="text-slate-200">Net Profit / (Loss)</span>
+                  <span className={parseFloat(financialStatements?.incomeStatement?.net_income || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    ${parseFloat(financialStatements?.incomeStatement?.net_income || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Sheet */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
+              <div className="px-5 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-850/50">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Balance Sheet Statement</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Financial position: Current Assets, Liabilities, and Equity</p>
+                </div>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {financialStatements?.balanceSheet?.is_balanced ? 'Balanced' : 'Imbalance'}
+                </span>
+              </div>
+
+              <div className="p-5 space-y-4 text-xs font-mono">
+                {/* Assets */}
+                <div>
+                  <div className="font-bold text-emerald-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-2">
+                    Assets (1000 series)
+                  </div>
+                  {loading || !financialStatements ? (
+                    <div className="py-4 text-center text-slate-500">Loading assets...</div>
+                  ) : (!financialStatements.balanceSheet?.assets || financialStatements.balanceSheet.assets.length === 0) ? (
+                    <div className="py-2 text-slate-500 italic">No asset balances</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {financialStatements.balanceSheet.assets.map((a) => (
+                        <div key={a.account_code} className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                          <span className="text-slate-300">{a.account_code} - {a.account_name}</span>
+                          <span className="text-emerald-400 font-semibold">${parseFloat(a.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-slate-200 border-t border-slate-800 pt-1.5 mt-2 px-2">
+                    <span>Total Assets</span>
+                    <span className="text-emerald-400">${parseFloat(financialStatements?.balanceSheet?.total_assets || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Liabilities */}
+                <div className="pt-2">
+                  <div className="font-bold text-amber-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-2">
+                    Liabilities (2000 series)
+                  </div>
+                  {loading || !financialStatements ? (
+                    <div className="py-4 text-center text-slate-500">Loading liabilities...</div>
+                  ) : (!financialStatements.balanceSheet?.liabilities || financialStatements.balanceSheet.liabilities.length === 0) ? (
+                    <div className="py-2 text-slate-500 italic">No liabilities</div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {financialStatements.balanceSheet.liabilities.map((l) => (
+                        <div key={l.account_code} className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                          <span className="text-slate-300">{l.account_code} - {l.account_name}</span>
+                          <span className="text-amber-400 font-semibold">${parseFloat(l.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-slate-200 border-t border-slate-800 pt-1.5 mt-2 px-2">
+                    <span>Total Liabilities</span>
+                    <span className="text-amber-400">${parseFloat(financialStatements?.balanceSheet?.total_liabilities || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Equity */}
+                <div className="pt-2">
+                  <div className="font-bold text-purple-400 uppercase tracking-wider border-b border-slate-800 pb-1 mb-2">
+                    Owner's Equity & Retained Earnings (3000 series)
+                  </div>
+                  {financialStatements?.balanceSheet?.equity?.map((eq) => (
+                    <div key={eq.account_code} className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                      <span className="text-slate-300">{eq.account_code} - {eq.account_name}</span>
+                      <span className="text-purple-400 font-semibold">${parseFloat(eq.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center py-1 px-2 rounded hover:bg-slate-800/60 transition">
+                    <span className="text-slate-300">Current Period Net Profit</span>
+                    <span className="text-emerald-400 font-semibold">${parseFloat(financialStatements?.balanceSheet?.current_period_net_income || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-slate-200 border-t border-slate-800 pt-1.5 mt-2 px-2">
+                    <span>Total Liabilities & Equity</span>
+                    <span className="text-purple-400">${parseFloat(financialStatements?.balanceSheet?.total_liabilities_and_equity || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1083,17 +1305,17 @@ export default function GLWorkspacePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Source Module</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Voucher Type / Source</label>
                   <select
                     value={newJournalForm.source_module}
                     onChange={(e) => setNewJournalForm({ ...newJournalForm, source_module: e.target.value })}
                     className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="GL_MANUAL">GL_MANUAL (Manual Journal)</option>
-                    <option value="COMMERCIAL_INVOICE">COMMERCIAL_INVOICE (Sales & Receivables)</option>
-                    <option value="BILLING_AR">BILLING_AR (Billing Clearance)</option>
-                    <option value="TREASURY_BANK_REC">TREASURY_BANK_REC (Cash Receipt)</option>
-                    <option value="FINANCE_CLOSE">FINANCE_CLOSE (Period Amortization & Close)</option>
+                    <option value="GL_MANUAL">GL_MANUAL (Journal Voucher)</option>
+                    <option value="BANKING_CASH">BANKING_CASH (Cash / Bank Contra Transfer)</option>
+                    <option value="COMMERCIAL">COMMERCIAL (Sales / Purchase Voucher)</option>
+                    <option value="TREASURY_BANK_REC">TREASURY_BANK_REC (Receipt / Deposit)</option>
+                    <option value="FINANCE_CLOSE">FINANCE_CLOSE (Period Close)</option>
                   </select>
                 </div>
                 <div>

@@ -3,11 +3,13 @@ const router = express.Router();
 const financeCloseController = require('../controllers/financeCloseController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace, requireModuleEntitlement } = require('../middleware/tenantMiddleware');
+const { requireCompanyModule } = require('../middleware/companyMiddleware');
 
 // Protect all finance close routes
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireModuleEntitlement('FINANCE_CLOSE'));
+router.use(requireCompanyModule('FINANCE_CLOSE', { optionalCompany: true }));
 
 // Overview
 router.get('/overview', financeCloseController.getOverview);

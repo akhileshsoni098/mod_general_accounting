@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext, requireCompanyPermission } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyPermission, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 const commercialController = require('../controllers/commercialController');
 
-// All commercial endpoints require authentication, tenant workspace, and valid company context
-router.use(requireAuth, requireTenantWorkspace, requireCompanyContext);
+// All commercial endpoints require authentication, tenant workspace, valid company context, and COMMERCIAL_BILLING module
+router.use(requireAuth, requireTenantWorkspace, requireCompanyContext, requireCompanyModule('COMMERCIAL_BILLING'));
 
 // ==========================================
 // 1. COMMERCIAL DOCUMENTS
