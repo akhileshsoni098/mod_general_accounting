@@ -22,7 +22,8 @@ const TYPE_BADGES = {
   COUNTERPARTY: { label: 'Counterparty', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30' },
   ORGANIZATION_UNIT: { label: 'Org Unit / CC', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
   LOOKUP_LIST: { label: 'Lookup List', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30' },
-  POLICY: { label: 'Policy Root', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  POLICY: { label: 'Contract / Ref', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
+  CONTRACT: { label: 'Contract / Agreement', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
   TEXT: { label: 'Text / Code', color: 'bg-slate-500/10 text-slate-300 border-slate-500/30' },
   CUSTOM: { label: 'Custom', color: 'bg-pink-500/10 text-pink-400 border-pink-500/30' }
 };
@@ -349,7 +350,7 @@ export default function DimensionsPage() {
             <option value="COUNTERPARTY">Counterparty</option>
             <option value="ORGANIZATION_UNIT">Organization Unit / Cost Center</option>
             <option value="LOOKUP_LIST">Lookup List</option>
-            <option value="POLICY">Policy</option>
+            <option value="POLICY">Contract / Agreement</option>
             <option value="TEXT">Text</option>
             <option value="CUSTOM">Custom</option>
           </select>

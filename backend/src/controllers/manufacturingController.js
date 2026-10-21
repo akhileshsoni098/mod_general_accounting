@@ -1,4 +1,5 @@
 const manufacturingService = require('../services/manufacturingService');
+const { StockItem } = require('../models');
 
 class ManufacturingController {
   async getBOMs(req, res) {
@@ -14,26 +15,50 @@ class ManufacturingController {
     try {
       const {
         bom_number,
+        bom_code,
         bom_name,
         finished_item_id,
         output_quantity,
+        finished_quantity,
         output_uom_id,
         raw_materials,
+        components,
         overhead_costs
       } = req.body;
+
+      const number = (bom_number || bom_code || `BOM-${Date.now()}`).toUpperCase().trim();
+      const name = bom_name || number;
+
+      let materials = raw_materials;
+      if (!materials && Array.isArray(components)) {
+        materials = [];
+        for (const c of components) {
+          const itemId = c.item_id || c.component_item_id;
+          let uomId = c.uom_id;
+          if (!uomId && itemId) {
+            const itm = await StockItem.findById(itemId);
+            if (itm) uomId = itm.base_uom_id;
+          }
+          materials.push({
+            item_id: itemId,
+            quantity: Number(c.quantity) || 1,
+            uom_id: uomId
+          });
+        }
+      }
 
       const bom = await manufacturingService.saveBOM({
         tenantId: req.tenantId,
         companyId: req.companyId,
-        bomNumber: bom_number,
-        bomName: bom_name,
+        bomNumber: number,
+        bomName: name,
         finishedItemId: finished_item_id,
-        outputQuantity: output_quantity,
+        outputQuantity: output_quantity || finished_quantity || 1,
         outputUomId: output_uom_id,
-        rawMaterials: raw_materials,
-        overheadCosts: overhead_costs
+        rawMaterials: materials || [],
+        overheadCosts: overhead_costs || []
       });
-      return res.success(bom);
+      return res.success(bom, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }
@@ -54,6 +79,7 @@ class ManufacturingController {
         bom_id,
         planned_quantity,
         raw_materials_godown_id,
+        target_godown_id,
         finished_goods_godown_id
       } = req.body;
 
@@ -63,10 +89,10 @@ class ManufacturingController {
         userId: req.user._id,
         bomId: bom_id,
         plannedQuantity: planned_quantity,
-        rawMaterialsGodownId: raw_materials_godown_id,
-        finishedGoodsGodownId: finished_goods_godown_id
+        rawMaterialsGodownId: raw_materials_godown_id || target_godown_id,
+        finishedGoodsGodownId: finished_goods_godown_id || target_godown_id
       });
-      return res.success(order);
+      return res.success(order, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }

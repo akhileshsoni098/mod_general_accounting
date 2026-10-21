@@ -114,12 +114,20 @@ async function createParty(req, res) {
     let createdRole = null;
     if (initial_role_type) {
       const validRoles = [
+        'CUSTOMER',
+        'SUPPLIER',
+        'VENDOR',
+        'DEBTOR',
+        'CREDITOR',
+        'GUEST',
+        'EMPLOYEE',
+        'PARTNER',
+        'AGENT',
         'CARRIER',
         'MGA',
         'BROKER',
         'POLICYHOLDER',
         'PRODUCER',
-        'VENDOR',
         'REINSURER',
         'REGULATOR'
       ];

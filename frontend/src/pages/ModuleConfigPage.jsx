@@ -26,7 +26,7 @@ const MODULE_META = {
   },
   FINANCE_CLOSE: {
     name: 'Finance Close, Period Lock & Reporting',
-    subtitle: 'Unearned Premium Reserves (UPR), Close Runbooks, Period Hard Lock, Final Trial Balance',
+    subtitle: 'Deferred Revenue Amortization, Close Runbooks, Period Hard Lock, Final Trial Balance',
     category: 'Close & Financial Reports'
   }
 };

@@ -1,0 +1,2751 @@
+{
+  "mountedCount": 193,
+  "fileRouteCount": 254,
+  "mountedRoutes": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register-tenant",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/plans",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/tenants",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/tenants/:tenantId/subscription",
+      "mounted": true
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/platform/tenants/:tenantId/subscription",
+      "mounted": true
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/platform/tenants/:tenantId/status",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/platform/audit-logs",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tenant/switch-workspace",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenant/users",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tenant/users/invite",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenant/roles",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenant/modules",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/tenant/modules",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tenant/settings",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/tenant/settings",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tenant/reset-dev-data",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/companies/profiles",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/companies/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/companies/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/companies/switch",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/companies/:id",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/companies/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/companies/:id/members",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/companies/:id/members",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/metrics",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/counterparties/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/counterparties/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/counterparties/seed",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/counterparties/:id",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/counterparties/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/counterparties/:id/roles",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/ping",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/accounts",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/accounts/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/accounts",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/gl/accounts/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/periods",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/periods",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/gl/periods/status",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/journals",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/journals/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/journals/preview",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/journals",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/journals/:id/reverse",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/trial-balance",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/posting-rules",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/posting-rules",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gl/exchange-rates",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gl/exchange-rates",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/groups",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/groups/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/groups",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/inventory/groups/:id",
+      "mounted": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/inventory/groups/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/categories",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/categories/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/categories",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/inventory/categories/:id",
+      "mounted": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/inventory/categories/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/uom",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/uom/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/uom",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/inventory/uom/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/uom/convert",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/godowns",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/godowns/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/godowns",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/inventory/godowns/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/items",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/items/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/items",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/inventory/items/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/opening-stock",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/balances",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/summary",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/movements",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/movements/:id/reverse",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/reconcile",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/documents",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/documents/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commercial/documents",
+      "mounted": true
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/commercial/documents/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commercial/documents/:id/post",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commercial/documents/:id/reverse",
+      "mounted": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/commercial/documents/:id",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/posting-config",
+      "mounted": true
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/commercial/posting-config",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/tax-rates",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commercial/tax-rates",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/opening-stock-gl/preview",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/commercial/opening-stock-gl/post",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/reports/register",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/reports/outstanding",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/reports/tax-summary",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/commercial/reports/stock-gl-reconciliation",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/retail-pos/shifts/open",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/retail-pos/shifts/current",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/retail-pos/shifts/close",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/retail-pos/checkout",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurant/tables",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurant/tables",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurant/recipes",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurant/recipes/:menuItemId",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurant/orders",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurant/orders",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurant/orders/:orderId/kot",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurant/orders/:orderId/settle",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hotel/room-types",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/room-types",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hotel/rooms",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/rooms",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hotel/reservations",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/reservations",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/check-in",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hotel/folios/:reservationId",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/folios/:folioId/charges",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/check-out",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hotel/night-audit",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hotel/metrics",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/manufacturing/boms",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/manufacturing/boms",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/manufacturing/work-orders",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/manufacturing/work-orders",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/manufacturing/work-orders/:workOrderId/issue",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/manufacturing/work-orders/:workOrderId/complete",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/data-exchange/import/accounts",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/data-exchange/import/stock-items",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data-exchange/export/accounts",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/data-exchange/export/stock-balances",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/overview",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/upr/preview",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/close/upr/run",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/reconciliation/subledgers",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/reconciliation/cases",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/close/reconciliation/cases/:id/resolve",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/checklist",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/close/checklist/step/:step/execute",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/trial-balance",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/close/trial-balance/certify",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/reports/financial-statements",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/export-batches",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/close/export-batches",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/adjustments",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/close/disputes",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/events/",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/events/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/events/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/events/:id/versions",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/events/:id/validate-payload",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/events/:id/status",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rules/",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rules/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/rules/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/:id/fork",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/:id/validate",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/:id/publish",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/:id/retire",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/:id/reactivate",
+      "mounted": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/rules/:id",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/simulate",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rules/simulate/post",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rule-tests/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rule-tests/",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rule-tests/:id/run",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/config-bundle/export",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/config-bundle/preview",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/config-bundle/import",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/event-pipeline/stats",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/event-pipeline/outbox",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/outbox/:eventId/retry",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/outbox/:eventId/replay",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/event-pipeline/inbox",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/inbox/:id/retry",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/inbox/:id/replay",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/dispatch",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/event-pipeline/trace/:identifier",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/event-pipeline/subscriptions",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/event-pipeline/subscriptions",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/event-pipeline/subscriptions/:id/toggle",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dimensions/",
+      "mounted": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dimensions/context",
+      "mounted": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dimensions/",
+      "mounted": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/dimensions/:id",
+      "mounted": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/dimensions/:id",
+      "mounted": true
+    }
+  ],
+  "fileRoutes": [
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/register-tenant",
+      "line": 8,
+      "fullLine": "router.post('/register-tenant', authLimiter, authController.registerTenant);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/login",
+      "line": 9,
+      "fullLine": "router.post('/login', authLimiter, authController.login);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/refresh",
+      "line": 10,
+      "fullLine": "router.post('/refresh', authController.refreshToken);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/forgot-password",
+      "line": 13,
+      "fullLine": "router.post('/forgot-password', passwordResetLimiter, authController.forgotPassword);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/reset-password",
+      "line": 14,
+      "fullLine": "router.post('/reset-password', passwordResetLimiter, authController.resetPassword);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "GET",
+      "subPath": "/me",
+      "line": 17,
+      "fullLine": "router.get('/me', requireAuth, authController.getMe);"
+    },
+    {
+      "file": "authRoutes.js",
+      "method": "POST",
+      "subPath": "/logout",
+      "line": 18,
+      "fullLine": "router.post('/logout', requireAuth, authController.logout);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/overview",
+      "line": 13,
+      "fullLine": "router.get('/overview', billingController.getBillingOverview);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/accounts",
+      "line": 16,
+      "fullLine": "router.get('/accounts', billingController.getBillingAccounts);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/accounts",
+      "line": 17,
+      "fullLine": "router.post('/accounts', billingController.createBillingAccount);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/accounts/:id",
+      "line": 18,
+      "fullLine": "router.get('/accounts/:id', billingController.getBillingAccountDetail);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/plans",
+      "line": 21,
+      "fullLine": "router.get('/plans', billingController.getBillingPlans);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/plans",
+      "line": 22,
+      "fullLine": "router.post('/plans', billingController.createBillingPlan);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/policies/schedule",
+      "line": 25,
+      "fullLine": "router.post('/policies/schedule', billingController.linkPolicyAndGenerateSchedule);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/schedules",
+      "line": 26,
+      "fullLine": "router.get('/schedules', billingController.getInstallmentSchedules);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/invoices",
+      "line": 29,
+      "fullLine": "router.get('/invoices', billingController.getInvoices);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/invoices",
+      "line": 30,
+      "fullLine": "router.post('/invoices', billingController.postIssueInvoice);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/invoices/:id",
+      "line": 31,
+      "fullLine": "router.get('/invoices/:id', billingController.getInvoiceDetail);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/payments",
+      "line": 34,
+      "fullLine": "router.get('/payments', billingController.getPayments);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/payments",
+      "line": 35,
+      "fullLine": "router.post('/payments', billingController.postPaymentReceipt);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "GET",
+      "subPath": "/adjustments",
+      "line": 38,
+      "fullLine": "router.get('/adjustments', billingController.getAdjustments);"
+    },
+    {
+      "file": "billingRoutes.js",
+      "method": "POST",
+      "subPath": "/adjustments",
+      "line": 39,
+      "fullLine": "router.post('/adjustments', billingController.postAdjustment);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/documents",
+      "line": 15,
+      "fullLine": "router.get('/documents', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:VIEW', 'PURCHASE:VIEW']), commercialController.getDocuments);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/documents/:id",
+      "line": 16,
+      "fullLine": "router.get('/documents/:id', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:VIEW', 'PURCHASE:VIEW']), commercialController.getDocumentById);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "POST",
+      "subPath": "/documents",
+      "line": 17,
+      "fullLine": "router.post('/documents', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:CREATE', 'PURCHASE:CREATE', 'RECEIPT:CREATE', 'PAYMENT:CREATE']), commercialController.createDocument);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "PUT",
+      "subPath": "/documents/:id",
+      "line": 18,
+      "fullLine": "router.put('/documents/:id', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:CREATE', 'PURCHASE:CREATE']), commercialController.updateDocument);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "POST",
+      "subPath": "/documents/:id/post",
+      "line": 19,
+      "fullLine": "router.post('/documents/:id/post', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:POST', 'PURCHASE:POST', 'RECEIPT:CREATE', 'PAYMENT:CREATE']), commercialController.postDocument);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "POST",
+      "subPath": "/documents/:id/reverse",
+      "line": 20,
+      "fullLine": "router.post('/documents/:id/reverse', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:REVERSE', 'TRANSACTION:REVERSE']), commercialController.reverseDocument);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "DELETE",
+      "subPath": "/documents/:id",
+      "line": 21,
+      "fullLine": "router.delete('/documents/:id', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:CREATE', 'PURCHASE:CREATE']), commercialController.cancelDocument);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/posting-config",
+      "line": 26,
+      "fullLine": "router.get('/posting-config', requireCompanyPermission(['COMMERCIAL:VIEW', 'ACCOUNT_MAPPING:VIEW']), commercialController.getPostingConfig);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "PUT",
+      "subPath": "/posting-config",
+      "line": 27,
+      "fullLine": "router.put('/posting-config', requireCompanyPermission(['COMMERCIAL:VIEW', 'ACCOUNT_MAPPING:MANAGE']), commercialController.updatePostingConfigHandler);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/tax-rates",
+      "line": 32,
+      "fullLine": "router.get('/tax-rates', requireCompanyPermission(['COMMERCIAL:VIEW', 'TAX:VIEW']), commercialController.getTaxRates);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "POST",
+      "subPath": "/tax-rates",
+      "line": 33,
+      "fullLine": "router.post('/tax-rates', requireCompanyPermission(['COMMERCIAL:VIEW', 'TAX:MANAGE']), commercialController.createOrUpdateTaxRate);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/opening-stock-gl/preview",
+      "line": 38,
+      "fullLine": "router.get('/opening-stock-gl/preview', requireCompanyPermission(['COMMERCIAL:VIEW', 'RECONCILIATION:VIEW']), commercialController.previewOpeningStockGl);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "POST",
+      "subPath": "/opening-stock-gl/post",
+      "line": 39,
+      "fullLine": "router.post('/opening-stock-gl/post', requireCompanyPermission(['COMMERCIAL:VIEW', 'RECONCILIATION:EXECUTE']), commercialController.postOpeningStockGl);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/reports/register",
+      "line": 44,
+      "fullLine": "router.get('/reports/register', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:VIEW', 'PURCHASE:VIEW']), commercialController.getRegisterReport);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/reports/outstanding",
+      "line": 45,
+      "fullLine": "router.get('/reports/outstanding', requireCompanyPermission(['COMMERCIAL:VIEW', 'SALES:VIEW', 'PURCHASE:VIEW']), commercialController.getOutstandingReportHandler);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/reports/tax-summary",
+      "line": 46,
+      "fullLine": "router.get('/reports/tax-summary', requireCompanyPermission(['COMMERCIAL:VIEW', 'TAX:VIEW']), commercialController.getTaxSummaryReportHandler);"
+    },
+    {
+      "file": "commercialRoutes.js",
+      "method": "GET",
+      "subPath": "/reports/stock-gl-reconciliation",
+      "line": 47,
+      "fullLine": "router.get('/reports/stock-gl-reconciliation', requireCompanyPermission(['COMMERCIAL:VIEW', 'RECONCILIATION:VIEW']), commercialController.getInventoryToGlReport);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/overview",
+      "line": 13,
+      "fullLine": "router.get('/overview', commissionsController.getOverview);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/seed",
+      "line": 16,
+      "fullLine": "router.post('/seed', commissionsController.seedCommissions);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/agreements",
+      "line": 19,
+      "fullLine": "router.get('/agreements', commissionsController.getAgreements);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/agreements",
+      "line": 20,
+      "fullLine": "router.post('/agreements', commissionsController.createAgreement);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "PATCH",
+      "subPath": "/agreements/:id/status",
+      "line": 21,
+      "fullLine": "router.patch('/agreements/:id/status', commissionsController.updateAgreementStatus);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/schedules",
+      "line": 24,
+      "fullLine": "router.get('/schedules', commissionsController.getSchedules);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/schedules",
+      "line": 25,
+      "fullLine": "router.post('/schedules', commissionsController.createSchedule);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/schedules/resolve-preview",
+      "line": 26,
+      "fullLine": "router.get('/schedules/resolve-preview', commissionsController.previewScheduleResolution);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/preview-chain",
+      "line": 27,
+      "fullLine": "router.get('/preview-chain', commissionsController.previewCanonicalChain);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/profit-schedules",
+      "line": 30,
+      "fullLine": "router.get('/profit-schedules', commissionsController.getProfitCommissionSchedules);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/profit-schedules",
+      "line": 31,
+      "fullLine": "router.post('/profit-schedules', commissionsController.createProfitCommissionSchedule);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/splits",
+      "line": 34,
+      "fullLine": "router.get('/splits', commissionsController.getSplits);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/splits",
+      "line": 35,
+      "fullLine": "router.post('/splits', commissionsController.createSplit);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/transactions",
+      "line": 38,
+      "fullLine": "router.get('/transactions', commissionsController.getTransactions);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/transactions",
+      "line": 39,
+      "fullLine": "router.post('/transactions', commissionsController.processTransaction);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/transactions/:id/disburse",
+      "line": 40,
+      "fullLine": "router.post('/transactions/:id/disburse', commissionsController.disburseBrokerCommission);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/allocate-shares",
+      "line": 43,
+      "fullLine": "router.post('/allocate-shares', commissionsController.allocateCommissionShares);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/fiduciary-accounts",
+      "line": 46,
+      "fullLine": "router.get('/fiduciary-accounts', commissionsController.getFiduciaryAccounts);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/fiduciary-accounts",
+      "line": 47,
+      "fullLine": "router.post('/fiduciary-accounts', commissionsController.createFiduciaryAccount);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/fiduciary-accounts/seed",
+      "line": 48,
+      "fullLine": "router.post('/fiduciary-accounts/seed', commissionsController.seedFiduciaryAccounts);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/sweeps/execute",
+      "line": 49,
+      "fullLine": "router.post('/sweeps/execute', commissionsController.executeSweep);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/bordereau/definitions",
+      "line": 52,
+      "fullLine": "router.get('/bordereau/definitions', commissionsController.getBordereauDefinitions);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/bordereau/runs",
+      "line": 53,
+      "fullLine": "router.get('/bordereau/runs', commissionsController.getBordereauRuns);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/bordereau/runs",
+      "line": 54,
+      "fullLine": "router.post('/bordereau/runs', commissionsController.generateBordereauRun);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/bordereau/runs/:runId/transmit",
+      "line": 55,
+      "fullLine": "router.post('/bordereau/runs/:runId/transmit', commissionsController.transmitBordereauRun);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/bordereau/runs/:runId/lines",
+      "line": 56,
+      "fullLine": "router.get('/bordereau/runs/:runId/lines', commissionsController.getBordereauRunLines);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "GET",
+      "subPath": "/settlements",
+      "line": 59,
+      "fullLine": "router.get('/settlements', commissionsController.getSettlements);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/settlements",
+      "line": 60,
+      "fullLine": "router.post('/settlements', commissionsController.generateSettlement);"
+    },
+    {
+      "file": "commissionsRoutes.js",
+      "method": "POST",
+      "subPath": "/settlements/:id/disburse",
+      "line": 61,
+      "fullLine": "router.post('/settlements/:id/disburse', commissionsController.disburseSettlement);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "GET",
+      "subPath": "/profiles",
+      "line": 11,
+      "fullLine": "router.get('/profiles', companyController.getBusinessProfilesList);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 14,
+      "fullLine": "router.get('/', requirePermission('COMPANY:VIEW'), companyController.listCompanies);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 17,
+      "fullLine": "router.post('/', requirePermission('COMPANY:CREATE'), companyController.createCompany);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "POST",
+      "subPath": "/switch",
+      "line": 20,
+      "fullLine": "router.post('/switch', requirePermission('COMPANY:VIEW'), companyController.switchCompany);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "GET",
+      "subPath": "/:id",
+      "line": 23,
+      "fullLine": "router.get('/:id', requirePermission('COMPANY:VIEW'), companyController.getCompanyDetails);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "PATCH",
+      "subPath": "/:id",
+      "line": 26,
+      "fullLine": "router.patch('/:id', requirePermission('COMPANY:UPDATE'), companyController.updateCompany);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "GET",
+      "subPath": "/:id/members",
+      "line": 29,
+      "fullLine": "router.get('/:id/members', requirePermission('COMPANY:MANAGE_MEMBERS'), companyController.listMembers);"
+    },
+    {
+      "file": "companyRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/members",
+      "line": 30,
+      "fullLine": "router.post('/:id/members', requirePermission('COMPANY:MANAGE_MEMBERS'), companyController.addMember);"
+    },
+    {
+      "file": "configBundleRoutes.js",
+      "method": "GET",
+      "subPath": "/export",
+      "line": 9,
+      "fullLine": "router.get('/export', requirePermission('GL:VIEW'), bundleCtrl.exportConfiguration);"
+    },
+    {
+      "file": "configBundleRoutes.js",
+      "method": "POST",
+      "subPath": "/preview",
+      "line": 10,
+      "fullLine": "router.post('/preview', requirePermission('GL:VIEW'), bundleCtrl.previewImport);"
+    },
+    {
+      "file": "configBundleRoutes.js",
+      "method": "POST",
+      "subPath": "/import",
+      "line": 11,
+      "fullLine": "router.post('/import', requirePermission('GL:ADMIN'), bundleCtrl.confirmedImport);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 10,
+      "fullLine": "router.get('/', counterpartyController.listParties);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 11,
+      "fullLine": "router.post('/', counterpartyController.createParty);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "POST",
+      "subPath": "/seed",
+      "line": 12,
+      "fullLine": "router.post('/seed', counterpartyController.seedParties);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "GET",
+      "subPath": "/:id",
+      "line": 13,
+      "fullLine": "router.get('/:id', counterpartyController.getPartyById);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "PATCH",
+      "subPath": "/:id",
+      "line": 14,
+      "fullLine": "router.patch('/:id', counterpartyController.updateParty);"
+    },
+    {
+      "file": "counterpartyRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/roles",
+      "line": 15,
+      "fullLine": "router.post('/:id/roles', counterpartyController.addPartyRole);"
+    },
+    {
+      "file": "dashboardRoutes.js",
+      "method": "GET",
+      "subPath": "/metrics",
+      "line": 10,
+      "fullLine": "router.get('/metrics', dashboardController.getDashboardMetrics);"
+    },
+    {
+      "file": "dimensionRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 10,
+      "fullLine": "router.get('/', dimensionController.listDimensions);"
+    },
+    {
+      "file": "dimensionRoutes.js",
+      "method": "GET",
+      "subPath": "/context",
+      "line": 11,
+      "fullLine": "router.get('/context', dimensionController.getDimensionContext);"
+    },
+    {
+      "file": "dimensionRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 12,
+      "fullLine": "router.post('/', dimensionController.createDimension);"
+    },
+    {
+      "file": "dimensionRoutes.js",
+      "method": "PATCH",
+      "subPath": "/:id",
+      "line": 13,
+      "fullLine": "router.patch('/:id', dimensionController.updateDimension);"
+    },
+    {
+      "file": "dimensionRoutes.js",
+      "method": "DELETE",
+      "subPath": "/:id",
+      "line": 14,
+      "fullLine": "router.delete('/:id', dimensionController.deleteDimension);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 10,
+      "fullLine": "router.get('/', requirePermission('GL:VIEW'), eventDefCtrl.getEventDefinitions);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "GET",
+      "subPath": "/:id",
+      "line": 11,
+      "fullLine": "router.get('/:id', requirePermission('GL:VIEW'), eventDefCtrl.getEventDefinitionById);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 14,
+      "fullLine": "router.post('/', requirePermission('GL:ADMIN'), eventDefCtrl.createEventDefinition);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/versions",
+      "line": 15,
+      "fullLine": "router.post('/:id/versions', requirePermission('GL:ADMIN'), eventDefCtrl.addSchemaVersion);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/validate-payload",
+      "line": 16,
+      "fullLine": "router.post('/:id/validate-payload', requirePermission('GL:VIEW'), eventDefCtrl.validatePayload);"
+    },
+    {
+      "file": "eventDefinitionRoutes.js",
+      "method": "PATCH",
+      "subPath": "/:id/status",
+      "line": 17,
+      "fullLine": "router.patch('/:id/status', requirePermission('GL:ADMIN'), eventDefCtrl.updateStatus);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "GET",
+      "subPath": "/stats",
+      "line": 11,
+      "fullLine": "router.get('/stats', requirePermission('GL:VIEW'), eventPipelineController.getPipelineStats);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "GET",
+      "subPath": "/outbox",
+      "line": 14,
+      "fullLine": "router.get('/outbox', requirePermission('GL:VIEW'), eventPipelineController.listOutbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/outbox/:eventId/retry",
+      "line": 15,
+      "fullLine": "router.post('/outbox/:eventId/retry', requirePermission('GL:ADMIN'), eventPipelineController.retryOutbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/outbox/:eventId/replay",
+      "line": 16,
+      "fullLine": "router.post('/outbox/:eventId/replay', requirePermission('GL:ADMIN'), eventPipelineController.replayOutbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "GET",
+      "subPath": "/inbox",
+      "line": 19,
+      "fullLine": "router.get('/inbox', requirePermission('GL:VIEW'), eventPipelineController.listInbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/inbox/:id/retry",
+      "line": 20,
+      "fullLine": "router.post('/inbox/:id/retry', requirePermission('GL:ADMIN'), eventPipelineController.retryInbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/inbox/:id/replay",
+      "line": 21,
+      "fullLine": "router.post('/inbox/:id/replay', requirePermission('GL:ADMIN'), eventPipelineController.replayInbox);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/dispatch",
+      "line": 24,
+      "fullLine": "router.post('/dispatch', requirePermission('GL:ADMIN'), eventPipelineController.triggerDispatch);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "GET",
+      "subPath": "/trace/:identifier",
+      "line": 27,
+      "fullLine": "router.get('/trace/:identifier', requirePermission('GL:VIEW'), eventPipelineController.getEventTrace);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "GET",
+      "subPath": "/subscriptions",
+      "line": 30,
+      "fullLine": "router.get('/subscriptions', requirePermission('GL:VIEW'), eventPipelineController.listSubscriptions);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "POST",
+      "subPath": "/subscriptions",
+      "line": 31,
+      "fullLine": "router.post('/subscriptions', requirePermission('GL:ADMIN'), eventPipelineController.upsertSubscription);"
+    },
+    {
+      "file": "eventPipelineRoutes.js",
+      "method": "PATCH",
+      "subPath": "/subscriptions/:id/toggle",
+      "line": 32,
+      "fullLine": "router.patch('/subscriptions/:id/toggle', requirePermission('GL:ADMIN'), eventPipelineController.toggleSubscription);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/overview",
+      "line": 13,
+      "fullLine": "router.get('/overview', financeCloseController.getOverview);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/upr/preview",
+      "line": 16,
+      "fullLine": "router.get('/upr/preview', financeCloseController.previewUPR);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "POST",
+      "subPath": "/upr/run",
+      "line": 17,
+      "fullLine": "router.post('/upr/run', financeCloseController.runUPRAmortization);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/reconciliation/subledgers",
+      "line": 20,
+      "fullLine": "router.get('/reconciliation/subledgers', financeCloseController.getSubledgerBalances);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/reconciliation/cases",
+      "line": 21,
+      "fullLine": "router.get('/reconciliation/cases', financeCloseController.getReconciliationCases);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "PATCH",
+      "subPath": "/reconciliation/cases/:id/resolve",
+      "line": 22,
+      "fullLine": "router.patch('/reconciliation/cases/:id/resolve', financeCloseController.resolveReconciliationCase);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/checklist",
+      "line": 25,
+      "fullLine": "router.get('/checklist', financeCloseController.getCloseChecklist);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "POST",
+      "subPath": "/checklist/step/:step/execute",
+      "line": 26,
+      "fullLine": "router.post('/checklist/step/:step/execute', financeCloseController.executeCloseTask);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/trial-balance",
+      "line": 29,
+      "fullLine": "router.get('/trial-balance', financeCloseController.getTrialBalance);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "POST",
+      "subPath": "/trial-balance/certify",
+      "line": 30,
+      "fullLine": "router.post('/trial-balance/certify', financeCloseController.certifyTrialBalance);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/reports/financial-statements",
+      "line": 33,
+      "fullLine": "router.get('/reports/financial-statements', financeCloseController.getFinancialStatements);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/export-batches",
+      "line": 36,
+      "fullLine": "router.get('/export-batches', financeCloseController.getExportBatches);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "POST",
+      "subPath": "/export-batches",
+      "line": 37,
+      "fullLine": "router.post('/export-batches', financeCloseController.createExportBatch);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/adjustments",
+      "line": 40,
+      "fullLine": "router.get('/adjustments', financeCloseController.getAdjustments);"
+    },
+    {
+      "file": "financeCloseRoutes.js",
+      "method": "GET",
+      "subPath": "/disputes",
+      "line": 41,
+      "fullLine": "router.get('/disputes', financeCloseController.getDisputes);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/ping",
+      "line": 13,
+      "fullLine": "router.get('/ping', requirePermission('GL:VIEW'), (req, res) => {"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/accounts",
+      "line": 23,
+      "fullLine": "router.get('/accounts', requirePermission('GL:VIEW'), glController.getAccounts);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/accounts/:id",
+      "line": 24,
+      "fullLine": "router.get('/accounts/:id', requirePermission('GL:VIEW'), glController.getAccountDetail);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/accounts",
+      "line": 25,
+      "fullLine": "router.post('/accounts', requirePermission('GL:ADMIN'), glController.createAccount);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "PATCH",
+      "subPath": "/accounts/:id",
+      "line": 26,
+      "fullLine": "router.patch('/accounts/:id', requirePermission('GL:ADMIN'), glController.updateAccount);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/periods",
+      "line": 29,
+      "fullLine": "router.get('/periods', requirePermission('GL:VIEW'), glController.getFiscalPeriods);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/periods",
+      "line": 30,
+      "fullLine": "router.post('/periods', requirePermission('GL:ADMIN'), glController.createFiscalPeriod);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "PATCH",
+      "subPath": "/periods/status",
+      "line": 31,
+      "fullLine": "router.patch('/periods/status', requirePermission('GL:ADMIN'), glController.updateFiscalPeriodStatus);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/journals",
+      "line": 34,
+      "fullLine": "router.get('/journals', requirePermission('GL:VIEW'), glController.getJournals);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/journals/:id",
+      "line": 35,
+      "fullLine": "router.get('/journals/:id', requirePermission('GL:VIEW'), glController.getJournalById);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/journals/preview",
+      "line": 36,
+      "fullLine": "router.post('/journals/preview', requirePermission('GL:VIEW'), glController.previewJournalTotals);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/journals",
+      "line": 37,
+      "fullLine": "router.post('/journals', requirePermission('GL:POST'), glController.postJournal);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/journals/:id/reverse",
+      "line": 38,
+      "fullLine": "router.post('/journals/:id/reverse', requirePermission('GL:POST'), glController.reverseJournal);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/trial-balance",
+      "line": 41,
+      "fullLine": "router.get('/trial-balance', requirePermission('GL:VIEW'), glController.getTrialBalance);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/posting-rules",
+      "line": 44,
+      "fullLine": "router.get('/posting-rules', requirePermission('GL:VIEW'), glController.getPostingRules);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/posting-rules",
+      "line": 45,
+      "fullLine": "router.post('/posting-rules', requirePermission('GL:ADMIN'), glController.createPostingRule);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "GET",
+      "subPath": "/exchange-rates",
+      "line": 48,
+      "fullLine": "router.get('/exchange-rates', requirePermission('GL:VIEW'), glController.getExchangeRates);"
+    },
+    {
+      "file": "glRoutes.js",
+      "method": "POST",
+      "subPath": "/exchange-rates",
+      "line": 49,
+      "fullLine": "router.post('/exchange-rates', requirePermission('GL:ADMIN'), glController.createExchangeRate);"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "GET",
+      "subPath": "/room-types",
+      "line": 12,
+      "fullLine": "router.get('/room-types', (req, res) => hotelPmsController.getRoomTypes(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/room-types",
+      "line": 13,
+      "fullLine": "router.post('/room-types', (req, res) => hotelPmsController.createRoomType(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "GET",
+      "subPath": "/rooms",
+      "line": 14,
+      "fullLine": "router.get('/rooms', (req, res) => hotelPmsController.getRooms(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/rooms",
+      "line": 15,
+      "fullLine": "router.post('/rooms', (req, res) => hotelPmsController.createRoom(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "GET",
+      "subPath": "/reservations",
+      "line": 16,
+      "fullLine": "router.get('/reservations', (req, res) => hotelPmsController.getReservations(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/reservations",
+      "line": 17,
+      "fullLine": "router.post('/reservations', (req, res) => hotelPmsController.createReservation(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/check-in",
+      "line": 18,
+      "fullLine": "router.post('/check-in', (req, res) => hotelPmsController.checkIn(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "GET",
+      "subPath": "/folios/:reservationId",
+      "line": 19,
+      "fullLine": "router.get('/folios/:reservationId', (req, res) => hotelPmsController.getFolio(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/folios/:folioId/charges",
+      "line": 20,
+      "fullLine": "router.post('/folios/:folioId/charges', (req, res) => hotelPmsController.addFolioCharge(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/check-out",
+      "line": 21,
+      "fullLine": "router.post('/check-out', (req, res) => hotelPmsController.checkOut(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "POST",
+      "subPath": "/night-audit",
+      "line": 22,
+      "fullLine": "router.post('/night-audit', (req, res) => hotelPmsController.runNightAudit(req, res));"
+    },
+    {
+      "file": "hotelPmsRoutes.js",
+      "method": "GET",
+      "subPath": "/metrics",
+      "line": 23,
+      "fullLine": "router.get('/metrics', (req, res) => hotelPmsController.getMetrics(req, res));"
+    },
+    {
+      "file": "importExportRoutes.js",
+      "method": "POST",
+      "subPath": "/import/accounts",
+      "line": 12,
+      "fullLine": "router.post('/import/accounts', (req, res) => importExportController.importAccounts(req, res));"
+    },
+    {
+      "file": "importExportRoutes.js",
+      "method": "POST",
+      "subPath": "/import/stock-items",
+      "line": 13,
+      "fullLine": "router.post('/import/stock-items', (req, res) => importExportController.importStockItems(req, res));"
+    },
+    {
+      "file": "importExportRoutes.js",
+      "method": "GET",
+      "subPath": "/export/accounts",
+      "line": 14,
+      "fullLine": "router.get('/export/accounts', (req, res) => importExportController.exportAccounts(req, res));"
+    },
+    {
+      "file": "importExportRoutes.js",
+      "method": "GET",
+      "subPath": "/export/stock-balances",
+      "line": 15,
+      "fullLine": "router.get('/export/stock-balances', (req, res) => importExportController.exportStockBalances(req, res));"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/groups",
+      "line": 15,
+      "fullLine": "router.get('/groups', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockGroups);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/groups/:id",
+      "line": 16,
+      "fullLine": "router.get('/groups/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockGroupById);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/groups",
+      "line": 17,
+      "fullLine": "router.post('/groups', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createStockGroup);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/groups/:id",
+      "line": 18,
+      "fullLine": "router.patch('/groups/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateStockGroup);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "DELETE",
+      "subPath": "/groups/:id",
+      "line": 19,
+      "fullLine": "router.delete('/groups/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.deleteStockGroup);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/categories",
+      "line": 24,
+      "fullLine": "router.get('/categories', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockCategories);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/categories/:id",
+      "line": 25,
+      "fullLine": "router.get('/categories/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockCategoryById);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/categories",
+      "line": 26,
+      "fullLine": "router.post('/categories', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createStockCategory);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/categories/:id",
+      "line": 27,
+      "fullLine": "router.patch('/categories/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateStockCategory);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "DELETE",
+      "subPath": "/categories/:id",
+      "line": 28,
+      "fullLine": "router.delete('/categories/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.deleteStockCategory);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/uom",
+      "line": 33,
+      "fullLine": "router.get('/uom', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getUnitsOfMeasurement);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/uom/:id",
+      "line": 34,
+      "fullLine": "router.get('/uom/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getUnitOfMeasurementById);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/uom",
+      "line": 35,
+      "fullLine": "router.post('/uom', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createUnitOfMeasurement);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/uom/:id",
+      "line": 36,
+      "fullLine": "router.patch('/uom/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateUnitOfMeasurement);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/uom/convert",
+      "line": 37,
+      "fullLine": "router.post('/uom/convert', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.simulateUomConversion);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/godowns",
+      "line": 42,
+      "fullLine": "router.get('/godowns', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getGodowns);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/godowns/:id",
+      "line": 43,
+      "fullLine": "router.get('/godowns/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getGodownById);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/godowns",
+      "line": 44,
+      "fullLine": "router.post('/godowns', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createGodown);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/godowns/:id",
+      "line": 45,
+      "fullLine": "router.patch('/godowns/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateGodown);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/items",
+      "line": 50,
+      "fullLine": "router.get('/items', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockItems);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/items/:id",
+      "line": 51,
+      "fullLine": "router.get('/items/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockItemById);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/items",
+      "line": 52,
+      "fullLine": "router.post('/items', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createStockItem);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/items/:id",
+      "line": 53,
+      "fullLine": "router.patch('/items/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateStockItem);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/opening-stock",
+      "line": 58,
+      "fullLine": "router.post('/opening-stock', requireCompanyPermission('INVENTORY:OPENING_STOCK'), inventoryController.postOpeningStock);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/balances",
+      "line": 63,
+      "fullLine": "router.get('/balances', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockBalances);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/summary",
+      "line": 64,
+      "fullLine": "router.get('/summary', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getInventorySummary);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "GET",
+      "subPath": "/movements",
+      "line": 69,
+      "fullLine": "router.get('/movements', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockMovements);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/movements/:id/reverse",
+      "line": 70,
+      "fullLine": "router.post('/movements/:id/reverse', requireCompanyPermission('INVENTORY:ADJUST'), inventoryController.reverseMovement);"
+    },
+    {
+      "file": "inventoryRoutes.js",
+      "method": "POST",
+      "subPath": "/reconcile",
+      "line": 75,
+      "fullLine": "router.post('/reconcile', requireCompanyPermission('INVENTORY:ADJUST'), inventoryController.reconcileBalances);"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "GET",
+      "subPath": "/boms",
+      "line": 12,
+      "fullLine": "router.get('/boms', (req, res) => manufacturingController.getBOMs(req, res));"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "POST",
+      "subPath": "/boms",
+      "line": 13,
+      "fullLine": "router.post('/boms', (req, res) => manufacturingController.saveBOM(req, res));"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "GET",
+      "subPath": "/work-orders",
+      "line": 14,
+      "fullLine": "router.get('/work-orders', (req, res) => manufacturingController.getWorkOrders(req, res));"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "POST",
+      "subPath": "/work-orders",
+      "line": 15,
+      "fullLine": "router.post('/work-orders', (req, res) => manufacturingController.createWorkOrder(req, res));"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "POST",
+      "subPath": "/work-orders/:workOrderId/issue",
+      "line": 16,
+      "fullLine": "router.post('/work-orders/:workOrderId/issue', (req, res) => manufacturingController.issueMaterials(req, res));"
+    },
+    {
+      "file": "manufacturingRoutes.js",
+      "method": "POST",
+      "subPath": "/work-orders/:workOrderId/complete",
+      "line": 17,
+      "fullLine": "router.post('/work-orders/:workOrderId/complete', (req, res) => manufacturingController.completeProduction(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "GET",
+      "subPath": "/plans",
+      "line": 9,
+      "fullLine": "router.get('/plans', (req, res) => platformAdminController.getPlans(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "GET",
+      "subPath": "/tenants",
+      "line": 10,
+      "fullLine": "router.get('/tenants', (req, res) => platformAdminController.getTenants(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "GET",
+      "subPath": "/tenants/:tenantId/subscription",
+      "line": 11,
+      "fullLine": "router.get('/tenants/:tenantId/subscription', (req, res) => platformAdminController.getTenantSubscription(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "PUT",
+      "subPath": "/tenants/:tenantId/subscription",
+      "line": 12,
+      "fullLine": "router.put('/tenants/:tenantId/subscription', (req, res) => platformAdminController.updateTenantPlan(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "PUT",
+      "subPath": "/tenants/:tenantId/status",
+      "line": 13,
+      "fullLine": "router.put('/tenants/:tenantId/status', (req, res) => platformAdminController.updateTenantStatus(req, res));"
+    },
+    {
+      "file": "platformAdminRoutes.js",
+      "method": "GET",
+      "subPath": "/audit-logs",
+      "line": 14,
+      "fullLine": "router.get('/audit-logs', (req, res) => platformAdminController.getAuditLogs(req, res));"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 10,
+      "fullLine": "router.get('/', requirePermission('GL:VIEW'), ruleCtrl.getPostingRules);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "GET",
+      "subPath": "/:id",
+      "line": 11,
+      "fullLine": "router.get('/:id', requirePermission('GL:VIEW'), ruleCtrl.getPostingRuleById);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 14,
+      "fullLine": "router.post('/', requirePermission('GL:ADMIN'), ruleCtrl.createPostingRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "PATCH",
+      "subPath": "/:id",
+      "line": 15,
+      "fullLine": "router.patch('/:id', requirePermission('GL:ADMIN'), ruleCtrl.updatePostingRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/fork",
+      "line": 16,
+      "fullLine": "router.post('/:id/fork', requirePermission('GL:ADMIN'), ruleCtrl.forkDraftVersion);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/validate",
+      "line": 17,
+      "fullLine": "router.post('/:id/validate', requirePermission('GL:VIEW'), ruleCtrl.validateRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/publish",
+      "line": 18,
+      "fullLine": "router.post('/:id/publish', requirePermission('GL:ADMIN'), ruleCtrl.publishRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/retire",
+      "line": 19,
+      "fullLine": "router.post('/:id/retire', requirePermission('GL:ADMIN'), ruleCtrl.retireRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/reactivate",
+      "line": 20,
+      "fullLine": "router.post('/:id/reactivate', requirePermission('GL:ADMIN'), ruleCtrl.reactivateRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "DELETE",
+      "subPath": "/:id",
+      "line": 21,
+      "fullLine": "router.delete('/:id', requirePermission('GL:ADMIN'), ruleCtrl.deletePostingRule);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/simulate",
+      "line": 24,
+      "fullLine": "router.post('/simulate', requirePermission('GL:VIEW'), ruleCtrl.simulateEvent);"
+    },
+    {
+      "file": "postingRuleRoutes.js",
+      "method": "POST",
+      "subPath": "/simulate/post",
+      "line": 25,
+      "fullLine": "router.post('/simulate/post', requirePermission('GL:POST'), ruleCtrl.postSimulatedJournal);"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "GET",
+      "subPath": "/tables",
+      "line": 12,
+      "fullLine": "router.get('/tables', (req, res) => restaurantController.getTables(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "POST",
+      "subPath": "/tables",
+      "line": 13,
+      "fullLine": "router.post('/tables', (req, res) => restaurantController.createTable(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "POST",
+      "subPath": "/recipes",
+      "line": 14,
+      "fullLine": "router.post('/recipes', (req, res) => restaurantController.saveRecipe(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "GET",
+      "subPath": "/recipes/:menuItemId",
+      "line": 15,
+      "fullLine": "router.get('/recipes/:menuItemId', (req, res) => restaurantController.getRecipe(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "GET",
+      "subPath": "/orders",
+      "line": 16,
+      "fullLine": "router.get('/orders', (req, res) => restaurantController.getOrders(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "POST",
+      "subPath": "/orders",
+      "line": 17,
+      "fullLine": "router.post('/orders', (req, res) => restaurantController.createOrder(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "POST",
+      "subPath": "/orders/:orderId/kot",
+      "line": 18,
+      "fullLine": "router.post('/orders/:orderId/kot', (req, res) => restaurantController.sendToKitchen(req, res));"
+    },
+    {
+      "file": "restaurantRoutes.js",
+      "method": "POST",
+      "subPath": "/orders/:orderId/settle",
+      "line": 19,
+      "fullLine": "router.post('/orders/:orderId/settle', (req, res) => restaurantController.settleOrder(req, res));"
+    },
+    {
+      "file": "retailPosRoutes.js",
+      "method": "POST",
+      "subPath": "/shifts/open",
+      "line": 12,
+      "fullLine": "router.post('/shifts/open', (req, res) => retailPosController.openShift(req, res));"
+    },
+    {
+      "file": "retailPosRoutes.js",
+      "method": "GET",
+      "subPath": "/shifts/current",
+      "line": 13,
+      "fullLine": "router.get('/shifts/current', (req, res) => retailPosController.getCurrentShift(req, res));"
+    },
+    {
+      "file": "retailPosRoutes.js",
+      "method": "POST",
+      "subPath": "/shifts/close",
+      "line": 14,
+      "fullLine": "router.post('/shifts/close', (req, res) => retailPosController.closeShift(req, res));"
+    },
+    {
+      "file": "retailPosRoutes.js",
+      "method": "POST",
+      "subPath": "/checkout",
+      "line": 15,
+      "fullLine": "router.post('/checkout', (req, res) => retailPosController.checkout(req, res));"
+    },
+    {
+      "file": "ruleTestCaseRoutes.js",
+      "method": "GET",
+      "subPath": "/",
+      "line": 9,
+      "fullLine": "router.get('/', requirePermission('GL:VIEW'), testCaseCtrl.getTestCases);"
+    },
+    {
+      "file": "ruleTestCaseRoutes.js",
+      "method": "POST",
+      "subPath": "/",
+      "line": 10,
+      "fullLine": "router.post('/', requirePermission('GL:ADMIN'), testCaseCtrl.createTestCase);"
+    },
+    {
+      "file": "ruleTestCaseRoutes.js",
+      "method": "POST",
+      "subPath": "/:id/run",
+      "line": 11,
+      "fullLine": "router.post('/:id/run', requirePermission('GL:VIEW'), testCaseCtrl.runTestCase);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "POST",
+      "subPath": "/switch-workspace",
+      "line": 8,
+      "fullLine": "router.post('/switch-workspace', requireAuth, tenantController.switchWorkspace);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "GET",
+      "subPath": "/users",
+      "line": 14,
+      "fullLine": "router.get('/users', requirePermission('USER:VIEW'), tenantController.getTenantUsers);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "POST",
+      "subPath": "/users/invite",
+      "line": 15,
+      "fullLine": "router.post('/users/invite', requirePermission('USER:INVITE'), tenantController.inviteTenantUser);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "GET",
+      "subPath": "/roles",
+      "line": 16,
+      "fullLine": "router.get('/roles', tenantController.getRoles);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "GET",
+      "subPath": "/modules",
+      "line": 19,
+      "fullLine": "router.get('/modules', tenantController.getModuleEntitlements);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "PATCH",
+      "subPath": "/modules",
+      "line": 20,
+      "fullLine": "router.patch('/modules', requirePermission('MODULE:CONFIGURE'), tenantController.updateModuleEntitlement);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "GET",
+      "subPath": "/settings",
+      "line": 23,
+      "fullLine": "router.get('/settings', tenantController.getOrganizationSettings);"
+    },
+    {
+      "file": "tenantRoutes.js",
+      "method": "PATCH",
+      "subPath": "/settings",
+      "line": 24,
+      "fullLine": "router.patch('/settings', requirePermission('MODULE:CONFIGURE'), tenantController.updateOrganizationSettings);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/overview",
+      "line": 12,
+      "fullLine": "router.get('/overview', treasuryController.getTreasuryOverview);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/mandates",
+      "line": 15,
+      "fullLine": "router.get('/mandates', treasuryController.getMandates);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/mandates",
+      "line": 16,
+      "fullLine": "router.post('/mandates', treasuryController.createMandate);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "PATCH",
+      "subPath": "/mandates/:id/status",
+      "line": 17,
+      "fullLine": "router.patch('/mandates/:id/status', treasuryController.updateMandateStatus);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/attempts",
+      "line": 20,
+      "fullLine": "router.get('/attempts', treasuryController.getAttempts);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/attempts",
+      "line": 21,
+      "fullLine": "router.post('/attempts', treasuryController.postPaymentAttempt);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/processor-transactions",
+      "line": 24,
+      "fullLine": "router.get('/processor-transactions', treasuryController.getProcessorTransactions);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/bank-lines",
+      "line": 27,
+      "fullLine": "router.get('/bank-lines', treasuryController.getBankStatementLines);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/bank-lines/import",
+      "line": 28,
+      "fullLine": "router.post('/bank-lines/import', treasuryController.postImportBankStatement);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/matches",
+      "line": 31,
+      "fullLine": "router.get('/matches', treasuryController.getReconciliationMatches);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/auto-reconcile",
+      "line": 32,
+      "fullLine": "router.post('/auto-reconcile', treasuryController.postAutoReconcile);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/manual-match",
+      "line": 33,
+      "fullLine": "router.post('/manual-match', treasuryController.postManualMatch);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/returns",
+      "line": 36,
+      "fullLine": "router.get('/returns', treasuryController.getPaymentReturns);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/returns",
+      "line": 37,
+      "fullLine": "router.post('/returns', treasuryController.postPaymentReturn);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/refunds",
+      "line": 40,
+      "fullLine": "router.get('/refunds', treasuryController.getRefunds);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "POST",
+      "subPath": "/refunds",
+      "line": 41,
+      "fullLine": "router.post('/refunds', treasuryController.postRefund);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/dunning/plans",
+      "line": 44,
+      "fullLine": "router.get('/dunning/plans', treasuryController.getDunningPlans);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/dunning/cases",
+      "line": 45,
+      "fullLine": "router.get('/dunning/cases', treasuryController.getDelinquencyCases);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/dunning/actions",
+      "line": 46,
+      "fullLine": "router.get('/dunning/actions', treasuryController.getDunningActions);"
+    },
+    {
+      "file": "treasuryRoutes.js",
+      "method": "GET",
+      "subPath": "/dunning/assignments",
+      "line": 47,
+      "fullLine": "router.get('/dunning/assignments', treasuryController.getCollectionAssignments);"
+    }
+  ]
+}

@@ -19,10 +19,13 @@ import {
 } from 'lucide-react';
 
 const ROLE_COLORS = {
+  CUSTOMER: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  SUPPLIER: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   CARRIER: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   MGA: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   BROKER: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   POLICYHOLDER: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  DEBTOR: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   PRODUCER: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   VENDOR: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
   REINSURER: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
@@ -52,7 +55,7 @@ export default function CounterpartiesPage() {
     tax_id: '',
     email: '',
     phone: '',
-    initial_role_type: 'POLICYHOLDER',
+    initial_role_type: 'CUSTOMER',
     street1: '',
     city: '',
     state: '',
@@ -190,7 +193,7 @@ export default function CounterpartiesPage() {
   const carrierCount = parties.filter(p => p.roles?.some(r => r.role_type === 'CARRIER')).length;
   const mgaCount = parties.filter(p => p.roles?.some(r => r.role_type === 'MGA')).length;
   const brokerCount = parties.filter(p => p.roles?.some(r => r.role_type === 'BROKER')).length;
-  const policyholderCount = parties.filter(p => p.roles?.some(r => r.role_type === 'POLICYHOLDER')).length;
+  const customerCount = parties.filter(p => p.roles?.some(r => ['CUSTOMER', 'DEBTOR', 'POLICYHOLDER'].includes(r.role_type))).length;
 
   return (
     <div className="space-y-6">
@@ -268,8 +271,8 @@ export default function CounterpartiesPage() {
           <div className="text-xl font-bold text-purple-400 mt-1">{brokerCount}</div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <div className="text-[10px] text-amber-400 font-mono uppercase">Policyholders</div>
-          <div className="text-xl font-bold text-amber-400 mt-1">{policyholderCount}</div>
+          <div className="text-[10px] text-amber-400 font-mono uppercase">Customers / Debtors</div>
+          <div className="text-xl font-bold text-amber-400 mt-1">{customerCount}</div>
         </div>
       </div>
 
@@ -295,13 +298,13 @@ export default function CounterpartiesPage() {
             className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
           >
             <option value="">All Business Roles</option>
-            <option value="CARRIER">Carrier</option>
-            <option value="MGA">MGA</option>
-            <option value="BROKER">Broker</option>
-            <option value="POLICYHOLDER">Policyholder</option>
+            <option value="CUSTOMER">Customer / Debtor</option>
+            <option value="VENDOR">Vendor / Supplier</option>
+            <option value="CARRIER">Carrier / Partner</option>
+            <option value="MGA">MGA / Wholesale</option>
+            <option value="BROKER">Broker / Agent</option>
             <option value="PRODUCER">Producer</option>
-            <option value="REINSURER">Reinsurer</option>
-            <option value="VENDOR">Vendor</option>
+            <option value="SUPPLIER">Supplier / Vendor</option>
           </select>
         </div>
       </div>
@@ -589,14 +592,13 @@ export default function CounterpartiesPage() {
                   onChange={(e) => setNewRoleType(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
                 >
-                  <option value="CARRIER">Carrier</option>
-                  <option value="MGA">MGA</option>
-                  <option value="BROKER">Broker</option>
-                  <option value="POLICYHOLDER">Policyholder</option>
-                  <option value="PRODUCER">Producer</option>
-                  <option value="REINSURER">Reinsurer</option>
-                  <option value="VENDOR">Vendor</option>
-                  <option value="REGULATOR">Regulator</option>
+                  <option value="CUSTOMER">Customer / Sundry Debtor</option>
+                  <option value="SUPPLIER">Supplier / Sundry Creditor</option>
+                  <option value="VENDOR">Vendor / Contractor</option>
+                  <option value="CARRIER">Carrier / Shipping Partner</option>
+                  <option value="MGA">Wholesaler / Distributor</option>
+                  <option value="BROKER">Broker / Sales Agent</option>
+                  <option value="PRODUCER">Producer / Agent</option>
                 </select>
               </div>
 

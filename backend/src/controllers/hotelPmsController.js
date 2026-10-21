@@ -23,7 +23,7 @@ class HotelPmsController {
         maxOccupancy: max_occupancy,
         amenities
       });
-      return res.success(type);
+      return res.success(type, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }
@@ -48,7 +48,7 @@ class HotelPmsController {
         roomTypeId: room_type_id,
         floor
       });
-      return res.success(room);
+      return res.success(room, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }
@@ -92,7 +92,7 @@ class HotelPmsController {
         ratePerNight: rate_per_night,
         depositAmount: deposit_amount
       });
-      return res.success(reservation);
+      return res.success(reservation, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }

@@ -51,8 +51,8 @@ async function registerTenant(req, res) {
     const {
       tenant_code,
       tenant_name,
-      tenant_type = 'MGA',
-      base_currency = 'USD',
+      tenant_type = 'ENTERPRISE',
+      base_currency = 'INR',
       admin_first_name,
       admin_last_name,
       admin_email,
@@ -68,8 +68,8 @@ async function registerTenant(req, res) {
       return res.error(pwdCheck.message, 400);
     }
 
-    const validTenantTypes = ['CARRIER', 'MGA', 'BROKER', 'OTHER'];
-    const normalizedType = (tenant_type || 'MGA').toUpperCase().trim();
+    const validTenantTypes = ['ENTERPRISE', 'RETAIL', 'HOSPITALITY', 'MANUFACTURING', 'SERVICES', 'WHOLESALE', 'COMMERCIAL', 'OTHER', 'CARRIER', 'MGA', 'BROKER'];
+    const normalizedType = (tenant_type || 'ENTERPRISE').toUpperCase().trim();
     if (!validTenantTypes.includes(normalizedType)) {
       return res.error(`Invalid tenant_type. Must be one of: ${validTenantTypes.join(', ')}`, 400);
     }

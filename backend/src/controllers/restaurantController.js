@@ -13,15 +13,15 @@ class RestaurantController {
 
   async createTable(req, res) {
     try {
-      const { table_number, section, capacity } = req.body;
+      const { table_number, section, capacity, seating_capacity } = req.body;
       const table = await restaurantService.createTable({
         tenantId: req.tenantId,
         companyId: req.companyId,
         tableNumber: table_number,
         section,
-        capacity
+        capacity: capacity || seating_capacity || 4
       });
-      return res.success(table);
+      return res.success(table, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }
@@ -95,7 +95,7 @@ class RestaurantController {
         customerPhone: customer_phone,
         items
       });
-      return res.success(order);
+      return res.success(order, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }

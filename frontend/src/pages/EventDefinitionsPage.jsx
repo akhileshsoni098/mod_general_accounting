@@ -35,8 +35,8 @@ export default function EventDefinitionsPage() {
     source_module: 'BILLING',
     category: 'TRANSACTION',
     initial_version: '1.0.0',
-    json_schema: '{\n  "type": "object",\n  "required": ["policy_id", "gross_premium"],\n  "properties": {\n    "policy_id": { "type": "string" },\n    "gross_premium": { "type": "number" },\n    "policy_fee": { "type": "number" }\n  }\n}',
-    sample_payload: '{\n  "policy_id": "POL-TX-8821",\n  "gross_premium": 37650,\n  "policy_fee": 150\n}'
+    json_schema: '{\n  "type": "object",\n  "required": ["invoice_id", "subtotal"],\n  "properties": {\n    "invoice_id": { "type": "string" },\n    "subtotal": { "type": "number" },\n    "tax_amount": { "type": "number" }\n  }\n}',
+    sample_payload: '{\n  "invoice_id": "INV-2026-0001",\n  "subtotal": 37650,\n  "tax_amount": 150\n}'
   });
 
   const loadEvents = async () => {
@@ -156,8 +156,8 @@ export default function EventDefinitionsPage() {
           <option value="BILLING">Billing & AR</option>
           <option value="TREASURY">Treasury & Bank Rec</option>
           <option value="COMMISSIONS">Commissions</option>
-          <option value="POLICY">Policy Ops</option>
-          <option value="CLAIMS">Claims</option>
+          <option value="COMMERCIAL">Commercial Ops</option>
+          <option value="INVENTORY">Inventory Ops</option>
           <option value="MANUAL">Manual</option>
         </select>
         <button
@@ -358,7 +358,7 @@ export default function EventDefinitionsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Premium Invoice Issued"
+                    placeholder="e.g. Commercial Invoice Issued"
                     value={form.display_name}
                     onChange={(e) => setForm({ ...form, display_name: e.target.value })}
                     className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-brand-500 focus:outline-none"
@@ -377,8 +377,8 @@ export default function EventDefinitionsPage() {
                     <option value="BILLING">Billing & AR</option>
                     <option value="TREASURY">Treasury & Bank Rec</option>
                     <option value="COMMISSIONS">Commissions</option>
-                    <option value="POLICY">Policy</option>
-                    <option value="CLAIMS">Claims</option>
+                    <option value="COMMERCIAL">Commercial Ops</option>
+                    <option value="INVENTORY">Inventory Ops</option>
                     <option value="MANUAL">Manual</option>
                   </select>
                 </div>

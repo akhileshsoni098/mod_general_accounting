@@ -33,11 +33,13 @@ export default function FinanceCloseWorkspacePage() {
   const [financialStatements, setFinancialStatements] = useState(null);
   const [exportBatches, setExportBatches] = useState([]);
 
-  // UPR Run form
+  // Revenue Amortization Run form
   const [uprForm, setUprForm] = useState({
-    policy_reference: 'POL-TX-8821',
+    policy_reference: 'CTR-2026-001',
+    contract_reference: 'CTR-2026-001',
     period_name: '2026-07',
     written_premium: '37650.00',
+    deferred_revenue: '37650.00',
     start_date: '2026-07-01',
     end_date: '2027-07-01',
     as_of_date: '2026-07-31'
@@ -165,13 +167,13 @@ export default function FinanceCloseWorkspacePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-100 flex items-center space-x-2">
-            <span>Finance Close, UPR Amortization & Financial Reporting</span>
+            <span>Finance Close, Revenue Amortization & Financial Reporting</span>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Module 41 Live
+              Module Live
             </span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            ASC 944 pro-rata UPR earning, 7-step month-end checklist, subledger control reconciliation, and immutable Trial Balance snapshots.
+            ASC 606 / IFRS 15 straight-line revenue amortization, 7-step month-end checklist, subledger control reconciliation, and immutable Trial Balance snapshots.
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -206,7 +208,7 @@ export default function FinanceCloseWorkspacePage() {
           { id: 'overview', label: 'Overview', icon: CalendarCheck },
           { id: 'checklist', label: '7-Step Close Checklist', icon: FileCheck },
           { id: 'reconciliation', label: 'Subledger Reconciliation', icon: Scale },
-          { id: 'upr', label: 'UPR & Earned Premium', icon: Clock },
+          { id: 'upr', label: 'Deferred Revenue Amortization', icon: Clock },
           { id: 'trial_balance', label: 'Trial Balance', icon: Layers },
           { id: 'financial_statements', label: 'Financial Statements', icon: PieChart },
           { id: 'export_batches', label: 'ERP Export Batches', icon: Download }
@@ -279,10 +281,10 @@ export default function FinanceCloseWorkspacePage() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-200">
-                  Canonical Lone Pine UPR Amortization (POL-TX-8821, July 2026)
+                  Commercial Revenue Amortization (CTR-2026-001, July 2026)
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  ASC 944 Non-Leap Year Actual/365 Convention ($37,650.00 / 365 = $103.1506849/day)
+                  ASC 606 Straight-Line Non-Leap Year Actual/365 Convention ($37,650.00 / 365 = $103.1506849/day)
                 </p>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -292,24 +294,24 @@ export default function FinanceCloseWorkspacePage() {
 
             <div className="grid grid-cols-4 gap-4 text-xs font-mono">
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                <div className="text-slate-400 text-[10px]">Annual Written Premium</div>
+                <div className="text-slate-400 text-[10px]">Annual Contract / Deferred Basis</div>
                 <div className="text-sm font-bold text-slate-200 mt-1">$37,650.00</div>
-                <div className="text-[10px] text-slate-500 mt-1">12-Month Coverage Term</div>
+                <div className="text-[10px] text-slate-500 mt-1">12-Month Service Term</div>
               </div>
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                <div className="text-slate-400 text-[10px]">July Covered Days</div>
+                <div className="text-slate-400 text-[10px]">July Active Days</div>
                 <div className="text-sm font-bold text-brand-400 mt-1">31 Days</div>
                 <div className="text-[10px] text-slate-500 mt-1">July 1 to July 31, 2026</div>
               </div>
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                <div className="text-slate-400 text-[10px]">July Earned Premium</div>
+                <div className="text-slate-400 text-[10px]">July Recognized Revenue</div>
                 <div className="text-sm font-bold text-emerald-400 mt-1">$3,197.67</div>
                 <div className="text-[10px] text-slate-500 mt-1">Recognized to Revenue (4000)</div>
               </div>
               <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800/80">
-                <div className="text-slate-400 text-[10px]">Remaining Unearned UPR</div>
+                <div className="text-slate-400 text-[10px]">Remaining Deferred Revenue</div>
                 <div className="text-sm font-bold text-blue-400 mt-1">$34,452.33</div>
-                <div className="text-[10px] text-slate-500 mt-1">UPR Liability Balance (2200)</div>
+                <div className="text-[10px] text-slate-500 mt-1">Deferred Liability Balance (2200)</div>
               </div>
             </div>
           </div>
@@ -421,26 +423,26 @@ export default function FinanceCloseWorkspacePage() {
           <div className="grid grid-cols-2 gap-6">
             <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg">
               <h3 className="text-xs font-semibold text-slate-200 uppercase tracking-wider mb-3">
-                Execute UPR Monthly Amortization Run
+                Execute Deferred Revenue Amortization Run
               </h3>
               <form onSubmit={handleRunUPR} className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">Policy Reference</label>
+                  <label className="block text-[11px] font-medium text-slate-400 mb-1">Contract / Agreement Reference</label>
                   <input
                     type="text"
-                    value={uprForm.policy_reference}
-                    onChange={(e) => setUprForm({ ...uprForm, policy_reference: e.target.value })}
+                    value={uprForm.contract_reference || uprForm.policy_reference}
+                    onChange={(e) => setUprForm({ ...uprForm, contract_reference: e.target.value, policy_reference: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs text-slate-200 font-mono"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-400 mb-1">Written Premium Basis ($)</label>
+                  <label className="block text-[11px] font-medium text-slate-400 mb-1">Deferred Revenue Basis ($)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={uprForm.written_premium}
-                    onChange={(e) => setUprForm({ ...uprForm, written_premium: e.target.value })}
+                    value={uprForm.deferred_revenue || uprForm.written_premium}
+                    onChange={(e) => setUprForm({ ...uprForm, deferred_revenue: e.target.value, written_premium: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-xs text-slate-200 font-mono"
                     required
                   />
@@ -472,7 +474,7 @@ export default function FinanceCloseWorkspacePage() {
                   disabled={loading}
                   className="w-full py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-semibold transition"
                 >
-                  Post UPR Earning Journal (Dr 2200 / Cr 4000)
+                  Post Revenue Recognition Journal (Dr 2200 / Cr 4000)
                 </button>
               </form>
             </div>
@@ -491,7 +493,7 @@ export default function FinanceCloseWorkspacePage() {
                   <span className="text-slate-200">{uprPreview?.total_term_days || 365} Days</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-800/80 py-1">
-                  <span className="text-slate-400">Covered Days (July):</span>
+                  <span className="text-slate-400">Active Days (July):</span>
                   <span className="text-brand-400 font-bold">{uprPreview?.covered_days || 31} Days</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-800/80 py-1">
@@ -499,11 +501,11 @@ export default function FinanceCloseWorkspacePage() {
                   <span className="text-slate-300">${uprPreview?.daily_earning_rate || '103.1506849'}/day</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-800/80 py-1">
-                  <span className="text-slate-400">Earned Premium (July):</span>
+                  <span className="text-slate-400">Recognized Revenue (July):</span>
                   <span className="text-emerald-400 font-bold">${uprPreview?.earned_premium || '3,197.67'}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-400">Remaining Unearned Reserve:</span>
+                  <span className="text-slate-400">Remaining Deferred Revenue:</span>
                   <span className="text-blue-400 font-bold">${uprPreview?.remaining_upr || '34,452.33'}</span>
                 </div>
               </div>

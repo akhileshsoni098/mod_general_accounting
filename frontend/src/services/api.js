@@ -152,7 +152,7 @@ export const commissionsApi = {
   createAgreement: (payload) => apiRequest('/commissions/agreements', { method: 'POST', body: payload }),
   getSchedules: (params = '') => apiRequest(`/commissions/schedules${params}`),
   createSchedule: (payload) => apiRequest('/commissions/schedules', { method: 'POST', body: payload }),
-  previewChain: (grossPremium) => apiRequest(`/commissions/preview-chain?gross_premium=${grossPremium || 37650}`),
+  previewChain: (grossAmount) => apiRequest(`/commissions/preview-chain?gross_amount=${grossAmount || 37650}&gross_premium=${grossAmount || 37650}`),
   getProfitSchedules: () => apiRequest('/commissions/profit-schedules'),
   createProfitSchedule: (payload) => apiRequest('/commissions/profit-schedules', { method: 'POST', body: payload }),
   getSplits: (params = '') => apiRequest(`/commissions/splits${params}`),

@@ -23,7 +23,7 @@ export default function RuleTestCasesPage() {
     posting_rule_id: '',
     test_name: '',
     description: '',
-    input_payload: '{\n  "policy_id": "POL-TX-8821",\n  "transaction_type": "DIRECT_BILL",\n  "gross_premium": 37650,\n  "policy_fee": 150\n}',
+    input_payload: '{\n  "invoice_id": "INV-2026-0001",\n  "transaction_type": "COMMERCIAL_INVOICE",\n  "subtotal": 37650,\n  "tax_amount": 150\n}',
     expected_total_debit: '37800.00',
     expected_total_credit: '37800.00'
   });

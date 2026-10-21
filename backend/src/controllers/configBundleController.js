@@ -20,6 +20,7 @@ async function exportConfiguration(req, res) {
 
     const bundle = {
       version: '1.0.0',
+      bundle_version: '1.0.0',
       exported_at: new Date().toISOString(),
       tenant_id: tenantId.toString(),
       data: {

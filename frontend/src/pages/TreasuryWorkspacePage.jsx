@@ -72,7 +72,7 @@ export default function TreasuryWorkspacePage() {
   const [refundForm, setRefundForm] = useState({
     billing_account_id: '',
     amount: '500.00',
-    reason: 'Endorsement reduction return premium',
+    reason: 'Customer credit balance / return adjustment refund',
     refund_method: 'ACH'
   });
 
@@ -604,7 +604,7 @@ export default function TreasuryWorkspacePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="text-xs text-slate-400">
-              Customer premium refund disbursements from Texas § 4053 segregated trust account.
+              Customer credit balance and return adjustment refund disbursements from operating bank account.
             </div>
             <button
               onClick={() => setShowRefundModal(true)}

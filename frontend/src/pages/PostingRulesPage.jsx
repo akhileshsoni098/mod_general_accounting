@@ -65,24 +65,24 @@ export default function PostingRulesPage() {
         line_key: 'DR_AR',
         account_code: '1100',
         direction: 'DEBIT',
-        amount_expression: 'payload.gross_premium + payload.policy_fee',
-        description_template: 'Receivable for Policy {{payload.policy_id}}'
+        amount_expression: 'payload.subtotal + payload.tax_amount',
+        description_template: 'Trade Receivable for Invoice {{payload.invoice_id}}'
       },
       {
         line_number: 2,
-        line_key: 'CR_UPR',
-        account_code: '2200',
+        line_key: 'CR_REVENUE',
+        account_code: '4000',
         direction: 'CREDIT',
-        amount_expression: 'payload.gross_premium',
-        description_template: 'Unearned premium reserve'
+        amount_expression: 'payload.subtotal',
+        description_template: 'Commercial Sales Revenue'
       },
       {
         line_number: 3,
-        line_key: 'CR_FEE',
-        account_code: '4100',
+        line_key: 'CR_TAX',
+        account_code: '2110',
         direction: 'CREDIT',
-        amount_expression: 'payload.policy_fee',
-        description_template: 'Policy fee revenue'
+        amount_expression: 'payload.tax_amount',
+        description_template: 'Output GST / Sales Tax Payable'
       }
     ]
   });
@@ -787,7 +787,7 @@ export default function PostingRulesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. RULE_INV_PREMIUM"
+                    placeholder="e.g. RULE_COMMERCIAL_SALES"
                     value={newRuleForm.rule_code}
                     onChange={(e) => setNewRuleForm({ ...newRuleForm, rule_code: e.target.value })}
                     className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono focus:border-brand-500 focus:outline-none"
@@ -798,7 +798,7 @@ export default function PostingRulesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Premium Invoice Direct Recognition"
+                    placeholder="e.g. Commercial Sales Invoice Revenue Recognition"
                     value={newRuleForm.rule_name}
                     onChange={(e) => setNewRuleForm({ ...newRuleForm, rule_name: e.target.value })}
                     className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-brand-500 focus:outline-none"
@@ -916,7 +916,7 @@ export default function PostingRulesPage() {
                       </select>
                       <input
                         type="text"
-                        placeholder="Expression (e.g. payload.gross_premium)"
+                        placeholder="Expression (e.g. payload.subtotal)"
                         required
                         value={l.amount_expression}
                         onChange={(e) => {
@@ -1030,7 +1030,7 @@ export default function PostingRulesPage() {
                 <label className="text-slate-400 font-medium">Description</label>
                 <input
                   type="text"
-                  placeholder="e.g. Recognizes premium and fees for Texas Direct Bill policies"
+                  placeholder="e.g. Recognizes trade receivable and sales revenue for commercial sales"
                   value={editRuleForm.description}
                   onChange={(e) => setEditRuleForm({ ...editRuleForm, description: e.target.value })}
                   className="w-full mt-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:border-amber-500 focus:outline-none"
@@ -1189,7 +1189,7 @@ export default function PostingRulesPage() {
                       </select>
                       <input
                         type="text"
-                        placeholder="Expression (e.g. payload.gross_premium)"
+                        placeholder="Expression (e.g. payload.subtotal)"
                         required
                         value={l.amount_expression}
                         onChange={(e) => {

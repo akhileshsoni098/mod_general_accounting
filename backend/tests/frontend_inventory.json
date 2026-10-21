@@ -1,0 +1,1289 @@
+[
+  {
+    "file": "BillingWorkspacePage.jsx",
+    "formsCount": 4,
+    "forms": [
+      "handleCreateAccount",
+      "handleGenerateSchedule",
+      "handleIssueInvoice",
+      "handleRecordPayment"
+    ],
+    "buttonsCount": 26,
+    "sampleButtons": [
+      {
+        "text": "Refresh",
+        "handler": "loadData"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setError(null)"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setSuccess(null)"
+      },
+      {
+        "text": "{tab.label}",
+        "handler": "() => {\n                setSubtab(tab.id);\n                setSuccess(null);\n                setError(null);\n              "
+      },
+      {
+        "text": "1. Bind Policy & Generate 4-Pay Schedule",
+        "handler": "() => setShowGenerateScheduleModal(true)"
+      },
+      {
+        "text": "View Installment Schedules {schedules.le",
+        "handler": "() => setSubtab('schedules')"
+      },
+      {
+        "text": "2. Issue Deposit Invoice",
+        "handler": "() => setShowIssueInvoiceModal(true)"
+      },
+      {
+        "text": "3. Capture Cash & Waterfall Allocate",
+        "handler": "() => setShowRecordPaymentModal(true)"
+      },
+      {
+        "text": "Bind Policy & Schedule",
+        "handler": "() => setShowGenerateScheduleModal(true)"
+      },
+      {
+        "text": "{sched.invoice_id.invoice_number || 'Vie",
+        "handler": "() => setSubtab('invoices')"
+      }
+    ],
+    "apiCalls": [
+      "rulesApi.getRules",
+      "authApi.getBillingOverview",
+      "authApi.getBillingAccounts",
+      "counterpartiesApi.getParties",
+      "authApi.getInstallmentSchedules",
+      "authApi.getBillingPlans",
+      "authApi.getInvoices",
+      "authApi.getPayments",
+      "authApi.getAdjustments",
+      "authApi.createBillingAccount",
+      "authApi.createBillingPlan",
+      "authApi.generateSchedule",
+      "authApi.issueInvoice",
+      "authApi.postPaymentReceipt",
+      "authApi.createAdjustment",
+      "authApi.getInvoiceDetail"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "CommercialWorkspacePage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleCreateDocument"
+    ],
+    "buttonsCount": 15,
+    "sampleButtons": [
+      {
+        "text": "New Voucher",
+        "handler": "() => setShowModal(true)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "Voucher Documents",
+        "handler": "() => setActiveTab('documents')"
+      },
+      {
+        "text": "Commercial & GST Reports",
+        "handler": "() => {\n            setActiveTab('reports');\n            if (!reportData) loadReport('sales_register');\n          "
+      },
+      {
+        "text": "Opening Stock GL Reconciliation",
+        "handler": "() => {\n            setActiveTab('opening_gl');\n            if (!glPreview) loadGlPreview();\n          "
+      },
+      {
+        "text": "Post to GL",
+        "handler": "() => handlePost(doc._id)"
+      },
+      {
+        "text": "Reverse",
+        "handler": "() => handleReverse(doc._id)"
+      },
+      {
+        "text": "{r.label}",
+        "handler": "() => loadReport(r.id)"
+      },
+      {
+        "text": "Scan & Refresh Preview",
+        "handler": "loadGlPreview"
+      }
+    ],
+    "apiCalls": [
+      "commercialApi.getDocuments",
+      "commercialApi.postDocument",
+      "commercialApi.reverseDocument",
+      "commercialApi.createDraftDocument",
+      "commercialApi.getSalesRegister",
+      "commercialApi.getPurchaseRegister",
+      "commercialApi.getCustomerAging",
+      "commercialApi.getSupplierAging",
+      "commercialApi.getGstSummary",
+      "commercialApi.getOpeningStockGlPreview",
+      "commercialApi.postOpeningStockGlCatchup"
+    ],
+    "tabs": [
+      "documents",
+      "reports",
+      "opening_gl"
+    ]
+  },
+  {
+    "file": "CommissionsWorkspacePage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleExecuteSweep"
+    ],
+    "buttonsCount": 16,
+    "sampleButtons": [
+      {
+        "text": "Seed Lone Pine Canonical Chain",
+        "handler": "handleSeedCanonical"
+      },
+      {
+        "text": "{tab.label}",
+        "handler": "() => {\n                setActiveSubtab(tab.id);\n                setError(null);\n                setSuccessMsg(null);\n              "
+      },
+      {
+        "text": "Disburse Broker via ACH (${Number(tx.cal",
+        "handler": "() => handleDisburseBroker(tx._id)"
+      },
+      {
+        "text": "{allocating ? 'Posting to GL...' : 'Allo",
+        "handler": "handleAllocateShares"
+      },
+      {
+        "text": "{showAdvancedDimensions ? 'Hide Segment ",
+        "handler": "() => setShowAdvancedDimensions(!showAdvancedDimensions)"
+      },
+      {
+        "text": "Seed Trust Accounts",
+        "handler": "handleSeedFiduciaryAccounts"
+      },
+      {
+        "text": "Initialize Texas § 4053 Accounts",
+        "handler": "handleSeedFiduciaryAccounts"
+      },
+      {
+        "text": "{isSelected ? '✓ Selected for Sweep' : '",
+        "handler": "(e) => {\n                                e.stopPropagation();\n                                setSweepForm(prev => ({ ...prev, fiduciary_account_id: fa._id "
+      },
+      {
+        "text": "$941.25 (10% MGA Share)",
+        "handler": "() => setSweepForm({ ...sweepForm, amount: '941.25' "
+      },
+      {
+        "text": "$1,091.25 (Step 1.4 Guide)",
+        "handler": "() => setSweepForm({ ...sweepForm, amount: '1091.25' "
+      }
+    ],
+    "apiCalls": [
+      "commissionsApi.allocateShares",
+      "commissionsApi.getOverview",
+      "commissionsApi.previewChain",
+      "commissionsApi.getAgreements",
+      "commissionsApi.getSchedules",
+      "commissionsApi.getProfitSchedules",
+      "commissionsApi.getSplits",
+      "commissionsApi.getTransactions",
+      "commissionsApi.getFiduciaryAccounts",
+      "rulesApi.getRules",
+      "dimensionsApi.getDimensionContext",
+      "billingApi.getInvoices",
+      "commissionsApi.getBordereauDefinitions",
+      "commissionsApi.getBordereauRuns",
+      "commissionsApi.getSettlements",
+      "commissionsApi.seedCommissions",
+      "commissionsApi.seedFiduciaryAccounts",
+      "commissionsApi.executeSweep",
+      "commissionsApi.disburseBrokerCommission",
+      "commissionsApi.generateBordereauRun",
+      "commissionsApi.transmitBordereauRun",
+      "commissionsApi.getBordereauRunLines",
+      "commissionsApi.generateSettlement",
+      "commissionsApi.disburseSettlement"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "ConfigBundlePage.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 3,
+    "sampleButtons": [
+      {
+        "text": "{exporting ? ( ) : ( )} Export Configura",
+        "handler": "handleExport"
+      },
+      {
+        "text": "{previewing ? ( ) : ( )} Preview & Valid",
+        "handler": "handlePreview"
+      },
+      {
+        "text": "{importing ? ( ) : ( )} Confirm & Import",
+        "handler": "handleImport"
+      }
+    ],
+    "apiCalls": [
+      "configBundleApi.exportBundle",
+      "configBundleApi.previewBundle",
+      "configBundleApi.importBundle"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "CounterpartiesPage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleCreate",
+      "handleAddRole"
+    ],
+    "buttonsCount": 5,
+    "sampleButtons": [
+      {
+        "text": "{seeding ? 'Seeding...' : 'Seed Default ",
+        "handler": "handleSeedDefaults"
+      },
+      {
+        "text": "Add Counterparty",
+        "handler": "() => setShowCreateModal(true)"
+      },
+      {
+        "text": "+ Add Role",
+        "handler": "() => {\n                          setSelectedParty(party);\n                          setShowRoleModal(true);\n                        "
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowCreateModal(false)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => {\n                    setShowRoleModal(false);\n                    setSelectedParty(null);\n                  "
+      }
+    ],
+    "apiCalls": [
+      "counterpartiesApi.getParties",
+      "counterpartiesApi.seedParties",
+      "counterpartiesApi.createParty",
+      "counterpartiesApi.addPartyRole"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "DimensionsPage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleCreateSubmit",
+      "handleEditSubmit"
+    ],
+    "buttonsCount": 3,
+    "sampleButtons": [
+      {
+        "text": "Add Dimension",
+        "handler": "() => setShowCreateModal(true)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowCreateModal(false)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowEditModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "dimensionsApi.getDimensions",
+      "dimensionsApi.getDimensionContext",
+      "dimensionsApi.createDimension",
+      "dimensionsApi.updateDimension",
+      "dimensionsApi.deleteDimension"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "EventDefinitionsPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleCreate"
+    ],
+    "buttonsCount": 4,
+    "sampleButtons": [
+      {
+        "text": "New Event Definition",
+        "handler": "() => setShowCreateModal(true)"
+      },
+      {
+        "text": "{testLoading ? ( ) : ( )} Validate Again",
+        "handler": "handleValidatePayload"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setShowCreateModal(false)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowCreateModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "eventsApi.getEvents",
+      "eventsApi.createEvent",
+      "eventsApi.validatePayload"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "EventOperationsPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleRunTrace"
+    ],
+    "buttonsCount": 15,
+    "sampleButtons": [
+      {
+        "text": "{loading ? 'Processing...' : 'Run Dispat",
+        "handler": "handleTriggerDispatch"
+      },
+      {
+        "text": "&times;",
+        "handler": "() => setError(null)"
+      },
+      {
+        "text": "&times;",
+        "handler": "() => setSuccessMsg(null)"
+      },
+      {
+        "text": "{tab.label}",
+        "handler": "() => { setActiveTab(tab.key); setStatusFilter(''); "
+      },
+      {
+        "text": "Payload",
+        "handler": "() => setDetailModal({ open: true, title: `Event ${evt.event_id"
+      },
+      {
+        "text": "Retry",
+        "handler": "() => handleRetryOutbox(evt.event_id)"
+      },
+      {
+        "text": "Replay",
+        "handler": "() => setReplayModal({ open: true, type: 'outbox', id: evt.event_id, reason: '' "
+      },
+      {
+        "text": "Details",
+        "handler": "() => setDetailModal({ open: true, title: `Inbox Message ${msg._id"
+      },
+      {
+        "text": "Retry",
+        "handler": "() => handleRetryInbox(msg._id)"
+      },
+      {
+        "text": "Replay",
+        "handler": "() => setReplayModal({ open: true, type: 'inbox', id: msg._id, reason: '' "
+      }
+    ],
+    "apiCalls": [
+      "eventPipelineApi.getStats",
+      "eventPipelineApi.getOutbox",
+      "eventPipelineApi.getInbox",
+      "eventPipelineApi.getSubscriptions",
+      "eventPipelineApi.triggerDispatch",
+      "eventPipelineApi.retryOutbox",
+      "eventPipelineApi.retryInbox",
+      "eventPipelineApi.replayOutbox",
+      "eventPipelineApi.replayInbox",
+      "eventPipelineApi.toggleSubscription",
+      "eventPipelineApi.getTrace"
+    ],
+    "tabs": [
+      "outbox",
+      "retry",
+      "deadletter",
+      "inbox",
+      "subscriptions",
+      "overview",
+      "trace"
+    ]
+  },
+  {
+    "file": "EventSimulatorPage.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 3,
+    "sampleButtons": [
+      {
+        "text": "{p.scenario} {p.label}",
+        "handler": "() => handleApplyPreset(p)"
+      },
+      {
+        "text": "{simulating ? ( ) : ( )} Run Simulation ",
+        "handler": "handleSimulate"
+      },
+      {
+        "text": "{posting ? ( ) : ( )} {postResult ? 'Pos",
+        "handler": "handlePostJournal"
+      }
+    ],
+    "apiCalls": [
+      "eventsApi.getEvents",
+      "rulesApi.simulate",
+      "rulesApi.postSimulated"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "FinanceCloseWorkspacePage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleRunUPR"
+    ],
+    "buttonsCount": 5,
+    "sampleButtons": [
+      {
+        "text": "{tab.label}",
+        "handler": "() => {\n                setActiveSubtab(tab.id);\n                setError(null);\n                setSuccessMsg(null);\n              "
+      },
+      {
+        "text": "Execute Step",
+        "handler": "() => handleExecuteStep(task.task_step)"
+      },
+      {
+        "text": "Certify & Lock Trial Balance Snapshot",
+        "handler": "handleCertifyTrialBalance"
+      },
+      {
+        "text": "Generate SAP S/4HANA (SIMULATED)",
+        "handler": "() => handleCreateExportBatch('SAP_S4HANA')"
+      },
+      {
+        "text": "Generate NetSuite (SIMULATED)",
+        "handler": "() => handleCreateExportBatch('NETSUITE')"
+      }
+    ],
+    "apiCalls": [
+      "financeCloseApi.getOverview",
+      "financeCloseApi.previewUPR",
+      "financeCloseApi.getChecklist",
+      "financeCloseApi.getSubledgerBalances",
+      "financeCloseApi.getReconciliationCases",
+      "financeCloseApi.getTrialBalance",
+      "financeCloseApi.getFinancialStatements",
+      "financeCloseApi.getExportBatches",
+      "financeCloseApi.executeChecklistStep",
+      "financeCloseApi.runUPR",
+      "financeCloseApi.certifyTrialBalance",
+      "financeCloseApi.createExportBatch"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "GLWorkspacePage.jsx",
+    "formsCount": 3,
+    "forms": [
+      "handlePostJournal",
+      "handleCreateAccount",
+      "handleCreateFx"
+    ],
+    "buttonsCount": 21,
+    "sampleButtons": [
+      {
+        "text": "Add Account",
+        "handler": "() => setShowNewAccountModal(true)"
+      },
+      {
+        "text": "New Posting Rule",
+        "handler": "() => setShowNewRuleModal(true)"
+      },
+      {
+        "text": "Record FX Rate",
+        "handler": "() => setShowNewFxModal(true)"
+      },
+      {
+        "text": "Post Manual Journal",
+        "handler": "() => setShowNewJournalModal(true)"
+      },
+      {
+        "text": "Journal Register",
+        "handler": "() => setActiveTab('journals')"
+      },
+      {
+        "text": "Trial Balance",
+        "handler": "() => setActiveTab('trial_balance')"
+      },
+      {
+        "text": "Chart of Accounts (COA)",
+        "handler": "() => setActiveTab('coa')"
+      },
+      {
+        "text": "Fiscal Periods & Lock",
+        "handler": "() => setActiveTab('periods')"
+      },
+      {
+        "text": "Posting Rules",
+        "handler": "() => setActiveTab('rules')"
+      },
+      {
+        "text": "Exchange Rates",
+        "handler": "() => setActiveTab('fx')"
+      }
+    ],
+    "apiCalls": [
+      "authApi.getAccountDetail",
+      "authApi.getJournals",
+      "authApi.getAccounts",
+      "authApi.getTrialBalance",
+      "authApi.getPeriods",
+      "authApi.getPostingRules",
+      "authApi.getExchangeRates",
+      "authApi.postJournal",
+      "authApi.getJournalById",
+      "authApi.reverseJournal",
+      "authApi.createAccount",
+      "authApi.createPostingRule",
+      "authApi.createExchangeRate",
+      "authApi.updatePeriodStatus"
+    ],
+    "tabs": [
+      "journals",
+      "coa",
+      "trial_balance",
+      "periods",
+      "rules",
+      "fx"
+    ]
+  },
+  {
+    "file": "HotelWorkspacePage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleCreateReservation"
+    ],
+    "buttonsCount": 12,
+    "sampleButtons": [
+      {
+        "text": "New Reservation",
+        "handler": "() => setShowResModal(true)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "Room Grid & Housekeeping",
+        "handler": "() => setActiveTab('rooms')"
+      },
+      {
+        "text": "Reservations & Folios",
+        "handler": "() => setActiveTab('reservations')"
+      },
+      {
+        "text": "Night Audit",
+        "handler": "() => setActiveTab('night_audit')"
+      },
+      {
+        "text": "Check In",
+        "handler": "() => handleCheckIn(res)"
+      },
+      {
+        "text": "Folio",
+        "handler": "() => handleViewFolio(res._id)"
+      },
+      {
+        "text": "Check Out",
+        "handler": "() => handleCheckOut(res._id)"
+      },
+      {
+        "text": "{nightAuditLoading ? 'Executing Night Au",
+        "handler": "handleRunNightAudit"
+      }
+    ],
+    "apiCalls": [
+      "hotelApi.getRooms",
+      "hotelApi.getRoomTypes",
+      "hotelApi.getReservations",
+      "hotelApi.getMetrics",
+      "hotelApi.createReservation",
+      "hotelApi.checkIn",
+      "hotelApi.getFolio",
+      "hotelApi.checkOut",
+      "hotelApi.runNightAudit"
+    ],
+    "tabs": [
+      "rooms",
+      "reservations",
+      "night_audit"
+    ]
+  },
+  {
+    "file": "InventoryWorkspacePage.jsx",
+    "formsCount": 7,
+    "forms": [
+      "handlePostOpeningStock",
+      "handleRunConversionSim",
+      "handleCreateItem",
+      "handleCreateGodown",
+      "handleCreateGroup",
+      "handleCreateCategory",
+      "handleCreateUom"
+    ],
+    "buttonsCount": 26,
+    "sampleButtons": [
+      {
+        "text": "Post Opening Stock",
+        "handler": "() => setShowOpeningStockModal(true)"
+      },
+      {
+        "text": "New Stock Item",
+        "handler": "() => setShowItemModal(true)"
+      },
+      {
+        "text": "{tab.label}",
+        "handler": "() => setActiveTab(tab.id)"
+      },
+      {
+        "text": "Audit & Reconcile",
+        "handler": "() => setShowReconcileModal(true)"
+      },
+      {
+        "text": "Post Opening Stock",
+        "handler": "() => setShowOpeningStockModal(true)"
+      },
+      {
+        "text": "Create New Stock Item",
+        "handler": "() => setShowItemModal(true)"
+      },
+      {
+        "text": "Add Warehouse / Godown",
+        "handler": "() => setShowGodownModal(true)"
+      },
+      {
+        "text": "View Full Register",
+        "handler": "() => setActiveTab('movements')"
+      },
+      {
+        "text": "Create Item",
+        "handler": "() => setShowItemModal(true)"
+      },
+      {
+        "text": "Reconcile / Rebuild Balances",
+        "handler": "() => setShowReconcileModal(true)"
+      }
+    ],
+    "apiCalls": [
+      "inventoryApi.getSummary",
+      "inventoryApi.getItems",
+      "inventoryApi.getGroups",
+      "inventoryApi.getCategories",
+      "inventoryApi.getUnits",
+      "inventoryApi.getGodowns",
+      "inventoryApi.getBalances",
+      "inventoryApi.getMovements",
+      "inventoryApi.createItem",
+      "inventoryApi.postOpeningStock",
+      "inventoryApi.createGodown",
+      "inventoryApi.createGroup",
+      "inventoryApi.createCategory",
+      "inventoryApi.createUnit",
+      "inventoryApi.reverseMovement",
+      "inventoryApi.reconcileBalances",
+      "inventoryApi.simulateConversion"
+    ],
+    "tabs": [
+      "overview",
+      "items",
+      "opening_stock",
+      "balances",
+      "movements",
+      "godowns",
+      "groups",
+      "categories",
+      "uom"
+    ]
+  },
+  {
+    "file": "LoginPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleSubmit"
+    ],
+    "buttonsCount": 2,
+    "sampleButtons": [
+      {
+        "text": "{theme === 'dark' ? ( <> Day Mode ) : ( ",
+        "handler": "toggleTheme"
+      },
+      {
+        "text": "Onboard New Tenant",
+        "handler": "onSwitchToRegister"
+      }
+    ],
+    "apiCalls": [],
+    "tabs": []
+  },
+  {
+    "file": "ManufacturingWorkspacePage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleCreateWo",
+      "handleCompleteWo"
+    ],
+    "buttonsCount": 9,
+    "sampleButtons": [
+      {
+        "text": "Create Work Order",
+        "handler": "() => setShowWoModal(true)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "Work Orders",
+        "handler": "() => setActiveTab('orders')"
+      },
+      {
+        "text": "Bill of Materials (BOM)",
+        "handler": "() => setActiveTab('boms')"
+      },
+      {
+        "text": "Issue Raw Materials",
+        "handler": "() => handleIssueMaterials(wo._id)"
+      },
+      {
+        "text": "Complete Production",
+        "handler": "() => {\n                            setActiveWo(wo);\n                            setCompletedQty(wo.planned_quantity);\n                            setShowCompleteModal(true);\n                          "
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowWoModal(false)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowCompleteModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "manufacturingApi.getWorkOrders",
+      "manufacturingApi.getBOMs",
+      "inventoryApi.getItems",
+      "inventoryApi.getGodowns",
+      "manufacturingApi.createWorkOrder",
+      "manufacturingApi.issueMaterials",
+      "manufacturingApi.completeProduction"
+    ],
+    "tabs": [
+      "orders",
+      "boms"
+    ]
+  },
+  {
+    "file": "ModuleConfigPage.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 0,
+    "sampleButtons": [],
+    "apiCalls": [
+      "authApi.getModules",
+      "authApi.updateModule"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "ModuleWorkspaceStub.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 1,
+    "sampleButtons": [
+      {
+        "text": "{tab.label} {tab.badge && ( {tab.badge} ",
+        "handler": "() => setActiveSubtab(tab.id)"
+      }
+    ],
+    "apiCalls": [],
+    "tabs": []
+  },
+  {
+    "file": "OrganizationSettingsPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleSubmit"
+    ],
+    "buttonsCount": 0,
+    "sampleButtons": [],
+    "apiCalls": [
+      "settingsApi.getSettings",
+      "settingsApi.updateSettings"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "PlatformAdminPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleUpdatePlan"
+    ],
+    "buttonsCount": 8,
+    "sampleButtons": [
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "Tenant Organizations ({tenants.length})",
+        "handler": "() => setActiveTab('tenants')"
+      },
+      {
+        "text": "Subscription Plans ({plans.length})",
+        "handler": "() => setActiveTab('plans')"
+      },
+      {
+        "text": "Platform Audit Trail",
+        "handler": "() => setActiveTab('audit')"
+      },
+      {
+        "text": "Change Plan",
+        "handler": "() => {\n                          setSelectedTenant(t);\n                          setShowPlanModal(true);\n                        "
+      },
+      {
+        "text": "{t.status === 'ACTIVE' ? 'Suspend' : 'Re",
+        "handler": "() => handleToggleStatus(t)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowPlanModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "platformApi.getTenants",
+      "platformApi.getPlans",
+      "platformApi.getAuditLogs",
+      "platformApi.updateTenantPlan",
+      "platformApi.updateTenantStatus"
+    ],
+    "tabs": [
+      "tenants",
+      "plans",
+      "audit"
+    ]
+  },
+  {
+    "file": "PostingRulesPage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleCreateRule",
+      "handleSaveEditRule"
+    ],
+    "buttonsCount": 17,
+    "sampleButtons": [
+      {
+        "text": "New Posting Rule",
+        "handler": "() => setShowCreateModal(true)"
+      },
+      {
+        "text": "Restore",
+        "handler": "(e) => handleReactivateRule(r._id, e)"
+      },
+      {
+        "text": "{selectedRule.status === 'PUBLISHED' ? '",
+        "handler": "() => handleOpenEdit(selectedRule)"
+      },
+      {
+        "text": "Clone Rule",
+        "handler": "(e) => handleDuplicateRule(selectedRule, e)"
+      },
+      {
+        "text": "Validate",
+        "handler": "() => handleValidate(selectedRule._id)"
+      },
+      {
+        "text": "Publish",
+        "handler": "() => handlePublish(selectedRule._id)"
+      },
+      {
+        "text": "Fork New Draft",
+        "handler": "() => handleFork(selectedRule._id)"
+      },
+      {
+        "text": "Reactivate / Publish",
+        "handler": "(e) => handleReactivateRule(selectedRule._id, e)"
+      },
+      {
+        "text": "Retire",
+        "handler": "() => handleRetire(selectedRule._id)"
+      },
+      {
+        "text": "Delete Rule",
+        "handler": "(e) => handleDeleteRule(selectedRule._id, selectedRule.rule_code, e)"
+      }
+    ],
+    "apiCalls": [
+      "rulesApi.getRules",
+      "eventsApi.getEvents",
+      "authApi.getAccounts",
+      "rulesApi.validateRule",
+      "rulesApi.publishRule",
+      "rulesApi.forkRule",
+      "rulesApi.retireRule",
+      "rulesApi.createRule",
+      "rulesApi.deleteRule",
+      "rulesApi.reactivateRule",
+      "rulesApi.updateRule"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "RegisterTenantPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleSubmit"
+    ],
+    "buttonsCount": 1,
+    "sampleButtons": [
+      {
+        "text": "Back to Login",
+        "handler": "onSwitchToLogin"
+      }
+    ],
+    "apiCalls": [],
+    "tabs": []
+  },
+  {
+    "file": "RestaurantWorkspacePage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleSaveRecipe",
+      "handleCreateTable"
+    ],
+    "buttonsCount": 15,
+    "sampleButtons": [
+      {
+        "text": "Add Table",
+        "handler": "() => setShowTableModal(true)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "Floor & Tables",
+        "handler": "() => setActiveTab('tables')"
+      },
+      {
+        "text": "Kitchen Display & Orders",
+        "handler": "() => setActiveTab('kitchen')"
+      },
+      {
+        "text": "Recipe BOM & Ingredients",
+        "handler": "() => setActiveTab('recipes')"
+      },
+      {
+        "text": "Take Order",
+        "handler": "() => openOrderForTable(t)"
+      },
+      {
+        "text": "Settle Bill",
+        "handler": "() => handleSettleOrder(ord._id)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setRecipeIngredients(recipeIngredients.filter((_, i) => i !== idx))"
+      },
+      {
+        "text": "+ Add Ingredient",
+        "handler": "() =>\n                  setRecipeIngredients([\n                    ...recipeIngredients,\n                    { ingredient_item_id: '', quantity: 0.1, uom_id: '', waste_percentage: 5 "
+      }
+    ],
+    "apiCalls": [
+      "restaurantApi.getTables",
+      "restaurantApi.getOrders",
+      "inventoryApi.getItems",
+      "restaurantApi.createTable",
+      "restaurantApi.createOrder",
+      "restaurantApi.sendToKitchen",
+      "restaurantApi.settleOrder",
+      "restaurantApi.saveRecipe"
+    ],
+    "tabs": [
+      "tables",
+      "kitchen",
+      "recipes"
+    ]
+  },
+  {
+    "file": "RetailPosPage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleOpenShift",
+      "handleCloseShift"
+    ],
+    "buttonsCount": 13,
+    "sampleButtons": [
+      {
+        "text": "Open Register Shift",
+        "handler": "() => setShowOpenShift(true)"
+      },
+      {
+        "text": "Close Shift & Reconcile",
+        "handler": "() => setShowCloseShift(true)"
+      },
+      {
+        "text": "×",
+        "handler": "() => setError('')"
+      },
+      {
+        "text": "×",
+        "handler": "() => setSuccess('')"
+      },
+      {
+        "text": "{item.item_code} {item.item_name} ₹{Numb",
+        "handler": "() => addToCart(item)"
+      },
+      {
+        "text": "Clear Cart",
+        "handler": "() => setCart([])"
+      },
+      {
+        "text": "Cash",
+        "handler": "() => setPaymentMethod('CASH')"
+      },
+      {
+        "text": "Card",
+        "handler": "() => setPaymentMethod('CARD')"
+      },
+      {
+        "text": "UPI",
+        "handler": "() => setPaymentMethod('UPI')"
+      },
+      {
+        "text": "{checkoutLoading ? 'Processing Checkout.",
+        "handler": "handleCheckout"
+      }
+    ],
+    "apiCalls": [
+      "posApi.getCurrentShift",
+      "inventoryApi.getItems",
+      "posApi.openShift",
+      "posApi.closeShift",
+      "posApi.checkout"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "RuleTestCasesPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleCreate"
+    ],
+    "buttonsCount": 4,
+    "sampleButtons": [
+      {
+        "text": "New Test Case",
+        "handler": "() => setShowCreateModal(true)"
+      },
+      {
+        "text": "{runningId === tc._id ? ( ) : ( )} Execu",
+        "handler": "() => handleRun(tc._id)"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setShowCreateModal(false)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowCreateModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "ruleTestsApi.getTestCases",
+      "rulesApi.getRules",
+      "ruleTestsApi.runTestCase",
+      "ruleTestsApi.createTestCase"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "TenantDashboardPage.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 9,
+    "sampleButtons": [
+      {
+        "text": "Refresh Metrics",
+        "handler": "loadMetrics"
+      },
+      {
+        "text": "Commercial Sales Invoices",
+        "handler": "() => onNavigateTab('commercial')"
+      },
+      {
+        "text": "Purchase Bills & Payables",
+        "handler": "() => onNavigateTab('commercial')"
+      },
+      {
+        "text": "Inventory & Stock Masters",
+        "handler": "() => onNavigateTab('inventory')"
+      },
+      {
+        "text": "General Ledger & Cash",
+        "handler": "() => onNavigateTab('gl')"
+      },
+      {
+        "text": "View Full General Ledger",
+        "handler": "() => onNavigateTab('gl')"
+      },
+      {
+        "text": "Open Commercial Register",
+        "handler": "() => onNavigateTab('commercial')"
+      },
+      {
+        "text": "View Financial Statements & Close",
+        "handler": "() => onNavigateTab('finance_close')"
+      },
+      {
+        "text": "View All Journals",
+        "handler": "() => onNavigateTab('gl')"
+      }
+    ],
+    "apiCalls": [
+      "dashboardApi.getMetrics"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "TreasuryWorkspacePage.jsx",
+    "formsCount": 2,
+    "forms": [
+      "handleImportStatement",
+      "handleManualMatch"
+    ],
+    "buttonsCount": 13,
+    "sampleButtons": [
+      {
+        "text": "Refresh",
+        "handler": "loadData"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setError(null)"
+      },
+      {
+        "text": "✕",
+        "handler": "() => setSuccess(null)"
+      },
+      {
+        "text": "{tab.label}",
+        "handler": "() => {\n                setSubtab(tab.id);\n                setSuccess(null);\n                setError(null);\n              "
+      },
+      {
+        "text": "Import Bank Statement Feed",
+        "handler": "() => setShowImportModal(true)"
+      },
+      {
+        "text": "Launch 2-Pane Reconciliation",
+        "handler": "() => setSubtab('reconciliation')"
+      },
+      {
+        "text": "Run Auto-Reconcile",
+        "handler": "handleAutoReconcile"
+      },
+      {
+        "text": "Manual Match...",
+        "handler": "() => setShowManualMatchModal(true)"
+      },
+      {
+        "text": "Import Statement",
+        "handler": "() => setShowImportModal(true)"
+      },
+      {
+        "text": "Record NSF Return",
+        "handler": "() => setShowReturnModal(true)"
+      }
+    ],
+    "apiCalls": [
+      "authApi.getTreasuryOverview",
+      "authApi.getBankStatementLines",
+      "authApi.getProcessorTransactions",
+      "authApi.getReconciliationMatches",
+      "authApi.getMandates",
+      "authApi.getAttempts",
+      "authApi.getPaymentReturns",
+      "authApi.getRefunds",
+      "authApi.getDelinquencyCases",
+      "authApi.getDunningPlans",
+      "authApi.importBankStatement",
+      "authApi.autoReconcile",
+      "authApi.manualMatch",
+      "authApi.postPaymentReturn",
+      "authApi.postRefund"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "UserManagementPage.jsx",
+    "formsCount": 1,
+    "forms": [
+      "handleInvite"
+    ],
+    "buttonsCount": 2,
+    "sampleButtons": [
+      {
+        "text": "Invite New User",
+        "handler": "() => setShowInviteModal(true)"
+      },
+      {
+        "text": "Cancel",
+        "handler": "() => setShowInviteModal(false)"
+      }
+    ],
+    "apiCalls": [
+      "authApi.getTenantUsers",
+      "authApi.getRoles",
+      "authApi.inviteUser"
+    ],
+    "tabs": []
+  },
+  {
+    "file": "WorkspaceSelectPage.jsx",
+    "formsCount": 0,
+    "forms": [],
+    "buttonsCount": 2,
+    "sampleButtons": [
+      {
+        "text": "{theme === 'dark' ? ( <> Day Mode ) : ( ",
+        "handler": "toggleTheme"
+      },
+      {
+        "text": "{switching ? 'Switching Workspace...' : ",
+        "handler": "handleSwitch"
+      }
+    ],
+    "apiCalls": [],
+    "tabs": []
+  }
+]

@@ -1,0 +1,560 @@
+[
+  {
+    "id": "API-PROBE-01",
+    "method": "GET",
+    "path": "/health",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Health check probe returns HEALTHY status and topology info"
+  },
+  {
+    "id": "API-PROBE-02",
+    "method": "GET",
+    "path": "/ready",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Readiness probe returns READY status and uptime"
+  },
+  {
+    "id": "API-AUTH-01",
+    "method": "POST",
+    "path": "/api/v1/auth/register-tenant",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Register tenant auto-initializes primary company and issues JWT"
+  },
+  {
+    "id": "API-AUTH-02",
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "User login returns valid access token and tenant memberships"
+  },
+  {
+    "id": "API-AUTH-03",
+    "method": "GET",
+    "path": "/api/v1/auth/me",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Get current user profile and session identity"
+  },
+  {
+    "id": "API-AUTH-04",
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Refresh token exchanges for updated access token"
+  },
+  {
+    "id": "API-TENANT-01",
+    "method": "GET",
+    "path": "/api/v1/tenant/settings",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch organization settings for current workspace"
+  },
+  {
+    "id": "API-TENANT-02",
+    "method": "PATCH",
+    "path": "/api/v1/tenant/settings",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Update organization settings"
+  },
+  {
+    "id": "API-TENANT-03",
+    "method": "GET",
+    "path": "/api/v1/tenant/modules",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List module entitlements for active workspace"
+  },
+  {
+    "id": "API-TENANT-04",
+    "method": "GET",
+    "path": "/api/v1/tenant/roles",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List available roles within tenant"
+  },
+  {
+    "id": "API-TENANT-05",
+    "method": "GET",
+    "path": "/api/v1/tenant/users",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List active tenant members"
+  },
+  {
+    "id": "API-TENANT-06",
+    "method": "POST",
+    "path": "/api/v1/tenant/users/invite",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Invite new member and assign tenant role"
+  },
+  {
+    "id": "API-COMP-01",
+    "method": "GET",
+    "path": "/api/v1/companies/profiles",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List business profile templates"
+  },
+  {
+    "id": "API-COMP-02",
+    "method": "GET",
+    "path": "/api/v1/companies/",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List accessible companies for current user"
+  },
+  {
+    "id": "API-COMP-03",
+    "method": "POST",
+    "path": "/api/v1/companies/",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create secondary company with distinct GSTIN and COA"
+  },
+  {
+    "id": "API-COMP-04",
+    "method": "POST",
+    "path": "/api/v1/companies/switch",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Switch active company context and receive company claim token"
+  },
+  {
+    "id": "API-PARTY-01",
+    "method": "POST",
+    "path": "/api/v1/counterparties/",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create customer party counterparty with initial business role"
+  },
+  {
+    "id": "API-PARTY-02",
+    "method": "GET",
+    "path": "/api/v1/counterparties/",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List counterparties in tenant/company scope"
+  },
+  {
+    "id": "API-PARTY-03",
+    "method": "GET",
+    "path": "/api/v1/counterparties/:id",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch counterparty details and associated business roles"
+  },
+  {
+    "id": "API-PARTY-04",
+    "method": "GET",
+    "path": "/api/v1/counterparties/:id (Cross-Tenant)",
+    "expectedStatus": 404,
+    "actualStatus": 404,
+    "pass": true,
+    "details": "Tenant B cannot access Tenant A counterparty"
+  },
+  {
+    "id": "API-GL-01",
+    "method": "GET",
+    "path": "/api/v1/gl/accounts",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch Chart of Accounts seeded for company"
+  },
+  {
+    "id": "API-GL-02",
+    "method": "POST",
+    "path": "/api/v1/gl/accounts",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create custom ledger account with unique account_number"
+  },
+  {
+    "id": "API-GL-03",
+    "method": "GET",
+    "path": "/api/v1/gl/periods",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch fiscal periods for current company"
+  },
+  {
+    "id": "API-GL-04",
+    "method": "POST",
+    "path": "/api/v1/gl/journals",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Post balanced double-entry manual journal and update account balances"
+  },
+  {
+    "id": "API-GL-05",
+    "method": "POST",
+    "path": "/api/v1/gl/journals (Unbalanced)",
+    "expectedStatus": 400,
+    "actualStatus": 400,
+    "pass": true,
+    "details": "Reject unbalanced journal posting where Total Debits != Total Credits"
+  },
+  {
+    "id": "API-GL-06",
+    "method": "GET",
+    "path": "/api/v1/gl/trial-balance",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Trial balance computes balanced totals (Debits == Credits)"
+  },
+  {
+    "id": "API-INV-01",
+    "method": "POST",
+    "path": "/api/v1/inventory/groups",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create stock group"
+  },
+  {
+    "id": "API-INV-02",
+    "method": "POST",
+    "path": "/api/v1/inventory/categories",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create stock category"
+  },
+  {
+    "id": "API-INV-03",
+    "method": "GET",
+    "path": "/api/v1/inventory/uom",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "List standard seeded Units of Measurement"
+  },
+  {
+    "id": "API-INV-04",
+    "method": "GET",
+    "path": "/api/v1/inventory/godowns",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch warehouses/godowns"
+  },
+  {
+    "id": "API-INV-05",
+    "method": "POST",
+    "path": "/api/v1/inventory/items",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create inventory stock item with GST HSN code and costing method"
+  },
+  {
+    "id": "API-INV-06",
+    "method": "POST",
+    "path": "/api/v1/inventory/opening-stock",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Initialize stock balance and movement ledger for opening stock"
+  },
+  {
+    "id": "API-INV-07",
+    "method": "GET",
+    "path": "/api/v1/inventory/balances",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Verify physical stock balances match opening stock movements"
+  },
+  {
+    "id": "API-COMM-01",
+    "method": "POST",
+    "path": "/api/v1/commercial/documents",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Draft sales invoice calculates intra-state GST (9% CGST + 9% SGST)"
+  },
+  {
+    "id": "API-COMM-02",
+    "method": "POST",
+    "path": "/api/v1/commercial/documents/:id/post",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Posting sales invoice updates stock balance (-10 PCS) and posts balanced GL entries"
+  },
+  {
+    "id": "API-COMM-03",
+    "method": "GET",
+    "path": "/api/v1/commercial/reports/stock-gl-reconciliation",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Reconcile perpetual inventory asset balance against physical stock valuation"
+  },
+  {
+    "id": "API-COMM-04",
+    "method": "GET",
+    "path": "/api/v1/commercial/reports/register",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch commercial document registers and totals"
+  },
+  {
+    "id": "API-POS-01",
+    "method": "POST",
+    "path": "/api/v1/retail-pos/shifts/open",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Open cashier shift with opening cash float"
+  },
+  {
+    "id": "API-POS-02",
+    "method": "POST",
+    "path": "/api/v1/retail-pos/checkout",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Retail POS checkout with tender receipt, GL journal, and stock movement"
+  },
+  {
+    "id": "API-POS-03",
+    "method": "POST",
+    "path": "/api/v1/retail-pos/shifts/close",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Close cashier shift and reconcile counted cash against system sales"
+  },
+  {
+    "id": "API-REST-01",
+    "method": "POST",
+    "path": "/api/v1/restaurant/tables",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create dining table"
+  },
+  {
+    "id": "API-REST-02",
+    "method": "POST",
+    "path": "/api/v1/restaurant/orders",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create dine-in restaurant order"
+  },
+  {
+    "id": "API-REST-03",
+    "method": "POST",
+    "path": "/api/v1/restaurant/orders/:orderId/kot",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Issue Kitchen Order Ticket"
+  },
+  {
+    "id": "API-HOTEL-01",
+    "method": "POST",
+    "path": "/api/v1/hotel/room-types",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create hotel room type with standard nightly rate"
+  },
+  {
+    "id": "API-HOTEL-02",
+    "method": "POST",
+    "path": "/api/v1/hotel/rooms",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create hotel room"
+  },
+  {
+    "id": "API-HOTEL-03",
+    "method": "POST",
+    "path": "/api/v1/hotel/reservations",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create guest reservation and folio"
+  },
+  {
+    "id": "API-HOTEL-04",
+    "method": "POST",
+    "path": "/api/v1/hotel/night-audit",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Execute idempotent nightly room revenue audit and folio posting"
+  },
+  {
+    "id": "API-MFG-01",
+    "method": "POST",
+    "path": "/api/v1/manufacturing/boms",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create production Bill of Materials (BOM)"
+  },
+  {
+    "id": "API-MFG-02",
+    "method": "POST",
+    "path": "/api/v1/manufacturing/work-orders",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Plan and schedule manufacturing work order"
+  },
+  {
+    "id": "API-DATA-01",
+    "method": "GET",
+    "path": "/api/v1/data-exchange/export/accounts",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Export Chart of Accounts to structured data exchange payload"
+  },
+  {
+    "id": "API-DATA-02",
+    "method": "GET",
+    "path": "/api/v1/data-exchange/export/stock-balances",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Export current stock balance quantities and valuations"
+  },
+  {
+    "id": "API-DATA-03",
+    "method": "POST",
+    "path": "/api/v1/data-exchange/import/accounts",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Dry-run bulk import validates payloads without database mutation"
+  },
+  {
+    "id": "API-CLOSE-01",
+    "method": "GET",
+    "path": "/api/v1/close/overview",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch month-end close overview and checklist runbook status"
+  },
+  {
+    "id": "API-CLOSE-02",
+    "method": "GET",
+    "path": "/api/v1/close/trial-balance",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Verify close trial balance balances across all debits and credits"
+  },
+  {
+    "id": "API-CLOSE-03",
+    "method": "GET",
+    "path": "/api/v1/close/reports/financial-statements",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Generate financial statements (Balance Sheet, P&L, Trial Balance)"
+  },
+  {
+    "id": "API-DIM-01",
+    "method": "POST",
+    "path": "/api/v1/dimensions/",
+    "expectedStatus": 201,
+    "actualStatus": 201,
+    "pass": true,
+    "details": "Create accounting dimension with enumerated values"
+  },
+  {
+    "id": "API-DIM-02",
+    "method": "GET",
+    "path": "/api/v1/dimensions/",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch defined accounting dimensions"
+  },
+  {
+    "id": "API-PIPE-01",
+    "method": "GET",
+    "path": "/api/v1/event-pipeline/stats",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Fetch event outbox/inbox pipeline throughput statistics"
+  },
+  {
+    "id": "API-BUNDLE-01",
+    "method": "GET",
+    "path": "/api/v1/config-bundle/export",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Export full configuration bundle (events, rules, dimensions)"
+  },
+  {
+    "id": "API-RESET-01",
+    "method": "POST",
+    "path": "/api/v1/tenant/reset-dev-data (No Header)",
+    "expectedStatus": 400,
+    "actualStatus": 400,
+    "pass": true,
+    "details": "Reset is blocked without explicit confirmation header"
+  },
+  {
+    "id": "API-RESET-02",
+    "method": "POST",
+    "path": "/api/v1/tenant/reset-dev-data (Confirmed)",
+    "expectedStatus": 200,
+    "actualStatus": 200,
+    "pass": true,
+    "details": "Successfully clear transactional test data with TENANT_ADMIN role"
+  },
+  {
+    "id": "API-RESET-03",
+    "method": "ASSERT",
+    "path": "Database CommercialDocument & StockMovement count",
+    "expectedStatus": 0,
+    "actualStatus": 0,
+    "pass": true,
+    "details": "Verify commercial transactions and inventory balances were fully wiped"
+  }
+]

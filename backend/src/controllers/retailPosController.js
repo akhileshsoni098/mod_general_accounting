@@ -11,7 +11,7 @@ class RetailPosController {
         openingFloat: opening_float,
         notes
       });
-      return res.success(shift);
+      return res.success(shift, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }
@@ -67,7 +67,7 @@ class RetailPosController {
         tenderedAmount: tendered_amount
       });
 
-      return res.success(result);
+      return res.success(result, 201);
     } catch (err) {
       return res.error(err.message, 400);
     }

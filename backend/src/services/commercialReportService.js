@@ -308,6 +308,7 @@ async function getInventoryToGlReconciliation(tenantId, companyId) {
     total_items_tracked: balances.length,
     total_quantity_on_hand: totalQtyOnHandBn.toFixed(4),
     stock_subledger_valuation: totalStockValBn.toFixed(2),
+    total_stock_valuation: totalStockValBn.toFixed(2),
     general_ledger_balance: glBalanceBn.toFixed(2),
     variance_amount: varianceBn.toFixed(2),
     pending_opening_stock_count: pendingOpeningMovements.length,

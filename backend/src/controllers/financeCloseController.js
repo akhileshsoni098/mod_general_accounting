@@ -180,6 +180,7 @@ exports.getTrialBalance = async (req, res) => {
     const { period_name } = req.query;
     const result = await financeCloseService.generateTrialBalanceSnapshot({
       tenantId: req.tenantId,
+      companyId: req.companyId,
       userId: req.user ? req.user._id : null,
       periodName: period_name || '2026-07',
       isCertified: false

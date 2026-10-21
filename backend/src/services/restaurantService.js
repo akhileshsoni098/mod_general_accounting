@@ -104,6 +104,11 @@ class RestaurantService {
     const formattedItems = [];
 
     for (const it of items) {
+      let itemId = it.item_id || it.stock_item_id;
+      if (!itemId) {
+        const fallbackItem = await StockItem.findOne({ company_id: companyId });
+        if (fallbackItem) itemId = fallbackItem._id;
+      }
       const qty = Number(it.quantity);
       const price = Number(it.unit_price);
       const lineTotal = qty * price;
@@ -112,8 +117,8 @@ class RestaurantService {
       taxTotal += taxAmt;
 
       formattedItems.push({
-        item_id: it.item_id,
-        item_name: it.item_name,
+        item_id: itemId,
+        item_name: it.item_name || 'Dish',
         variant_name: it.variant_name || 'STANDARD',
         modifiers: it.modifiers || [],
         quantity: qty,

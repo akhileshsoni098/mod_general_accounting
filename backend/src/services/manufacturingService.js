@@ -71,6 +71,16 @@ class ManufacturingService {
     const count = await WorkOrder.countDocuments({ company_id: companyId });
     const orderNumber = `WO-${Date.now().toString().slice(-6)}-${String(count + 1).padStart(3, '0')}`;
 
+    let rmGodown = rawMaterialsGodownId;
+    let fgGodown = finishedGoodsGodownId;
+    if (!rmGodown || !fgGodown) {
+      const defG = await Godown.findOne({ company_id: companyId });
+      if (defG) {
+        if (!rmGodown) rmGodown = defG._id;
+        if (!fgGodown) fgGodown = defG._id;
+      }
+    }
+
     return WorkOrder.create({
       tenant_id: tenantId,
       company_id: companyId,
@@ -78,8 +88,8 @@ class ManufacturingService {
       bom_id: bomId,
       finished_item_id: bom.finished_item_id,
       planned_quantity: Number(plannedQuantity),
-      raw_materials_godown_id: rawMaterialsGodownId,
-      finished_goods_godown_id: finishedGoodsGodownId,
+      raw_materials_godown_id: rmGodown,
+      finished_goods_godown_id: fgGodown,
       status: 'PLANNED',
       created_by: userId
     });

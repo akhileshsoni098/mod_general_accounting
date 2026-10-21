@@ -100,14 +100,14 @@ export default function GLWorkspacePage() {
   // New Posting Rule Modal
   const [showNewRuleModal, setShowNewRuleModal] = useState(false);
   const [newRuleForm, setNewRuleForm] = useState({
-    rule_code: 'RULE_POLICY_BIND',
-    event_type: 'POLICY_BOUND',
-    rule_name: 'Policy Bound Gross Premium & UPR Initial Recognition',
-    description: 'Debit Premium Receivable 1100, Credit Unearned Premium Reserve 2200',
+    rule_code: 'RULE_COMMERCIAL_SALES',
+    event_type: 'COMMERCIAL_INVOICE_ISSUED',
+    rule_name: 'Commercial Sales Invoice AR & Revenue Recognition',
+    description: 'Debit Trade Receivables 1100, Credit Sales Revenue 4000',
     applicable_module: 'GL',
     lines: [
-      { account_code: '1100', direction: 'DEBIT', amount_field: 'gross_premium', description_template: 'Gross Premium AR' },
-      { account_code: '2200', direction: 'CREDIT', amount_field: 'gross_premium', description_template: 'Initial UPR Reserve' }
+      { account_code: '1100', direction: 'DEBIT', amount_field: 'subtotal', description_template: 'Trade AR' },
+      { account_code: '4000', direction: 'CREDIT', amount_field: 'subtotal', description_template: 'Sales Revenue' }
     ]
   });
   const [submittingRule, setSubmittingRule] = useState(false);
@@ -1090,17 +1090,17 @@ export default function GLWorkspacePage() {
                     className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <option value="GL_MANUAL">GL_MANUAL (Manual Journal)</option>
-                    <option value="POLICY_BIND">POLICY_BIND (Policy Gross AR & UPR)</option>
+                    <option value="COMMERCIAL_INVOICE">COMMERCIAL_INVOICE (Sales & Receivables)</option>
                     <option value="BILLING_AR">BILLING_AR (Billing Clearance)</option>
                     <option value="TREASURY_BANK_REC">TREASURY_BANK_REC (Cash Receipt)</option>
-                    <option value="FINANCE_CLOSE">FINANCE_CLOSE (UPR Recognition)</option>
+                    <option value="FINANCE_CLOSE">FINANCE_CLOSE (Period Amortization & Close)</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Reference ID</label>
                   <input
                     type="text"
-                    placeholder="e.g. POL-TX-8821"
+                    placeholder="e.g. INV-2026-0001"
                     value={newJournalForm.reference_id}
                     onChange={(e) => setNewJournalForm({ ...newJournalForm, reference_id: e.target.value })}
                     className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono"
@@ -1113,7 +1113,7 @@ export default function GLWorkspacePage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Initial Policy Gross Premium & UPR Reserve"
+                  placeholder="e.g. Commercial Sales Invoice Revenue Recognition"
                   value={newJournalForm.memo}
                   onChange={(e) => setNewJournalForm({ ...newJournalForm, memo: e.target.value })}
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500"

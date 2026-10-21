@@ -55,18 +55,24 @@ export default function BillingWorkspacePage() {
   const [newPlan, setNewPlan] = useState({ plan_code: '', plan_name: '', installment_count: 4, down_payment_pct: 25, installment_fee: 0, interval_months: 3 });
   const [scheduleForm, setScheduleForm] = useState({
     billing_account_id: '',
-    policy_id: 'POL-TX-8821',
-    policy_number: 'POL-TX-8821',
+    contract_id: 'CTR-2026-001',
+    contract_number: 'CTR-2026-001',
+    policy_id: 'CTR-2026-001',
+    policy_number: 'CTR-2026-001',
+    total_amount: '37650.00',
     total_premium: '37650.00',
+    service_fee: '150.00',
     policy_fee: '150.00',
     billing_plan_code: '4_PAY_25_DOWN',
     effective_date: '2026-07-01'
   });
   const [invoiceForm, setInvoiceForm] = useState({
     billing_account_id: '',
-    policy_id: 'POL-TX-8821',
+    contract_id: 'CTR-2026-001',
+    policy_id: 'CTR-2026-001',
     installment_number: 1,
     invoice_date: '2026-07-01',
+    billing_amount: '9412.50',
     premium_amount: '9412.50',
     fee_amount: '150.00'
   });
@@ -106,13 +112,15 @@ export default function BillingWorkspacePage() {
       sched.billing_account_id?._id ||
       sched.billing_account_id ||
       (accounts[0] ? accounts[0]._id : '');
-    const prem = sched.premium_amount?.$numberDecimal || sched.premium_amount || '9412.50';
+    const prem = sched.premium_amount?.$numberDecimal || sched.premium_amount || sched.total_amount || '9412.50';
     const fee = sched.fee_amount?.$numberDecimal || sched.fee_amount || (sched.installment_number === 1 ? '150.00' : '0.00');
     setInvoiceForm({
       billing_account_id: accId,
-      policy_id: sched.policy_id || 'POL-TX-8821',
+      contract_id: sched.contract_id || sched.policy_id || 'CTR-2026-001',
+      policy_id: sched.policy_id || sched.contract_id || 'CTR-2026-001',
       installment_number: sched.installment_number || 1,
       invoice_date: sched.due_date ? new Date(sched.due_date).toISOString().split('T')[0] : '2026-07-01',
+      billing_amount: String(prem),
       premium_amount: String(prem),
       fee_amount: String(fee)
     });
@@ -229,7 +237,7 @@ export default function BillingWorkspacePage() {
     e.preventDefault();
     try {
       await authApi.generateSchedule(scheduleForm);
-      setSuccess('Policy bound & 4-pay installment schedule generated successfully! Review scheduled installments below.');
+      setSuccess('Commercial billing & 4-pay installment schedule generated successfully! Review scheduled installments below.');
       setShowGenerateScheduleModal(false);
       setSubtab('schedules');
       loadData();
@@ -245,15 +253,15 @@ export default function BillingWorkspacePage() {
       const lines = [
         {
           line_type: 'PREMIUM',
-          description: `Commercial Auto Premium Installment #${invoiceForm.installment_number}`,
-          amount: invoiceForm.premium_amount,
+          description: `Commercial Contract Installment #${invoiceForm.installment_number}`,
+          amount: invoiceForm.premium_amount || invoiceForm.billing_amount,
           ledger_account_code: '2200'
         }
       ];
       if (Number(invoiceForm.fee_amount) > 0) {
         lines.push({
           line_type: 'FEE',
-          description: 'Policy Issuance Fee',
+          description: 'Commercial Service Fee',
           amount: invoiceForm.fee_amount,
           ledger_account_code: '4100'
         });
@@ -261,7 +269,8 @@ export default function BillingWorkspacePage() {
 
       await authApi.issueInvoice({
         billing_account_id: invoiceForm.billing_account_id,
-        policy_id: invoiceForm.policy_id,
+        contract_id: invoiceForm.contract_id || invoiceForm.policy_id,
+        policy_id: invoiceForm.policy_id || invoiceForm.contract_id,
         installment_number: invoiceForm.installment_number,
         invoice_date: invoiceForm.invoice_date,
         lines
@@ -426,9 +435,9 @@ export default function BillingWorkspacePage() {
           </div>
 
           <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-lg space-y-3">
-            <h3 className="text-sm font-semibold text-slate-200">Policy Lifecycle Quick Actions</h3>
+            <h3 className="text-sm font-semibold text-slate-200">Commercial Billing Quick Actions</h3>
             <p className="text-xs text-slate-400">
-              Execute standard commercial policy billing actions: generate installment schedules, issue deposit invoices, and record fiduciary premium cash receipts.
+              Execute standard commercial billing actions: generate installment schedules, issue billing invoices, and record cash receipts.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <button
@@ -436,7 +445,7 @@ export default function BillingWorkspacePage() {
                 className="px-3.5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-semibold flex items-center space-x-1.5 transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>1. Bind Policy & Generate 4-Pay Schedule</span>
+                <span>1. Generate Commercial Billing Schedule</span>
               </button>
               <button
                 onClick={() => setSubtab('schedules')}
@@ -469,9 +478,9 @@ export default function BillingWorkspacePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-white">Policy Installment Schedules (4-Pay Lifecycle)</h3>
+              <h3 className="text-sm font-semibold text-white">Commercial Installment Schedules (4-Pay Lifecycle)</h3>
               <p className="text-xs text-slate-400">
-                Payment plans generated upon policy binding. Issue invoices against scheduled installments when due.
+                Payment plans generated upon agreement creation. Issue invoices against scheduled installments when due.
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -480,7 +489,7 @@ export default function BillingWorkspacePage() {
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-semibold transition"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Bind Policy & Schedule</span>
+                <span>Create Schedule</span>
               </button>
               <button
                 onClick={loadData}
@@ -531,10 +540,10 @@ export default function BillingWorkspacePage() {
               <thead className="bg-slate-850 text-slate-400 font-mono text-[11px] uppercase border-b border-slate-800">
                 <tr>
                   <th className="p-3">Installment</th>
-                  <th className="p-3">Policy Number</th>
+                  <th className="p-3">Contract Ref</th>
                   <th className="p-3">Customer / Account</th>
                   <th className="p-3">Due Date</th>
-                  <th className="p-3">Premium</th>
+                  <th className="p-3">Amount</th>
                   <th className="p-3">Fee</th>
                   <th className="p-3">Total Due</th>
                   <th className="p-3">Status</th>
@@ -548,7 +557,7 @@ export default function BillingWorkspacePage() {
                     <td colSpan="10" className="p-8 text-center text-slate-500 font-sans space-y-2">
                       <div>No installment schedules generated yet.</div>
                       <div className="text-xs text-slate-600">
-                        Click "1. Bind Policy & Generate 4-Pay Schedule" in AR Overview to create the payment plan.
+                        Click "1. Generate Commercial Billing Schedule" in AR Overview to create the payment plan.
                       </div>
                     </td>
                   </tr>
@@ -569,15 +578,15 @@ export default function BillingWorkspacePage() {
                           </div>
                         </td>
                         <td className="p-3 font-semibold text-slate-200">
-                          {sched.policy_number || sched.policy_id}
+                          {sched.contract_number || sched.policy_number || sched.policy_id || 'CTR-2026-001'}
                         </td>
                         <td className="p-3 font-sans text-slate-300">
-                          {sched.billing_account_id ? sched.billing_account_id.customer_name : 'Lone Pine Trucking LLC'}
+                          {sched.billing_account_id ? sched.billing_account_id.customer_name : 'Enterprise Solutions LLC'}
                         </td>
                         <td className="p-3 text-slate-400">
                           {new Date(sched.due_date).toLocaleDateString()}
                         </td>
-                        <td className="p-3 text-slate-200">${formatMoney(sched.premium_amount)}</td>
+                        <td className="p-3 text-slate-200">${formatMoney(sched.premium_amount || sched.total_amount)}</td>
                         <td className="p-3 text-slate-400">${formatMoney(sched.fee_amount)}</td>
                         <td className="p-3 text-white font-bold">${formatMoney(sched.total_amount)}</td>
                         <td className="p-3">
@@ -1084,7 +1093,7 @@ export default function BillingWorkspacePage() {
       {showGenerateScheduleModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 max-w-md w-full space-y-4">
-            <h3 className="text-base font-bold text-white">Bind Policy & Generate 4-Pay Schedule</h3>
+            <h3 className="text-base font-bold text-white">Generate Commercial Billing Schedule</h3>
             <form onSubmit={handleGenerateSchedule} className="space-y-3 text-xs">
               <div>
                 <label className="text-slate-400 block mb-1">Target Billing Account</label>
@@ -1102,11 +1111,11 @@ export default function BillingWorkspacePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Policy Number</label>
+                  <label className="text-slate-400 block mb-1">Contract / Agreement Ref</label>
                   <input
                     type="text"
-                    value={scheduleForm.policy_number}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, policy_number: e.target.value })}
+                    value={scheduleForm.contract_number || scheduleForm.policy_number}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, contract_number: e.target.value, policy_number: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"
                   />
                 </div>
@@ -1125,20 +1134,20 @@ export default function BillingWorkspacePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Annual Gross Premium</label>
+                  <label className="text-slate-400 block mb-1">Total Contract Amount ($)</label>
                   <input
                     type="text"
-                    value={scheduleForm.total_premium}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, total_premium: e.target.value })}
+                    value={scheduleForm.total_amount || scheduleForm.total_premium}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, total_amount: e.target.value, total_premium: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 block mb-1">Policy Fee</label>
+                  <label className="text-slate-400 block mb-1">Service / Processing Fee</label>
                   <input
                     type="text"
-                    value={scheduleForm.policy_fee}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, policy_fee: e.target.value })}
+                    value={scheduleForm.service_fee || scheduleForm.policy_fee}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, service_fee: e.target.value, policy_fee: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"
                   />
                 </div>
@@ -1184,13 +1193,13 @@ export default function BillingWorkspacePage() {
                 </select>
               </div>
               <div>
-                <label className="text-slate-400 block mb-1">Policy ID / Insured Risk Reference</label>
+                <label className="text-slate-400 block mb-1">Contract ID / Agreement Reference</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. POL-TX-8821 (Insured: Summit / Pine Cone)"
-                  value={invoiceForm.policy_id}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, policy_id: e.target.value })}
+                  placeholder="e.g. CTR-2026-001 (Client: Enterprise Commercial)"
+                  value={invoiceForm.contract_id || invoiceForm.policy_id}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, contract_id: e.target.value, policy_id: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"
                 />
               </div>
@@ -1216,16 +1225,16 @@ export default function BillingWorkspacePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-400 block mb-1">Premium Amount ($)</label>
+                  <label className="text-slate-400 block mb-1">Billing Amount ($)</label>
                   <input
                     type="text"
-                    value={invoiceForm.premium_amount}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, premium_amount: e.target.value })}
+                    value={invoiceForm.billing_amount || invoiceForm.premium_amount}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, billing_amount: e.target.value, premium_amount: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-400 block mb-1">Policy Fee ($)</label>
+                  <label className="text-slate-400 block mb-1">Service Fee ($)</label>
                   <input
                     type="text"
                     value={invoiceForm.fee_amount}
@@ -1266,10 +1275,10 @@ export default function BillingWorkspacePage() {
                       ))}
                     </select>
                     <div className="font-mono text-[11px] text-slate-300 space-y-0.5 pt-1">
-                      <div>Dr 1100 Premium Receivable: ${(Number(invoiceForm.premium_amount || 0) + Number(invoiceForm.fee_amount || 0)).toFixed(2)}</div>
-                      <div>Cr 2200 Unearned Premium Reserve: ${Number(invoiceForm.premium_amount || 0).toFixed(2)}</div>
+                      <div>Dr 1100 Accounts Receivable: ${(Number(invoiceForm.billing_amount || invoiceForm.premium_amount || 0) + Number(invoiceForm.fee_amount || 0)).toFixed(2)}</div>
+                      <div>Cr 2200 Deferred Revenue / Advance: ${Number(invoiceForm.billing_amount || invoiceForm.premium_amount || 0).toFixed(2)}</div>
                       {Number(invoiceForm.fee_amount || 0) > 0 && (
-                        <div>Cr 4100 Policy Fee Income: ${Number(invoiceForm.fee_amount || 0).toFixed(2)}</div>
+                        <div>Cr 4100 Processing / Service Fee: ${Number(invoiceForm.fee_amount || 0).toFixed(2)}</div>
                       )}
                     </div>
                   </div>
@@ -1359,7 +1368,7 @@ export default function BillingWorkspacePage() {
                         <option value="">-- Apply to Oldest Due (Standard Waterfall) --</option>
                         {openInvoicesForAccount.map((inv) => (
                           <option key={inv._id} value={inv._id}>
-                            {inv.invoice_number} (Policy: {inv.policy_id}) — Balance Due: ${Number(inv.balance_due).toFixed(2)}
+                            {inv.invoice_number} (Ref: {inv.contract_id || inv.policy_id || 'CTR-2026-001'}) — Balance Due: ${Number(inv.balance_due).toFixed(2)}
                           </option>
                         ))}
                       </select>
@@ -1393,7 +1402,7 @@ export default function BillingWorkspacePage() {
                     onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white"
                   >
-                    <option value="ACH">ACH (Texas Trust)</option>
+                    <option value="ACH">ACH Direct Debit</option>
                     <option value="CHECK">Lockbox Check</option>
                     <option value="WIRE">Wire Transfer</option>
                     <option value="CREDIT_CARD">Credit Card</option>
@@ -1414,7 +1423,7 @@ export default function BillingWorkspacePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-slate-200 flex items-center space-x-1.5">
                     <Sliders className="w-3.5 h-3.5 text-brand-400" />
-                    <span>Applied Payment Rule (Texas Trust)</span>
+                    <span>Applied Payment Rule</span>
                   </span>
                   {paymentRules.length > 0 ? (
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -1441,7 +1450,7 @@ export default function BillingWorkspacePage() {
                       ))}
                     </select>
                     <div className="font-mono text-[11px] text-slate-300 space-y-0.5 pt-1">
-                      <div>Dr 1010 Texas Premium Trust: ${paymentForm.amount || '0.00'}</div>
+                      <div>Dr 1010 Operating Bank Account: ${paymentForm.amount || '0.00'}</div>
                       <div>Cr 1100 AR (Waterfall Cleared): ${paymentForm.amount || '0.00'}</div>
                     </div>
                   </div>

@@ -21,14 +21,14 @@ const GUIDE_PRESETS = [
     id: 's1_1',
     scenario: 'Scenario 1.1',
     label: 'Invoice Issued ($9,562.50)',
-    event_code: 'billing.invoice.issued',
-    desc: 'Dr 1100 AR $9,562.50 / Cr 2200 UPR $9,412.50 + Cr 4100 Fee $150.00',
+    event_code: 'commercial.invoice.issued',
+    desc: 'Dr 1100 AR $9,562.50 / Cr 4000 Sales $9,412.50 + Cr 2110 Output Tax $150.00',
     payload: {
       invoice_id: 'INV-2026-00001',
-      policy_id: 'POL-TX-8821',
-      transaction_type: 'DIRECT_BILL',
-      gross_premium: 9412.50,
-      policy_fee: 150.00,
+      order_id: 'ORD-2026-00001',
+      transaction_type: 'COMMERCIAL_INVOICE',
+      subtotal: 9412.50,
+      tax_amount: 150.00,
       total_amount: 9562.50
     }
   },
@@ -36,128 +36,118 @@ const GUIDE_PRESETS = [
     id: 's1_2',
     scenario: 'Scenario 1.2',
     label: 'Payment Collected ($9,562.50)',
-    event_code: 'billing.payment.received',
-    desc: 'Dr 1010 Trust $9,562.50 / Cr 1100 AR $9,562.50',
+    event_code: 'commercial.payment.received',
+    desc: 'Dr 1000 Operating Bank $9,562.50 / Cr 1100 AR $9,562.50',
     payload: {
       payment_id: 'PAY-2026-00001',
       invoice_id: 'INV-2026-00001',
       amount: 9562.50,
-      payment_method: 'ACH'
+      payment_method: 'BANK_TRANSFER'
     }
   },
   {
     id: 's1_3',
     scenario: 'Scenario 1.3',
-    label: 'Commission Allocation (Due to Carrier)',
-    event_code: 'finance.commission.allocated',
-    desc: 'Dr 2200 UPR $9,412.50 / Cr 2010 Carrier $7,530.00 + Cr 2020 Broker $941.25 + Cr 4200 MGA $941.25',
+    label: 'Vendor Bill Recorded ($7,530.00)',
+    event_code: 'commercial.bill.recorded',
+    desc: 'Dr 5000 Purchases $7,530.00 / Cr 2000 AP $7,530.00',
     payload: {
-      policy_id: 'POL-TX-8821',
-      invoice_id: 'INV-2026-00001',
-      installment_premium: 9412.50,
-      carrier_amount: 7530.00,
-      broker_amount: 941.25,
-      mga_amount: 941.25
+      bill_id: 'BILL-2026-00001',
+      vendor_id: 'VEND-001-SUPPLIES',
+      bill_amount: 7530.00
     }
   },
   {
     id: 's1_4',
     scenario: 'Scenario 1.4',
-    label: 'Texas Fiduciary Sweep ($3,765.00)',
-    event_code: 'fiduciary.sweep.executed',
-    desc: 'Dr 1000 Cash $3,765.00 / Cr 1010 Trust $3,765.00',
+    label: 'Vendor Bill Paid ($7,530.00)',
+    event_code: 'commercial.vendor_payment.issued',
+    desc: 'Dr 2000 AP $7,530.00 / Cr 1000 Operating Bank $7,530.00',
     payload: {
-      sweep_reference: 'SWEEP-2026-00001',
-      amount: 3765.00,
-      fiduciary_account_code: '1010'
+      payment_id: 'VPAY-2026-00001',
+      bill_id: 'BILL-2026-00001',
+      amount: 7530.00
     }
   },
   {
     id: 's2',
     scenario: 'Scenario 2',
-    label: 'Endorsement Truck T5 ($7,222.19)',
-    event_code: 'policy.endorsement.issued',
-    desc: 'Dr 1100 AR $7,222.19 / Cr 2200 UPR $7,222.19 (Pro-Rata 303 Active Days)',
+    label: 'Inventory Receipt ($7,222.19)',
+    event_code: 'inventory.goods_received',
+    desc: 'Dr 1300 Inventory $7,222.19 / Cr 2050 GRN Clearing $7,222.19',
     payload: {
-      policy_id: 'POL-TX-8821',
-      endorsement_number: 'END-001-T5',
-      vehicle_id: 'TRUCK-T5-BOX',
-      delta_premium: 7222.19,
-      active_days: 303
+      grn_number: 'GRN-2026-001',
+      item_code: 'RAW-ALUM-BAR',
+      valuation_amount: 7222.19
     }
   },
   {
     id: 's3_1',
     scenario: 'Scenario 3',
-    label: 'Pro-Rata Cancel Return ($10,000)',
-    event_code: 'policy.cancelled.prorata',
-    desc: 'Dr 2200 UPR $10,000.00 / Cr 2100 Return Premium Payable $10,000.00',
+    label: 'Sales Return / Credit Note ($10,000)',
+    event_code: 'commercial.credit_note.issued',
+    desc: 'Dr 4010 Sales Returns $10,000.00 / Cr 1100 AR $10,000.00',
     payload: {
-      policy_id: 'POL-TX-8821',
-      cancellation_reason: 'Underwriting carrier portfolio withdrawal',
-      return_premium: 10000.00
+      credit_note_id: 'CN-2026-0001',
+      invoice_id: 'INV-2026-00001',
+      return_amount: 10000.00
     }
   },
   {
     id: 's3_2',
     scenario: 'Scenario 3',
-    label: 'Broker Clawback ($1,000.00)',
-    event_code: 'finance.commission.clawback',
-    desc: 'Dr 2020 Broker Payable $1,000.00 / Cr 5010 Commission Expense $1,000.00',
+    label: 'Inventory Restocking ($8,000.00)',
+    event_code: 'inventory.return.recorded',
+    desc: 'Dr 1300 Inventory $8,000.00 / Cr 5010 COGS $8,000.00',
     payload: {
-      policy_id: 'POL-TX-8821',
-      broker_id: 'BROKER-BRIGHTLINE',
-      clawback_amount: 1000.00
+      return_slip: 'RET-2026-001',
+      cost_amount: 8000.00
     }
   },
   {
     id: 's4',
     scenario: 'Scenario 4',
-    label: 'Policy Reinstatement ($10,050)',
-    event_code: 'policy.reinstated',
-    desc: 'Dr 1100 AR $10,050.00 / Cr 2200 UPR $10,000.00 + Cr 4100 Fee $50.00',
+    label: 'Advance Billing ($10,050.00)',
+    event_code: 'billing.advance.billed',
+    desc: 'Dr 1100 AR $10,050.00 / Cr 2200 Deferred Revenue $10,000.00 + Cr 2110 Output Tax $50.00',
     payload: {
-      policy_id: 'POL-TX-8821',
-      reinstated_premium: 10000.00,
-      reinstatement_fee: 50.00
+      contract_id: 'CTR-2026-001',
+      advance_amount: 10000.00,
+      service_fee: 50.00
     }
   },
   {
     id: 's5',
     scenario: 'Scenario 5',
-    label: 'Daily Earned Premium ($3,197.67)',
-    event_code: 'finance.earned_premium.calculated',
-    desc: 'Dr 2200 UPR $3,197.67 / Cr 4000 Earned Revenue $3,197.67 (July 31 Days)',
+    label: 'Revenue Recognition ($3,197.67)',
+    event_code: 'finance.revenue_recognition.posted',
+    desc: 'Dr 2200 Deferred Revenue $3,197.67 / Cr 4000 Earned Revenue $3,197.67',
     payload: {
-      policy_id: 'POL-TX-8821',
+      contract_id: 'CTR-2026-001',
       period: '2026-07',
-      earned_amount: 3197.67
+      recognized_amount: 3197.67
     }
   },
   {
     id: 's6_1',
     scenario: 'Scenario 6',
-    label: 'Claim Reserve ($39,000.00)',
-    event_code: 'claim.reserve.established',
-    desc: 'Dr 5000 Losses Incurred $39,000.00 / Cr 2500 Loss Reserves $39,000.00',
+    label: 'WIP Material Issue ($39,000.00)',
+    event_code: 'manufacturing.material_issued',
+    desc: 'Dr 1350 WIP $39,000.00 / Cr 1300 Raw Materials $39,000.00',
     payload: {
-      claim_number: 'CLM-2026-0041',
-      policy_id: 'POL-TX-8821',
-      claimant_name: 'Susan Park',
-      reserve_amount: 39000.00
+      work_order_id: 'WO-2026-001',
+      raw_material_cost: 39000.00
     }
   },
   {
     id: 's6_2',
     scenario: 'Scenario 6',
-    label: 'Claim Payout ($7,400.00)',
-    event_code: 'claim.payment.issued',
-    desc: 'Dr 2500 Loss Reserves $7,400.00 / Cr 1000 Operating Cash $7,400.00',
+    label: 'Finished Goods Receipt ($39,000.00)',
+    event_code: 'manufacturing.goods_completed',
+    desc: 'Dr 1310 Finished Goods $39,000.00 / Cr 1350 WIP $39,000.00',
     payload: {
-      claim_number: 'CLM-2026-0041',
-      payee_name: 'Susan Park',
-      payout_amount: 7400.00,
-      check_number: 'CHK-90412'
+      work_order_id: 'WO-2026-001',
+      finished_goods_cost: 39000.00
     }
   },
   {
@@ -165,7 +155,7 @@ const GUIDE_PRESETS = [
     scenario: 'Treasury',
     label: 'NSF Dishonor Return ($9,562.50)',
     event_code: 'treasury.payment.returned',
-    desc: 'Dr 1100 AR $9,562.50 / Cr 1010 Trust $9,562.50 (Bank Dishonor R01)',
+    desc: 'Dr 1100 AR $9,562.50 / Cr 1000 Operating Bank $9,562.50 (Bank Dishonor R01)',
     payload: {
       return_reference: 'NSF-ACH-9912',
       return_code: 'R01',
@@ -181,8 +171,7 @@ export default function EventSimulatorPage() {
 
   // Simulation Form
   const [selectedEventCode, setSelectedEventCode] = useState('');
-  const [schemaVersion, setSchemaVersion] = useState('1.0.0');
-  const [payloadText, setPayloadText] = useState('{\n  "policy_id": "POL-TX-8821",\n  "transaction_type": "DIRECT_BILL",\n  "gross_premium": 37650,\n  "policy_fee": 150\n}');
+  const [payloadText, setPayloadText] = useState('{\n  "invoice_id": "INV-2026-00001",\n  "transaction_type": "COMMERCIAL_INVOICE",\n  "subtotal": 37650,\n  "tax_amount": 150\n}');
 
   // Simulation Execution State
   const [simulating, setSimulating] = useState(false);
@@ -270,12 +259,14 @@ export default function EventSimulatorPage() {
 
       const eventRef = parsedPayload.transaction_id
         || (parsedPayload.invoice_id ? `${selectedEventCode}:${parsedPayload.invoice_id}` : null)
+        || (parsedPayload.order_id ? `${selectedEventCode}:${parsedPayload.order_id}` : null)
+        || (parsedPayload.bill_id ? `${selectedEventCode}:${parsedPayload.bill_id}` : null)
         || (parsedPayload.payment_id ? `${selectedEventCode}:${parsedPayload.payment_id}` : null)
-        || (parsedPayload.endorsement_number || parsedPayload.endorsement_id ? `${selectedEventCode}:${parsedPayload.endorsement_number || parsedPayload.endorsement_id}` : null)
-        || (parsedPayload.claim_number || parsedPayload.claim_id ? `${selectedEventCode}:${parsedPayload.claim_number || parsedPayload.claim_id}` : null)
-        || (parsedPayload.sweep_id ? `${selectedEventCode}:${parsedPayload.sweep_id}` : null)
-        || (parsedPayload.statement_number || parsedPayload.settlement_id ? `${selectedEventCode}:${parsedPayload.statement_number || parsedPayload.settlement_id}` : null)
-        || `${selectedEventCode}:${parsedPayload.policy_id || Date.now()}`;
+        || (parsedPayload.grn_number ? `${selectedEventCode}:${parsedPayload.grn_number}` : null)
+        || (parsedPayload.work_order_id ? `${selectedEventCode}:${parsedPayload.work_order_id}` : null)
+        || (parsedPayload.contract_id ? `${selectedEventCode}:${parsedPayload.contract_id}` : null)
+        || (parsedPayload.return_reference ? `${selectedEventCode}:${parsedPayload.return_reference}` : null)
+        || `${selectedEventCode}:${parsedPayload.reference_id || parsedPayload.policy_id || Date.now()}`;
 
       const res = await rulesApi.postSimulated({
         event_code: selectedEventCode,

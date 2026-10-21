@@ -376,7 +376,24 @@ async function postJournal(req, res) {
   try {
     const tenantId = req.tenantId;
     const companyId = req.companyId;
-    const { posting_date, source_module, reference_id, memo, lines, currency, accounting_basis } = req.body;
+    const { posting_date, source_module, reference_id, memo, description, lines, entries, currency, accounting_basis } = req.body;
+
+    const rawLines = lines || entries || [];
+    const processedLines = [];
+    for (const l of rawLines) {
+      let code = l.account_code;
+      if (!code && l.account_id) {
+        const acc = await LedgerAccount.findById(l.account_id);
+        if (acc) code = acc.account_code;
+      }
+      processedLines.push({
+        account_code: code,
+        debit: l.debit || 0,
+        credit: l.credit || 0,
+        memo: l.memo || l.description || '',
+        dimensions: l.dimensions || {}
+      });
+    }
 
     const result = await postJournalEntry({
       tenantId,
@@ -385,10 +402,10 @@ async function postJournal(req, res) {
       postingDate: posting_date,
       sourceModule: source_module || 'GL_MANUAL',
       referenceId: reference_id,
-      memo,
+      memo: memo || description || '',
       currency: currency || req.company?.base_currency || 'INR',
       accountingBasis: accounting_basis || 'GAAP',
-      lines
+      lines: processedLines
     });
 
     return res.success(result, { message: `Journal ${result.journal.journal_number} posted successfully` }, 201);

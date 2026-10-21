@@ -102,13 +102,13 @@ class RetailPosService {
     const lines = items.map((it, idx) => ({
       line_number: idx + 1,
       line_type: 'GOODS',
-      item_id: it.item_id,
+      item_id: it.item_id || it.stock_item_id,
       item_code: it.item_code || 'ITEM',
       item_name: it.item_name || 'Product',
       godown_id: it.godown_id || (defaultGodown ? defaultGodown._id : null),
       quantity: Number(it.quantity),
       uom_id: it.uom_id,
-      unit_price: Number(it.unit_price),
+      unit_price: Number(it.unit_price !== undefined ? it.unit_price : (it.rate !== undefined ? it.rate : 0)),
       discount_percentage: Number(it.discount_percentage || 0),
       tax_rate_code: it.tax_rate_code || 'GST_18'
     }));

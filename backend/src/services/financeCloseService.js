@@ -321,28 +321,63 @@ async function reconcileSubledgers({ tenantId, periodName = '2026-07' }) {
  */
 async function generateTrialBalanceSnapshot({
   tenantId,
+  companyId = null,
   userId,
   periodName = '2026-07',
   isCertified = false
 }) {
-  let period = await FiscalPeriod.findOne({ tenant_id: tenantId, period_name: periodName });
+  let periodQuery = { tenant_id: tenantId, period_name: periodName };
+  if (companyId) periodQuery.company_id = companyId;
+
+  let period = await FiscalPeriod.findOne(periodQuery);
   if (!period) {
-    period = await FiscalPeriod.findOne({ tenant_id: tenantId }).sort({ start_date: 1 });
+    const fallbackQ = { tenant_id: tenantId };
+    if (companyId) fallbackQ.company_id = companyId;
+    period = await FiscalPeriod.findOne(fallbackQ).sort({ start_date: 1 });
+  }
+  if (!period) {
+    const { seedFiscalPeriods } = require('../utils/seedFiscalPeriods');
+    const seeded = await seedFiscalPeriods(tenantId, new Date().getFullYear());
+    period = seeded[0] || (await FiscalPeriod.findOne({ tenant_id: tenantId }));
   }
 
-  // Query all active accounts
-  const accounts = await LedgerAccount.find({ tenant_id: tenantId, status: 'ACTIVE' }).sort({ account_code: 1 });
+  // Query accounts scoped to target company
+  const accQuery = { tenant_id: tenantId, status: 'ACTIVE' };
+  const targetCompanyId = companyId || (period ? period.company_id : null);
+  if (targetCompanyId) accQuery.company_id = targetCompanyId;
+
+  const accounts = await LedgerAccount.find(accQuery).sort({ account_code: 1 });
+
+  // Map and deduplicate accounts by account_code for the snapshot line unique constraint
+  const accountMap = new Map();
+  for (const acc of accounts) {
+    const code = acc.account_code;
+    const bal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : '0.00');
+    if (!accountMap.has(code)) {
+      accountMap.set(code, {
+        ledger_account_id: acc._id,
+        account_code: code,
+        account_name: acc.account_name,
+        account_type: acc.account_type,
+        normal_balance: acc.normal_balance,
+        balance: bal
+      });
+    } else {
+      const existing = accountMap.get(code);
+      existing.balance = existing.balance.plus(bal);
+    }
+  }
 
   let totalDebits = new BigNumber(0);
   let totalCredits = new BigNumber(0);
   const linesData = [];
 
-  for (const acc of accounts) {
-    const bal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : '0.00');
+  for (const item of accountMap.values()) {
+    const bal = item.balance;
     let debitBal = new BigNumber(0);
     let creditBal = new BigNumber(0);
 
-    if (acc.normal_balance === 'DEBIT') {
+    if (item.normal_balance === 'DEBIT') {
       if (bal.isGreaterThanOrEqualTo(0)) {
         debitBal = bal;
       } else {
@@ -360,11 +395,11 @@ async function generateTrialBalanceSnapshot({
     totalCredits = totalCredits.plus(creditBal);
 
     linesData.push({
-      ledger_account_id: acc._id,
-      account_code: acc.account_code,
-      account_name: acc.account_name,
-      account_type: acc.account_type,
-      normal_balance: acc.normal_balance,
+      ledger_account_id: item.ledger_account_id,
+      account_code: item.account_code,
+      account_name: item.account_name,
+      account_type: item.account_type,
+      normal_balance: item.normal_balance,
       debit_balance: toDecimal(debitBal.toFixed(2)),
       credit_balance: toDecimal(creditBal.toFixed(2))
     });
