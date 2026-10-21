@@ -25,6 +25,14 @@ router.get('/:id', requirePermission('COMPANY:VIEW'), companyController.getCompa
 // Update company configuration
 router.patch('/:id', requirePermission('COMPANY:UPDATE'), companyController.updateCompany);
 
+// Company business module management
+router.get('/:id/modules', requirePermission('COMPANY:VIEW'), companyController.getCompanyModules);
+router.patch('/:id/modules', requirePermission('COMPANY:UPDATE'), companyController.updateCompanyModules);
+
+// Franchise & Commission sharing configuration
+router.get('/:id/franchise-config', requirePermission('COMPANY:VIEW'), companyController.getCompanyFranchiseConfig);
+router.put('/:id/franchise-config', requirePermission('COMPANY:UPDATE'), companyController.updateCompanyFranchiseConfig);
+
 // Company membership management
 router.get('/:id/members', requirePermission('COMPANY:MANAGE_MEMBERS'), companyController.listMembers);
 router.post('/:id/members', requirePermission('COMPANY:MANAGE_MEMBERS'), companyController.addMember);

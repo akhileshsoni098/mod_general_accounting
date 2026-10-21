@@ -169,7 +169,73 @@ function requireCompanyPermission(requiredPermissionCode) {
   };
 }
 
+const { isCoreModule, getModuleDefinition } = require('../config/moduleRegistry');
+
+/**
+ * Middleware factory enforcing that a company has enabled a specific business module.
+ * If the module is a Core Module (GL, BANKING_CASH, PARTIES, REPORTS), it is always permitted.
+ * If the module is disabled for the company, returns HTTP 403 with code MODULE_DISABLED.
+ */
+function requireCompanyModule(requiredModuleKey) {
+  return async (req, res, next) => {
+    try {
+      if (!requiredModuleKey) return next();
+
+      const normKey = String(requiredModuleKey).toUpperCase().trim();
+
+      // Core modules are always enabled
+      if (isCoreModule(normKey)) {
+        return next();
+      }
+
+      // Check if company is already resolved in request
+      let company = req.company;
+      if (!company) {
+        const companyId = req.companyId || req.headers['x-company-id'] || req.query.company_id || req.body?.company_id;
+        if (companyId) {
+          company = await Company.findById(companyId);
+          if (company) {
+            req.company = company;
+            req.companyId = company._id.toString();
+          }
+        }
+      }
+
+      if (!company) {
+        return res.error('Active company context is required to verify module access', 400, {
+          code: 'COMPANY_CONTEXT_REQUIRED',
+          required_module: normKey
+        });
+      }
+
+      const isEnabled = typeof company.isModuleEnabled === 'function'
+        ? company.isModuleEnabled(normKey)
+        : (Array.isArray(company.enabled_modules) && company.enabled_modules.some(m => String(m).toUpperCase().trim() === normKey));
+
+      if (!isEnabled) {
+        const moduleDef = getModuleDefinition(normKey);
+        const moduleName = moduleDef?.name || normKey;
+        return res.error(
+          `Module ${normKey} (${moduleName}) is not enabled for company "${company.company_name}". Please enable it in Company Settings > Modules to access this feature.`,
+          403,
+          {
+            code: 'MODULE_DISABLED',
+            required_module: normKey,
+            company_id: company._id.toString(),
+            company_name: company.company_name
+          }
+        );
+      }
+
+      next();
+    } catch (err) {
+      return res.error('Module entitlement verification error', 500, err.message);
+    }
+  };
+}
+
 module.exports = {
   requireCompanyContext,
-  requireCompanyPermission
+  requireCompanyPermission,
+  requireCompanyModule
 };

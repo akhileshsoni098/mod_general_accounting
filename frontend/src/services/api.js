@@ -68,6 +68,10 @@ export const authApi = {
   getCompanyMembers: (id) => apiRequest(`/companies/${id}/members`),
   addCompanyMember: (id, payload) => apiRequest(`/companies/${id}/members`, { method: 'POST', body: payload }),
   getBusinessProfiles: () => apiRequest('/companies/profiles'),
+  getCompanyModules: (id) => apiRequest(`/companies/${id}/modules`),
+  updateCompanyModules: (id, payload) => apiRequest(`/companies/${id}/modules`, { method: 'PATCH', body: payload }),
+  getCompanyFranchiseConfig: (id) => apiRequest(`/companies/${id}/franchise-config`),
+  updateCompanyFranchiseConfig: (id, payload) => apiRequest(`/companies/${id}/franchise-config`, { method: 'PUT', body: payload }),
 
   // GL Module Endpoints
   getAccounts: () => apiRequest('/gl/accounts'),

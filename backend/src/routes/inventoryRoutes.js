@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext, requireCompanyPermission } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyPermission, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 const inventoryController = require('../controllers/inventoryController');
 
-// All Inventory endpoints require authentication, tenant workspace, and valid company context
-router.use(requireAuth, requireTenantWorkspace, requireCompanyContext);
+// All Inventory endpoints require authentication, tenant workspace, valid company context, and INVENTORY module
+router.use(requireAuth, requireTenantWorkspace, requireCompanyContext, requireCompanyModule('INVENTORY'));
 
 // ==========================================
 // 1. Stock Groups

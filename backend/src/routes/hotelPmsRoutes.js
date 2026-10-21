@@ -3,11 +3,12 @@ const router = express.Router();
 const hotelPmsController = require('../controllers/hotelPmsController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireCompanyContext);
+router.use(requireCompanyModule('HOTEL_PMS'));
 
 router.get('/room-types', (req, res) => hotelPmsController.getRoomTypes(req, res));
 router.post('/room-types', (req, res) => hotelPmsController.createRoomType(req, res));

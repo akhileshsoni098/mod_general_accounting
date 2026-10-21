@@ -3,11 +3,12 @@ const router = express.Router();
 const manufacturingController = require('../controllers/manufacturingController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireCompanyContext);
+router.use(requireCompanyModule('MANUFACTURING'));
 
 router.get('/boms', (req, res) => manufacturingController.getBOMs(req, res));
 router.post('/boms', (req, res) => manufacturingController.saveBOM(req, res));

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { Company, CompanyMembership, UserRole, Role, Tenant } = require('../models');
 const { isValidProfile, getProfile } = require('../config/businessProfiles');
+const { getDefaultModulesForProfile, resolveModuleDependencies } = require('../config/moduleRegistry');
 const { seedCompanyChartOfAccounts } = require('../utils/seedCoa');
 const { seedCompanyFiscalPeriods } = require('../utils/seedFiscalPeriods');
 const { initializeCompanyInventoryDefaults } = require('./inventoryInitService');
@@ -17,6 +18,8 @@ async function initializeCompany({
   companyName,
   legalName = '',
   businessProfile = 'GENERAL_RETAIL',
+  enabledModules = null,
+  modulesConfig = {},
   description = '',
   countryCode = 'IN',
   baseCurrency = 'INR',
@@ -69,6 +72,10 @@ async function initializeCompany({
 
   const fyStartMonth = parseInt(financialYearStartMonth, 10) || profileMeta.default_financial_year_start_month || 4;
 
+  const resolvedModules = Array.isArray(enabledModules)
+    ? resolveModuleDependencies(enabledModules)
+    : getDefaultModulesForProfile(normalizedProfile);
+
   const operation = async (session) => {
     // 1. Create or revive Company document
     let company;
@@ -76,6 +83,14 @@ async function initializeCompany({
       existingCompany.company_name = companyName.trim();
       existingCompany.legal_name = legalName ? legalName.trim() : companyName.trim();
       existingCompany.business_profile = normalizedProfile;
+      if (Array.isArray(enabledModules)) {
+        existingCompany.enabled_modules = resolvedModules;
+      } else if (!existingCompany.enabled_modules || existingCompany.enabled_modules.length === 0) {
+        existingCompany.enabled_modules = resolvedModules;
+      }
+      if (modulesConfig && Object.keys(modulesConfig).length > 0) {
+        existingCompany.modules_config = { ...existingCompany.modules_config, ...modulesConfig };
+      }
       existingCompany.description = description.trim();
       existingCompany.country_code = (countryCode || profileMeta.default_country || 'IN').toUpperCase().trim();
       existingCompany.base_currency = (baseCurrency || profileMeta.default_currency || 'INR').toUpperCase().trim();
@@ -96,6 +111,8 @@ async function initializeCompany({
           company_name: companyName.trim(),
           legal_name: legalName ? legalName.trim() : companyName.trim(),
           business_profile: normalizedProfile,
+          enabled_modules: resolvedModules,
+          modules_config: modulesConfig || {},
           description: description.trim(),
           country_code: (countryCode || profileMeta.default_country || 'IN').toUpperCase().trim(),
           base_currency: (baseCurrency || profileMeta.default_currency || 'INR').toUpperCase().trim(),

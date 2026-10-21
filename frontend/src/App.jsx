@@ -76,12 +76,47 @@ const TENANT_TYPE_BADGES = {
 };
 
 export default function App() {
-  const { user, currentWorkspace, availableWorkspaces, roles, loading, logout } = useAuth();
+  const { user, currentWorkspace, availableWorkspaces, currentCompany, roles, loading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [authView, setAuthView] = useState('login'); // 'login' | 'register'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
   const [clearingData, setClearingData] = useState(false);
+
+  // Dynamic module enablement check for the active company set of books
+  const isModuleEnabled = (moduleKey) => {
+    if (!moduleKey) return true;
+    const core = ['GL', 'BANKING_CASH', 'PARTIES', 'REPORTS'];
+    if (core.includes(moduleKey)) return true;
+    const companyModules = currentCompany?.enabled_modules;
+    if (!Array.isArray(companyModules)) return false;
+    return companyModules.includes(moduleKey);
+  };
+
+  // Redirect to dashboard if currently viewing a disabled module tab
+  React.useEffect(() => {
+    const tabModuleMap = {
+      commercial: 'COMMERCIAL_BILLING',
+      inventory: 'INVENTORY',
+      finance_close: 'FINANCE_CLOSE',
+      retail_pos: 'RETAIL_POS',
+      restaurant: 'RESTAURANT',
+      hotel: 'HOTEL_PMS',
+      manufacturing: 'MANUFACTURING',
+      event_definitions: 'RULES_ENGINE',
+      posting_rules: 'RULES_ENGINE',
+      event_simulator: 'RULES_ENGINE',
+      event_operations: 'RULES_ENGINE',
+      rule_tests: 'RULES_ENGINE',
+      config_bundle: 'RULES_ENGINE',
+      dimensions: 'DIMENSIONS'
+    };
+
+    const requiredModule = tabModuleMap[activeTab];
+    if (requiredModule && !isModuleEnabled(requiredModule)) {
+      setActiveTab('dashboard');
+    }
+  }, [currentCompany, activeTab]);
 
   const handleClearTestData = async () => {
     const confirmed = window.confirm(
@@ -130,41 +165,41 @@ export default function App() {
     );
   }
 
-  // Core Financial Modules Navigation
+  // Core Financial Modules Navigation (dynamically filtered by company configuration)
   const financialNavItems = [
-    { id: 'dashboard', label: 'Dashboard & Business KPIs', icon: LayoutDashboard },
-    { id: 'commercial', label: 'Commercial Sales & Purchases (GST)', icon: Receipt },
-    { id: 'inventory', label: 'Inventory & Stock Masters', icon: Boxes },
-    { id: 'gl', label: 'General Ledger & Double-Entry', icon: BookOpen },
-    { id: 'finance_close', label: 'Finance Close & Financial Reports', icon: CalendarCheck },
-    { id: 'counterparties', label: 'Customers & Vendors', icon: Users2 }
-  ];
+    { id: 'dashboard', label: 'Dashboard & Business KPIs', icon: LayoutDashboard, module: 'GL' },
+    { id: 'gl', label: 'General Ledger & Double-Entry', icon: BookOpen, module: 'GL' },
+    { id: 'counterparties', label: 'Customers & Vendors', icon: Users2, module: 'PARTIES' },
+    { id: 'commercial', label: 'Commercial Sales & Purchases (GST)', icon: Receipt, module: 'COMMERCIAL_BILLING' },
+    { id: 'inventory', label: 'Inventory & Stock Masters', icon: Boxes, module: 'INVENTORY' },
+    { id: 'finance_close', label: 'Finance Close & Period Lock', icon: CalendarCheck, module: 'FINANCE_CLOSE' }
+  ].filter(item => isModuleEnabled(item.module));
 
-  // Industry & Commercial Workspaces Navigation
+  // Industry & Commercial Workspaces Navigation (conditionally visible)
   const industryNavItems = [
-    { id: 'retail_pos', label: 'Retail POS Checkout', icon: ShoppingCart },
-    { id: 'restaurant', label: 'Restaurant & Kitchen Orders', icon: UtensilsCrossed },
-    { id: 'hotel', label: 'Hotel PMS & Hospitality', icon: Building },
-    { id: 'manufacturing', label: 'Manufacturing & Assembly', icon: Factory }
-  ];
+    { id: 'retail_pos', label: 'Retail POS Checkout', icon: ShoppingCart, module: 'RETAIL_POS' },
+    { id: 'restaurant', label: 'Restaurant & Kitchen Orders', icon: UtensilsCrossed, module: 'RESTAURANT' },
+    { id: 'hotel', label: 'Hotel PMS & Hospitality', icon: Building, module: 'HOTEL_PMS' },
+    { id: 'manufacturing', label: 'Manufacturing & Assembly', icon: Factory, module: 'MANUFACTURING' }
+  ].filter(item => isModuleEnabled(item.module));
 
-  // Accounting Configuration & Rules-Driven Engine Navigation
+  // Accounting Configuration & Rules-Driven Engine Navigation (conditionally visible)
   const rulesNavItems = [
-    { id: 'event_definitions', label: 'Event Definitions', icon: FileCode },
-    { id: 'posting_rules', label: 'Journal Entry Rules', icon: Sliders },
-    { id: 'dimensions', label: 'Accounting Dimensions', icon: Tags },
-    { id: 'event_simulator', label: 'Event Simulator', icon: Play },
-    { id: 'event_operations', label: 'Event Operations', icon: Activity },
-    { id: 'rule_tests', label: 'Rule Test Cases', icon: FileCheck },
-    { id: 'config_bundle', label: 'Configuration Bundle', icon: FolderSync }
-  ];
+    { id: 'posting_rules', label: 'Journal Entry Rules', icon: Sliders, module: 'RULES_ENGINE' },
+    { id: 'dimensions', label: 'Accounting Dimensions', icon: Tags, module: 'DIMENSIONS' },
+    { id: 'event_simulator', label: 'Event Simulator', icon: Play, module: 'RULES_ENGINE' },
+    { id: 'event_definitions', label: 'Event Definitions', icon: FileCode, module: 'RULES_ENGINE' },
+    { id: 'event_operations', label: 'Event Operations', icon: Activity, module: 'RULES_ENGINE' },
+    { id: 'rule_tests', label: 'Rule Test Cases', icon: FileCheck, module: 'RULES_ENGINE' },
+    { id: 'config_bundle', label: 'Configuration Bundle', icon: FolderSync, module: 'RULES_ENGINE' }
+  ].filter(item => isModuleEnabled(item.module));
 
   // Administration Navigation (Role-Guarded)
   const isAdmin = roles.includes('TENANT_ADMIN') || user?.is_platform_admin;
   const adminNavItems = [
     { id: 'users', label: 'Users & Roles', icon: Users },
     { id: 'settings', label: 'Organization Settings', icon: Sliders },
-    { id: 'modules', label: 'Module Configuration', icon: Layers },
+    { id: 'modules', label: 'Business Modules & Setup', icon: Layers },
     ...(isAdmin ? [{ id: 'platform_admin', label: 'Platform Super Admin', icon: ShieldAlert }] : [])
   ];
 
@@ -286,55 +321,59 @@ export default function App() {
               })}
             </div>
 
-            {/* Commercial & Industry Workspaces Group */}
-            <div className="space-y-1 pt-2 border-t border-slate-800/80">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
-                Commercial & Industry
+            {/* Commercial & Industry Workspaces Group (Only if any industry module enabled) */}
+            {industryNavItems.length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-slate-800/80">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
+                  Commercial & Industry
+                </div>
+                {industryNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                        isActive
+                          ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/30 font-semibold'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {industryNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
-                      isActive
-                        ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/30 font-semibold'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            )}
 
-            {/* Accounting Configuration Group */}
-            <div className="space-y-1 pt-2 border-t border-slate-800/80">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
-                Accounting Configuration
+            {/* Accounting Configuration Group (Only if rules engine or dimensions enabled) */}
+            {rulesNavItems.length > 0 && (
+              <div className="space-y-1 pt-2 border-t border-slate-800/80">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 px-3 mb-2">
+                  Accounting Configuration
+                </div>
+                {rulesNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
+                        isActive
+                          ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/30 font-semibold'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {rulesNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition ${
-                      isActive
-                        ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/30 font-semibold'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-850'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            )}
 
             {/* Administration Group (Role-Guarded) */}
             {isAdmin && (

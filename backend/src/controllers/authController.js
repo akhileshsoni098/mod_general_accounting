@@ -429,7 +429,9 @@ async function getMe(req, res) {
             business_profile: c.business_profile,
             base_currency: c.base_currency,
             status: c.status,
-            financial_year_start_month: c.financial_year_start_month
+            financial_year_start_month: c.financial_year_start_month,
+            enabled_modules: c.enabled_modules || [],
+            modules_config: c.modules_config || {}
           }));
 
         const headerCompanyId = req.headers['x-company-id'];

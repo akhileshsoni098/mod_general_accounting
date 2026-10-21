@@ -3,11 +3,12 @@ const router = express.Router();
 const restaurantController = require('../controllers/restaurantController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireCompanyContext);
+router.use(requireCompanyModule('RESTAURANT'));
 
 router.get('/tables', (req, res) => restaurantController.getTables(req, res));
 router.post('/tables', (req, res) => restaurantController.createTable(req, res));

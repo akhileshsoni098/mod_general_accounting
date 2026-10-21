@@ -1,6 +1,14 @@
-const { Company, CompanyMembership, UserRole, Role, User, RolePermission, Permission } = require('../models');
+const { Company, CompanyMembership, UserRole, Role, User, RolePermission, Permission, Party, LedgerAccount } = require('../models');
 const { initializeCompany } = require('../services/companyInitService');
 const { getAllProfiles, isValidProfile, getProfile } = require('../config/businessProfiles');
+const {
+  CORE_MODULE_KEYS,
+  getModuleCatalog,
+  validateModuleDependencies,
+  resolveModuleDependencies,
+  INDUSTRY_TEMPLATES,
+  MODULE_CATEGORIES
+} = require('../config/moduleRegistry');
 
 /**
  * List companies accessible to the authenticated user within the active tenant.
@@ -66,6 +74,8 @@ async function listCompanies(req, res) {
       country_code: c.country_code,
       status: c.status,
       financial_year_start_month: c.financial_year_start_month,
+      enabled_modules: c.enabled_modules || [],
+      modules_config: c.modules_config || {},
       is_default: defaultCompanyId === c._id.toString()
     }));
 
@@ -94,7 +104,9 @@ async function createCompany(req, res) {
       financial_year_start_month,
       books_beginning_from,
       tax_jurisdiction,
-      tax_details
+      tax_details,
+      enabled_modules,
+      modules_config
     } = req.body;
 
     if (!company_code || !company_name) {
@@ -122,6 +134,8 @@ async function createCompany(req, res) {
       companyName: company_name,
       legalName: legal_name,
       businessProfile: business_profile,
+      enabledModules: enabled_modules,
+      modulesConfig: modules_config,
       description,
       countryCode: country_code,
       baseCurrency: base_currency,
@@ -144,7 +158,9 @@ async function createCompany(req, res) {
         country_code: initResult.company.country_code,
         status: initResult.company.status,
         financial_year_start_month: initResult.company.financial_year_start_month,
-        books_beginning_from: initResult.company.books_beginning_from
+        books_beginning_from: initResult.company.books_beginning_from,
+        enabled_modules: initResult.company.enabled_modules || [],
+        modules_config: initResult.company.modules_config || {}
       }
     }, { message: 'Company initialized successfully with chart of accounts and fiscal periods' }, 201);
   } catch (err) {
@@ -206,6 +222,9 @@ async function getCompanyDetails(req, res) {
       tax_jurisdiction: company.tax_jurisdiction,
       tax_details: company.tax_details,
       status: company.status,
+      enabled_modules: company.enabled_modules || [],
+      modules_catalog: getModuleCatalog(company.enabled_modules),
+      modules_config: company.modules_config || {},
       created_at: company.created_at
     });
   } catch (err) {
@@ -338,7 +357,9 @@ async function switchCompany(req, res) {
         business_profile: company.business_profile,
         base_currency: company.base_currency,
         country_code: company.country_code,
-        status: company.status
+        status: company.status,
+        enabled_modules: company.enabled_modules || [],
+        modules_config: company.modules_config || {}
       },
       roles: roleCodes,
       permissions
@@ -440,6 +461,304 @@ function getBusinessProfilesList(req, res) {
   return res.success(getAllProfiles());
 }
 
+/**
+ * Get module configuration and full module catalog for a company.
+ */
+async function getCompanyModules(req, res) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    const company = await Company.findOne({ _id: id, tenant_id: tenantId });
+    if (!company) {
+      return res.error('Company not found', 404);
+    }
+
+    const enabledModules = Array.isArray(company.enabled_modules) && company.enabled_modules.length > 0
+      ? company.enabled_modules
+      : CORE_MODULE_KEYS;
+
+    const catalog = getModuleCatalog(enabledModules);
+
+    return res.success({
+      company_id: company._id.toString(),
+      company_code: company.company_code,
+      company_name: company.company_name,
+      business_profile: company.business_profile,
+      enabled_modules: enabledModules,
+      modules_catalog: catalog,
+      modules_config: company.modules_config || {},
+      categories: MODULE_CATEGORIES,
+      templates: INDUSTRY_TEMPLATES
+    });
+  } catch (err) {
+    return res.error('Failed to get company modules', 500, err.message);
+  }
+}
+
+/**
+ * Update enabled modules for a company.
+ * Non-destructively enables/disables business modules.
+ * Core accounting modules cannot be disabled.
+ */
+async function updateCompanyModules(req, res) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const {
+      enabled_modules,
+      enable,
+      disable,
+      module_code,
+      is_enabled,
+      template_id,
+      auto_resolve_dependencies = true
+    } = req.body;
+
+    const company = await Company.findOne({ _id: id, tenant_id: tenantId });
+    if (!company) {
+      return res.error('Company not found', 404);
+    }
+
+    let currentSet = new Set((company.enabled_modules && company.enabled_modules.length > 0 ? company.enabled_modules : CORE_MODULE_KEYS).map(m => String(m).toUpperCase().trim()));
+
+    if (template_id && INDUSTRY_TEMPLATES[template_id]) {
+      // Apply industry template
+      const template = INDUSTRY_TEMPLATES[template_id];
+      currentSet = new Set([...CORE_MODULE_KEYS, ...template.modules]);
+    } else if (Array.isArray(enabled_modules)) {
+      // Full replacement
+      currentSet = new Set([...CORE_MODULE_KEYS, ...enabled_modules.map(m => String(m).toUpperCase().trim())]);
+    } else {
+      if (Array.isArray(enable)) {
+        for (const k of enable) currentSet.add(String(k).toUpperCase().trim());
+      }
+      if (Array.isArray(disable)) {
+        for (const k of disable) {
+          const normK = String(k).toUpperCase().trim();
+          if (!CORE_MODULE_KEYS.includes(normK)) {
+            currentSet.delete(normK);
+          }
+        }
+      }
+      if (module_code !== undefined && is_enabled !== undefined) {
+        const normK = String(module_code).toUpperCase().trim();
+        if (is_enabled) {
+          currentSet.add(normK);
+        } else {
+          if (CORE_MODULE_KEYS.includes(normK)) {
+            return res.error(`Core module "${normK}" cannot be disabled. It is fundamental to General Accounting.`, 400);
+          }
+          currentSet.delete(normK);
+        }
+      }
+    }
+
+    // Always ensure core modules
+    for (const coreKey of CORE_MODULE_KEYS) {
+      currentSet.add(coreKey);
+    }
+
+    let targetModules = Array.from(currentSet);
+
+    // Validate dependencies
+    const { valid, missingDependencies } = validateModuleDependencies(targetModules);
+    if (!valid) {
+      if (auto_resolve_dependencies) {
+        targetModules = resolveModuleDependencies(targetModules);
+      } else {
+        return res.error(
+          `Module dependency validation failed: ${JSON.stringify(missingDependencies)}`,
+          400,
+          { missingDependencies }
+        );
+      }
+    }
+
+    company.enabled_modules = targetModules;
+    company.row_version = (company.row_version || 1) + 1;
+    await company.save();
+
+    return res.success({
+      company_id: company._id.toString(),
+      company_name: company.company_name,
+      enabled_modules: company.enabled_modules,
+      modules_catalog: getModuleCatalog(company.enabled_modules)
+    }, { message: 'Company modules updated successfully' });
+  } catch (err) {
+    return res.error('Failed to update company modules', 500, err.message);
+  }
+}
+
+/**
+ * Get Franchise & Commission Sharing configuration for a company.
+ */
+async function getCompanyFranchiseConfig(req, res) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+
+    const company = await Company.findOne({ _id: id, tenant_id: tenantId });
+    if (!company) {
+      return res.error('Company not found', 404);
+    }
+
+    const franchiseConfig = company.modules_config?.franchise || {
+      is_franchise: false,
+      main_hub_party_id: null,
+      franchise_share_pct: 70,
+      hub_share_pct: 30,
+      income_account_code: '4200',
+      payable_account_code: '2020',
+      settlement_account_code: '1010'
+    };
+
+    let hubParty = null;
+    if (franchiseConfig.main_hub_party_id) {
+      hubParty = await Party.findOne({
+        _id: franchiseConfig.main_hub_party_id,
+        tenant_id: tenantId
+      }).select('legal_name trade_name party_code party_type');
+    }
+
+    // Look up accounts in company's COA
+    const accounts = await LedgerAccount.find({
+      company_id: company._id,
+      account_code: {
+        $in: [
+          franchiseConfig.income_account_code || '4200',
+          franchiseConfig.payable_account_code || '2020',
+          franchiseConfig.settlement_account_code || '1010'
+        ]
+      }
+    }).select('account_code account_name classification');
+
+    const accountsMap = {};
+    for (const a of accounts) {
+      accountsMap[a.account_code] = a;
+    }
+
+    return res.success({
+      company_id: company._id.toString(),
+      company_name: company.company_name,
+      is_franchise_module_enabled: company.isModuleEnabled('FRANCHISE_COMMISSIONS'),
+      config: {
+        ...franchiseConfig,
+        main_hub_party: hubParty
+      },
+      accounts: {
+        income_account: accountsMap[franchiseConfig.income_account_code || '4200'] || null,
+        payable_account: accountsMap[franchiseConfig.payable_account_code || '2020'] || null,
+        settlement_account: accountsMap[franchiseConfig.settlement_account_code || '1010'] || null
+      }
+    });
+  } catch (err) {
+    return res.error('Failed to get franchise configuration', 500, err.message);
+  }
+}
+
+/**
+ * Update Franchise & Commission Sharing configuration for a company.
+ * Validates that shares sum to 100% and accounts exist in company's chart of accounts.
+ */
+async function updateCompanyFranchiseConfig(req, res) {
+  try {
+    const { id } = req.params;
+    const tenantId = req.tenantId;
+    const {
+      is_franchise,
+      main_hub_party_id,
+      franchise_share_pct,
+      hub_share_pct,
+      income_account_code,
+      payable_account_code,
+      settlement_account_code
+    } = req.body;
+
+    const company = await Company.findOne({ _id: id, tenant_id: tenantId });
+    if (!company) {
+      return res.error('Company not found', 404);
+    }
+
+    const currentFranchise = company.modules_config?.franchise || {};
+
+    const fPct = franchise_share_pct !== undefined ? Number(franchise_share_pct) : (currentFranchise.franchise_share_pct ?? 70);
+    const hPct = hub_share_pct !== undefined ? Number(hub_share_pct) : (currentFranchise.hub_share_pct ?? 30);
+
+    if (isNaN(fPct) || isNaN(hPct) || fPct < 0 || hPct < 0) {
+      return res.error('Franchise share and hub share must be non-negative numbers', 400);
+    }
+
+    // Strict validation: Shares must total 100%
+    if (fPct + hPct !== 100) {
+      return res.error(`Franchise share (${fPct}%) and Hub share (${hPct}%) must sum to exactly 100% (currently ${fPct + hPct}%)`, 400);
+    }
+
+    // Validate Main Hub party if provided
+    const hubId = main_hub_party_id !== undefined ? main_hub_party_id : currentFranchise.main_hub_party_id;
+    if (hubId) {
+      const hubParty = await Party.findOne({ _id: hubId, tenant_id: tenantId });
+      if (!hubParty) {
+        return res.error(`Main Hub party not found for ID: ${hubId}`, 404);
+      }
+    }
+
+    const incomeCode = (income_account_code || currentFranchise.income_account_code || '4200').trim();
+    const payableCode = (payable_account_code || currentFranchise.payable_account_code || '2020').trim();
+    const settlementCode = (settlement_account_code || currentFranchise.settlement_account_code || '1010').trim();
+
+    // Verify accounts exist in company COA
+    const verifiedAccounts = await LedgerAccount.find({
+      company_id: company._id,
+      account_code: { $in: [incomeCode, payableCode, settlementCode] }
+    });
+    const verifiedCodes = new Set(verifiedAccounts.map(a => a.account_code));
+
+    const missingAccounts = [];
+    if (!verifiedCodes.has(incomeCode)) missingAccounts.push(`Income account (${incomeCode})`);
+    if (!verifiedCodes.has(payableCode)) missingAccounts.push(`Payable account (${payableCode})`);
+    if (!verifiedCodes.has(settlementCode)) missingAccounts.push(`Settlement account (${settlementCode})`);
+
+    if (missingAccounts.length > 0) {
+      return res.error(`The following ledger accounts do not exist in company Chart of Accounts: ${missingAccounts.join(', ')}`, 400);
+    }
+
+    // Update modules_config.franchise
+    const updatedFranchise = {
+      is_franchise: is_franchise !== undefined ? Boolean(is_franchise) : (currentFranchise.is_franchise || false),
+      main_hub_party_id: hubId || null,
+      franchise_share_pct: fPct,
+      hub_share_pct: hPct,
+      income_account_code: incomeCode,
+      payable_account_code: payableCode,
+      settlement_account_code: settlementCode
+    };
+
+    if (!company.modules_config) company.modules_config = {};
+    company.modules_config.franchise = updatedFranchise;
+    company.markModified('modules_config');
+
+    // If marked as franchise, auto-enable FRANCHISE_COMMISSIONS module
+    if (updatedFranchise.is_franchise) {
+      if (!company.enabled_modules) company.enabled_modules = [...CORE_MODULE_KEYS];
+      if (!company.enabled_modules.includes('FRANCHISE_COMMISSIONS')) {
+        company.enabled_modules.push('FRANCHISE_COMMISSIONS');
+      }
+    }
+
+    company.row_version = (company.row_version || 1) + 1;
+    await company.save();
+
+    return res.success({
+      company_id: company._id.toString(),
+      is_franchise_module_enabled: company.isModuleEnabled('FRANCHISE_COMMISSIONS'),
+      config: updatedFranchise
+    }, { message: 'Franchise configuration updated successfully' });
+  } catch (err) {
+    return res.error('Failed to update franchise configuration', 500, err.message);
+  }
+}
+
 module.exports = {
   listCompanies,
   createCompany,
@@ -448,5 +767,9 @@ module.exports = {
   switchCompany,
   listMembers,
   addMember,
-  getBusinessProfilesList
+  getBusinessProfilesList,
+  getCompanyModules,
+  updateCompanyModules,
+  getCompanyFranchiseConfig,
+  updateCompanyFranchiseConfig
 };

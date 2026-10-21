@@ -1,0 +1,559 @@
+process.env.PORT = '5056';
+process.env.NODE_ENV = 'test';
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('http');
+const mongoose = require('mongoose');
+const BigNumber = require('bignumber.js');
+
+const { startServer } = require('../src/server');
+const {
+  Tenant,
+  User,
+  Role,
+  UserRole,
+  Company,
+  CompanyMembership,
+  LedgerAccount,
+  Party,
+  StockItem,
+  UnitOfMeasurement,
+  Godown
+} = require('../src/models');
+
+const { initializeCompany } = require('../src/services/companyInitService');
+const { postJournalEntry, computeTrialBalance } = require('../src/services/journalPostingService');
+const commissionsService = require('../src/services/commissionsService');
+
+let serverInstance = null;
+const PORT = 5056;
+
+function makeRequest({ method = 'GET', path, headers = {}, body = null }) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      ...headers
+    };
+    if (payload) {
+      reqHeaders['Content-Length'] = Buffer.byteLength(payload);
+    }
+
+    const req = http.request(
+      {
+        hostname: 'localhost',
+        port: PORT,
+        path,
+        method,
+        headers: reqHeaders
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve({ status: res.statusCode, body: parsed });
+          } catch (e) {
+            resolve({ status: res.statusCode, body: data });
+          }
+        });
+      }
+    );
+
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+const runId = Math.floor(Date.now() % 100000);
+let tenant = null;
+let token = null;
+let user = null;
+let companySimple = null;
+let companyRetail = null;
+let mainHubParty = null;
+
+test.before(async () => {
+  const serverObj = await startServer(PORT);
+  serverInstance = serverObj ? serverObj.server : null;
+
+  // 1. Create a test tenant
+  const tenantRes = await makeRequest({
+    method: 'POST',
+    path: '/api/v1/auth/register-tenant',
+    body: {
+      tenant_code: `TEN_CFG_${runId}`,
+      tenant_name: `Configurable ERP Tenant ${runId}`,
+      admin_email: `admin_cfg_${runId}@example.com`,
+      admin_password: 'Password123!Safe',
+      admin_first_name: 'Config',
+      admin_last_name: 'Admin',
+      tenant_type: 'ENTERPRISE',
+      base_currency: 'INR'
+    }
+  });
+
+  assert.equal(tenantRes.status, 201, `Failed to register tenant: ${JSON.stringify(tenantRes.body)}`);
+  token = tenantRes.body.data.token;
+  tenant = await Tenant.findOne({ tenant_code: `TEN_CFG_${runId}` });
+  user = await User.findOne({ email: `admin_cfg_${runId}@example.com` });
+
+  // 2. Create Main Hub Party in this tenant
+  mainHubParty = await Party.create({
+    tenant_id: tenant._id,
+    party_code: `HUB_${runId}`,
+    legal_name: `Main Regional Logistics Hub ${runId}`,
+    trade_name: 'Central Hub',
+    party_type: 'ORGANIZATION',
+    roles: ['MAIN_HUB', 'VENDOR']
+  });
+});
+
+test.after(async () => {
+  if (serverInstance && typeof serverInstance.closeAllConnections === 'function') {
+    serverInstance.closeAllConnections();
+  }
+  if (serverInstance) {
+    await new Promise((resolve) => serverInstance.close(resolve));
+  }
+  if (mongoose.connection && mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
+});
+
+// ==========================================
+// Test 1: Default Company Creation (Simple Core Only)
+// ==========================================
+test('1. Default Company Creation: Newly created general company has only core modules enabled', async () => {
+  const initRes = await initializeCompany({
+    tenantId: tenant._id,
+    creatorUserId: user._id,
+    companyCode: `CMP_GEN_${runId}`,
+    companyName: 'General Accounting Sole Proprietor',
+    businessProfile: 'CUSTOM_OTHER'
+  });
+
+  companySimple = initRes.company;
+  assert.ok(companySimple, 'Company should be created');
+  assert.ok(Array.isArray(companySimple.enabled_modules), 'enabled_modules should be an array');
+
+  // Verify only core modules
+  assert.deepEqual(companySimple.enabled_modules.sort(), ['BANKING_CASH', 'GL', 'PARTIES', 'REPORTS'].sort());
+  assert.equal(companySimple.isModuleEnabled('GL'), true);
+  assert.equal(companySimple.isModuleEnabled('BANKING_CASH'), true);
+  assert.equal(companySimple.isModuleEnabled('PARTIES'), true);
+  assert.equal(companySimple.isModuleEnabled('REPORTS'), true);
+
+  // Optional modules should NOT be enabled
+  assert.equal(companySimple.isModuleEnabled('INVENTORY'), false);
+  assert.equal(companySimple.isModuleEnabled('RETAIL_POS'), false);
+  assert.equal(companySimple.isModuleEnabled('RESTAURANT'), false);
+  assert.equal(companySimple.isModuleEnabled('HOTEL_PMS'), false);
+  assert.equal(companySimple.isModuleEnabled('MANUFACTURING'), false);
+  assert.equal(companySimple.isModuleEnabled('FRANCHISE_COMMISSIONS'), false);
+});
+
+// ==========================================
+// Test 2: Business Profile Preset (Retail & Wholesale)
+// ==========================================
+test('2. Business Profile Preset: GENERAL_RETAIL presets recommended retail & inventory modules', async () => {
+  const initRes = await initializeCompany({
+    tenantId: tenant._id,
+    creatorUserId: user._id,
+    companyCode: `CMP_RET_${runId}`,
+    companyName: 'Retail & Trading Store',
+    businessProfile: 'GENERAL_RETAIL'
+  });
+
+  companyRetail = initRes.company;
+  assert.ok(companyRetail, 'Retail company should be created');
+
+  // Should include core + INVENTORY + COMMERCIAL_BILLING + GST_TAX + RETAIL_POS
+  assert.equal(companyRetail.isModuleEnabled('GL'), true);
+  assert.equal(companyRetail.isModuleEnabled('INVENTORY'), true);
+  assert.equal(companyRetail.isModuleEnabled('COMMERCIAL_BILLING'), true);
+  assert.equal(companyRetail.isModuleEnabled('GST_TAX'), true);
+  assert.equal(companyRetail.isModuleEnabled('RETAIL_POS'), true);
+
+  // Restaurant, Hotel, Manufacturing should remain disabled
+  assert.equal(companyRetail.isModuleEnabled('RESTAURANT'), false);
+  assert.equal(companyRetail.isModuleEnabled('HOTEL_PMS'), false);
+  assert.equal(companyRetail.isModuleEnabled('MANUFACTURING'), false);
+});
+
+// ==========================================
+// Test 3: Module Enable API
+// ==========================================
+test('3. Module Enable API: Admin enables optional module (INVENTORY) via PATCH /api/v1/companies/:id/modules', async () => {
+  const patchRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['INVENTORY']
+    }
+  });
+
+  assert.equal(patchRes.status, 200, `PATCH modules failed: ${JSON.stringify(patchRes.body)}`);
+  assert.ok(patchRes.body.data.enabled_modules.includes('INVENTORY'), 'INVENTORY should be enabled');
+
+  // Verify persistence via GET /api/v1/companies/:id/modules
+  const getRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+
+  assert.equal(getRes.status, 200);
+  assert.ok(getRes.body.data.enabled_modules.includes('INVENTORY'), 'Retrieved modules should include INVENTORY');
+});
+
+// ==========================================
+// Test 4: Module Disable API & Core Protection
+// ==========================================
+test('4. Module Disable API: Disabling optional module succeeds; disabling core module is rejected', async () => {
+  // Attempt to disable core module GL -> should be rejected with 400
+  const disableCoreRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'GL',
+      is_enabled: false
+    }
+  });
+
+  assert.equal(disableCoreRes.status, 400, 'Disabling core module GL must be rejected');
+  assert.match(disableCoreRes.body.message || disableCoreRes.body.error?.message, /cannot be disabled/i);
+
+  // Successfully disable optional module INVENTORY
+  const disableOptRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      disable: ['INVENTORY']
+    }
+  });
+
+  assert.equal(disableOptRes.status, 200);
+  assert.equal(disableOptRes.body.data.enabled_modules.includes('INVENTORY'), false, 'INVENTORY should now be disabled');
+});
+
+// ==========================================
+// Test 5: Middleware Blocking
+// ==========================================
+test('5. Middleware Blocking: Accessing restaurant route when RESTAURANT is disabled returns 403 MODULE_DISABLED', async () => {
+  const res = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/restaurant/tables',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+
+  assert.equal(res.status, 403, 'Should be forbidden when RESTAURANT module is disabled');
+  const details = res.body.error?.details || res.body.details || {};
+  assert.equal(details.code, 'MODULE_DISABLED');
+  assert.equal(details.required_module, 'RESTAURANT');
+});
+
+// ==========================================
+// Test 6: Middleware Allowance
+// ==========================================
+test('6. Middleware Allowance: Calling /api/v1/restaurant/tables after enabling RESTAURANT succeeds (200 OK)', async () => {
+  // Enable RESTAURANT module
+  await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['RESTAURANT', 'INVENTORY']
+    }
+  });
+
+  // Call restaurant endpoint now
+  const res = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/restaurant/tables',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+
+  assert.equal(res.status, 200, `Expected 200 OK after enabling RESTAURANT, got: ${res.status}`);
+  assert.ok(Array.isArray(res.body.data), 'Expected array of restaurant tables');
+});
+
+// ==========================================
+// Test 7: Dependency Validation
+// ==========================================
+test('7. Dependency Validation: Enabling RETAIL_POS automatically resolves dependency on INVENTORY', async () => {
+  const patchRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['RETAIL_POS'],
+      auto_resolve_dependencies: true
+    }
+  });
+
+  assert.equal(patchRes.status, 200);
+  assert.ok(patchRes.body.data.enabled_modules.includes('RETAIL_POS'), 'RETAIL_POS should be enabled');
+  assert.ok(patchRes.body.data.enabled_modules.includes('INVENTORY'), 'INVENTORY dependency should be auto-enabled');
+});
+
+// ==========================================
+// Test 8: Non-destructive Disabling
+// ==========================================
+test('8. Non-destructive Disabling: Creating record, disabling module, verifies DB record persists', async () => {
+  const uom = await UnitOfMeasurement.findOne({ company_id: companySimple._id })
+    || await UnitOfMeasurement.create({
+      tenant_id: tenant._id,
+      company_id: companySimple._id,
+      uom_code: `PCS_${runId}`,
+      uom_name: 'Pieces',
+      uom_type: 'SIMPLE'
+    });
+
+  const item = await StockItem.create({
+    tenant_id: tenant._id,
+    company_id: companySimple._id,
+    item_code: `ITEM_TEST_${runId}`,
+    item_name: 'Historical Test Item',
+    sku: `SKU_TEST_${runId}`,
+    base_uom_id: uom._id,
+    standard_selling_price: 150
+  });
+
+  assert.ok(item, 'Stock item created successfully');
+
+  // Disable INVENTORY module
+  await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      disable: ['INVENTORY', 'RETAIL_POS', 'RESTAURANT']
+    }
+  });
+
+  // Verify item document is NOT deleted and remains safely in database
+  const itemInDb = await StockItem.findById(item._id);
+  assert.ok(itemInDb, 'Item record must still exist in MongoDB after disabling INVENTORY module');
+  assert.equal(itemInDb.item_code, `ITEM_TEST_${runId}`);
+});
+
+// ==========================================
+// Test 9: Franchise Config Persistence
+// ==========================================
+test('9. Franchise Config Persistence: Configure 75/25 split with custom accounts, retrieve via API', async () => {
+  const putRes = await makeRequest({
+    method: 'PUT',
+    path: `/api/v1/companies/${companySimple._id}/franchise-config`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      is_franchise: true,
+      main_hub_party_id: mainHubParty._id.toString(),
+      franchise_share_pct: 75,
+      hub_share_pct: 25,
+      income_account_code: '4200',
+      payable_account_code: '2020',
+      settlement_account_code: '1010'
+    }
+  });
+
+  assert.equal(putRes.status, 200, `PUT franchise-config failed: ${JSON.stringify(putRes.body)}`);
+  assert.equal(putRes.body.data.config.franchise_share_pct, 75);
+  assert.equal(putRes.body.data.config.hub_share_pct, 25);
+  assert.equal(putRes.body.data.is_franchise_module_enabled, true);
+
+  // Retrieve via GET /api/v1/companies/:id/franchise-config
+  const getRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/companies/${companySimple._id}/franchise-config`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+
+  assert.equal(getRes.status, 200);
+  assert.equal(getRes.body.data.config.franchise_share_pct, 75);
+  assert.equal(getRes.body.data.config.hub_share_pct, 25);
+  assert.equal(getRes.body.data.config.main_hub_party?._id, mainHubParty._id.toString());
+  assert.ok(getRes.body.data.accounts.income_account, 'Income account 4200 should be resolved');
+  assert.ok(getRes.body.data.accounts.payable_account, 'Payable account 2020 should be resolved');
+  assert.ok(getRes.body.data.accounts.settlement_account, 'Settlement account 1010 should be resolved');
+});
+
+// ==========================================
+// Test 10: Franchise Config Validation
+// ==========================================
+test('10. Franchise Config Validation: Attempting split where percentages do not sum to 100% returns 400', async () => {
+  const badRes = await makeRequest({
+    method: 'PUT',
+    path: `/api/v1/companies/${companySimple._id}/franchise-config`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      franchise_share_pct: 70,
+      hub_share_pct: 40 // sum = 110%
+    }
+  });
+
+  assert.equal(badRes.status, 400, 'Non-100% split must be rejected');
+  assert.match(badRes.body.message || badRes.body.error?.message, /must sum to exactly 100%/i);
+});
+
+// ==========================================
+// Test 11: Dynamic Commission Calculation
+// ==========================================
+test('11. Dynamic Commission Calculation: 75/25 split on ₹200 yields ₹150 Franchise & ₹50 Main Hub', async () => {
+  const calc = commissionsService.calculateFranchiseCommission({
+    transactionAmount: 200.00,
+    franchiseSplitPct: 75,
+    hubSplitPct: 25
+  });
+
+  assert.equal(calc.transaction_amount, '200.00');
+  assert.equal(calc.franchise_amount, '150.00');
+  assert.equal(calc.hub_amount, '50.00');
+  assert.equal(calc.total_split, '200.00');
+  assert.equal(calc.is_split_balanced, true);
+});
+
+// ==========================================
+// Test 12: Multi-Company Isolation
+// ==========================================
+test('12. Company Isolation: Company A with Franchise ON does not affect Company B in same tenant', async () => {
+  // Fetch Company Retail's franchise config
+  const resB = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/companies/${companyRetail._id}/franchise-config`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+
+  assert.equal(resB.status, 200);
+  assert.equal(resB.body.data.config.is_franchise, false);
+  assert.equal(resB.body.data.config.main_hub_party_id, null);
+  // Default values untouched
+  assert.equal(resB.body.data.config.franchise_share_pct, 70);
+  assert.equal(resB.body.data.config.hub_share_pct, 30);
+});
+
+// ==========================================
+// Test 13: Navigation Payload
+// ==========================================
+test('13. Navigation Payload: Switch company returns enabled_modules for client dynamic rendering', async () => {
+  const switchRes = await makeRequest({
+    method: 'POST',
+    path: '/api/v1/companies/switch',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      company_id: companySimple._id.toString()
+    }
+  });
+
+  assert.equal(switchRes.status, 200);
+  assert.ok(switchRes.body.data.active_company.enabled_modules, 'active_company should include enabled_modules');
+  assert.ok(Array.isArray(switchRes.body.data.active_company.enabled_modules));
+});
+
+// ==========================================
+// Test 14: End-to-End Voucher to Reports
+// ==========================================
+test('14. End-to-End Commercial Voucher: Posts balanced JE, verifies Trial Balance debits = credits', async () => {
+  const cashAcc = await LedgerAccount.findOne({ company_id: companySimple._id, account_code: '1001' });
+  const salesAcc = await LedgerAccount.findOne({ company_id: companySimple._id, account_code: '4001' });
+
+  assert.ok(cashAcc, 'Cash account 1001 should exist');
+  assert.ok(salesAcc, 'Sales account 4001 should exist');
+
+  const postRes = await postJournalEntry({
+    tenantId: tenant._id,
+    companyId: companySimple._id,
+    userId: user._id,
+    postingDate: new Date(),
+    sourceModule: 'COMMERCIAL',
+    referenceId: `INV_TEST_${runId}`,
+    memo: 'Cash sale voucher for general accounting',
+    lines: [
+      {
+        account_code: '1001',
+        debit: 500,
+        credit: 0,
+        memo: 'Cash received'
+      },
+      {
+        account_code: '4001',
+        debit: 0,
+        credit: 500,
+        memo: 'Sales revenue recognized'
+      }
+    ]
+  });
+
+  assert.ok(postRes.journal, 'Journal should be posted');
+  assert.equal(postRes.journal.status, 'POSTED');
+
+  // Compute Trial Balance
+  const tb = await computeTrialBalance({
+    tenantId: tenant._id,
+    companyId: companySimple._id
+  });
+
+  assert.equal(tb.is_balanced, true, 'Trial Balance must be in exact mathematical equilibrium');
+  assert.equal(tb.difference, '0.00');
+  assert.equal(tb.total_debits, tb.total_credits);
+});
+
+// ==========================================
+// Test 15: Frontend Production Build
+// ==========================================
+test('15. Frontend Production Build: Validates dist bundle assets exist without bundler errors', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const distIndex = path.resolve(__dirname, '../../frontend/dist/index.html');
+  assert.ok(fs.existsSync(distIndex), 'frontend/dist/index.html should exist from production build');
+});

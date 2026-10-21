@@ -3,11 +3,12 @@ const router = express.Router();
 const retailPosController = require('../controllers/retailPosController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireTenantWorkspace } = require('../middleware/tenantMiddleware');
-const { requireCompanyContext } = require('../middleware/companyMiddleware');
+const { requireCompanyContext, requireCompanyModule } = require('../middleware/companyMiddleware');
 
 router.use(requireAuth);
 router.use(requireTenantWorkspace);
 router.use(requireCompanyContext);
+router.use(requireCompanyModule('RETAIL_POS'));
 
 router.post('/shifts/open', (req, res) => retailPosController.openShift(req, res));
 router.get('/shifts/current', (req, res) => retailPosController.getCurrentShift(req, res));
