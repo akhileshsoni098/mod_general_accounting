@@ -209,7 +209,10 @@ exports.certifyTrialBalance = async (req, res) => {
 // 6. Financial Statements
 exports.getFinancialStatements = async (req, res) => {
   try {
-    const statements = await financeCloseService.generateFinancialReports({ tenantId: req.tenantId });
+    const statements = await financeCloseService.generateFinancialReports({
+      tenantId: req.tenantId,
+      companyId: req.companyId || null
+    });
     return res.json({ status: 'success', data: statements });
   } catch (err) {
     return res.status(500).json({ status: 'error', message: err.message });

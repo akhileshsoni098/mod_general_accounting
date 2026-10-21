@@ -10,12 +10,15 @@ const { postJournalEntry } = require('./journalPostingService');
  */
 async function simulateJournalFromEvent({
   tenantId,
+  companyId = null,
   eventCode,
   schemaVersion = '1.0.0',
   occurrenceDate = new Date(),
   tenantType = null,
   payload = {}
 }) {
+  const resolvedCompanyId = companyId || payload.company_id || null;
+
   // 1. Validate payload schema against EventDefinition
   const schemaValidation = await validateEventPayload(tenantId, eventCode, schemaVersion, payload);
   if (!schemaValidation.valid) {
@@ -32,6 +35,7 @@ async function simulateJournalFromEvent({
   // 2. Resolve matching published rule
   const resolution = await resolvePublishedPostingRule({
     tenantId,
+    companyId: resolvedCompanyId,
     eventCode,
     schemaVersion,
     occurrenceDate,
@@ -72,11 +76,19 @@ async function simulateJournalFromEvent({
   const evaluationErrors = [];
 
   for (const line of ruleLines) {
-    // Resolve Ledger Account
-    const account = await LedgerAccount.findOne({
+    // Resolve Ledger Account (company-scoped with tenant fallback)
+    const accQuery = {
       tenant_id: tenantId,
       account_code: line.account_code
-    });
+    };
+    if (resolvedCompanyId) {
+      accQuery.company_id = resolvedCompanyId;
+    }
+
+    let account = await LedgerAccount.findOne(accQuery);
+    if (!account && resolvedCompanyId) {
+      account = await LedgerAccount.findOne({ tenant_id: tenantId, account_code: line.account_code, company_id: null });
+    }
 
     if (!account) {
       evaluationErrors.push(`Account code "${line.account_code}" does not exist in active tenant Chart of Accounts`);
@@ -157,11 +169,22 @@ async function simulateJournalFromEvent({
       if (!dimensions.carrier_name && payload.carrier_name) dimensions.carrier_name = String(payload.carrier_name);
     }
     if (line.account_code === '2020') {
+      if (!dimensions.counterparty_id && (payload.hub_party_id || payload.counterparty_id)) {
+        dimensions.counterparty_id = String(payload.hub_party_id || payload.counterparty_id);
+      }
+      if (!dimensions.counterparty_name && (payload.hub_party_name || payload.counterparty_name)) {
+        dimensions.counterparty_name = String(payload.hub_party_name || payload.counterparty_name);
+      }
+      if (!dimensions.counterparty_role) {
+        dimensions.counterparty_role = String(payload.hub_role || payload.counterparty_role || 'MAIN_HUB');
+      }
       if (!dimensions.broker_id && (payload.broker_id || payload.producer_id)) dimensions.broker_id = String(payload.broker_id || payload.producer_id);
       if (!dimensions.broker_name && payload.broker_name) dimensions.broker_name = String(payload.broker_name);
       if (!dimensions.producer_id && (payload.producer_id || payload.broker_id)) dimensions.producer_id = String(payload.producer_id || payload.broker_id);
     }
     if (line.account_code === '4200') {
+      if (!dimensions.franchise_id && payload.franchise_id) dimensions.franchise_id = String(payload.franchise_id);
+      if (!dimensions.franchise_name && payload.franchise_name) dimensions.franchise_name = String(payload.franchise_name);
       if (!dimensions.mga_id && payload.mga_id) dimensions.mga_id = String(payload.mga_id);
     }
 
@@ -225,6 +248,7 @@ async function simulateJournalFromEvent({
  */
 async function postJournalFromResolvedRule({
   tenantId,
+  companyId = null,
   userId,
   eventCode,
   schemaVersion = '1.0.0',
@@ -232,10 +256,13 @@ async function postJournalFromResolvedRule({
   tenantType = null,
   payload = {},
   sourceReference = null,
-  memo = null
+  memo = null,
+  currency = 'INR'
 }) {
+  const resolvedCompanyId = companyId || payload.company_id || null;
   const sim = await simulateJournalFromEvent({
     tenantId,
+    companyId: resolvedCompanyId,
     eventCode,
     schemaVersion,
     occurrenceDate,
@@ -274,11 +301,13 @@ async function postJournalFromResolvedRule({
 
   const glResult = await postJournalEntry({
     tenantId,
+    companyId: resolvedCompanyId,
     userId,
     postingDate: occurrenceDate,
     sourceModule: 'RULES_ENGINE',
     referenceId: refId,
     memo: journalMemo,
+    currency: currency || payload.currency || 'INR',
     lines: journalLines,
     accountingBasis: sim.rule.accounting_basis || 'GAAP'
   });

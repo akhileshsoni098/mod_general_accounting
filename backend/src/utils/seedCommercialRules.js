@@ -122,6 +122,40 @@ const COMMERCIAL_RULES_DATA = [
       { line_number: 1, line_key: 'DR_DEST_ACCOUNT', account_code: '1002', direction: 'DEBIT', amount_expression: 'payload.amount', description_template: 'Transfer in to {{payload.to_account_name}}' },
       { line_number: 2, line_key: 'CR_SRC_ACCOUNT', account_code: '1001', direction: 'CREDIT', amount_expression: 'payload.amount', description_template: 'Transfer out from {{payload.from_account_name}}' }
     ]
+  },
+  {
+    rule_code: 'RULE_FRANCHISE_COMMISSION_SPLIT',
+    rule_name: 'Franchise Commission & Main Hub Split Posting Rule',
+    description: 'Debits settlement clearing cash 1010, credits franchise commission revenue 4200 (70%), and credits main hub payable 2020 (30%)',
+    event_code: 'franchise.commission.calculated',
+    applicable_module: 'GL',
+    priority: 10,
+    lines: [
+      {
+        line_number: 1,
+        line_key: 'DR_SETTLEMENT_CASH',
+        account_code: '1010',
+        direction: 'DEBIT',
+        amount_expression: 'payload.transaction_amount',
+        description_template: 'Collected settlement cash for {{payload.transaction_id}}'
+      },
+      {
+        line_number: 2,
+        line_key: 'CR_FRANCHISE_REVENUE',
+        account_code: '4200',
+        direction: 'CREDIT',
+        amount_expression: 'payload.franchise_amount || (payload.transaction_amount * 0.70)',
+        description_template: 'Franchise commission revenue for {{payload.transaction_id}}'
+      },
+      {
+        line_number: 3,
+        line_key: 'CR_DUE_TO_MAIN_HUB',
+        account_code: '2020',
+        direction: 'CREDIT',
+        amount_expression: 'payload.hub_amount || (payload.transaction_amount * 0.30)',
+        description_template: 'Payable to Main Hub for {{payload.transaction_id}}'
+      }
+    ]
   }
 ];
 

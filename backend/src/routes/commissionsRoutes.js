@@ -25,6 +25,7 @@ router.get('/schedules', commissionsController.getSchedules);
 router.post('/schedules', commissionsController.createSchedule);
 router.get('/schedules/resolve-preview', commissionsController.previewScheduleResolution);
 router.get('/preview-chain', commissionsController.previewCanonicalChain);
+router.get('/franchise-split-preview', commissionsController.previewFranchiseSplit);
 
 // Profit Commission Schedules
 router.get('/profit-schedules', commissionsController.getProfitCommissionSchedules);

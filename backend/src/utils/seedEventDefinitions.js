@@ -178,6 +178,46 @@ async function seedDefaultEventDefinitions(tenantId) {
           }
         }
       ]
+    },
+    {
+      tenant_id: tenantId,
+      event_code: 'franchise.commission.calculated',
+      display_name: 'Franchise Commission Calculated',
+      description: 'Triggered when franchise commission and main hub revenue split are calculated for an eligible transaction',
+      source_module: 'COMMERCIAL',
+      category: 'TRANSACTION',
+      status: 'ACTIVE',
+      current_version: '1.0.0',
+      versions: [
+        {
+          version: '1.0.0',
+          status: 'ACTIVE',
+          description: 'Franchise commission calculation event schema',
+          json_schema: {
+            type: 'object',
+            properties: {
+              transaction_id: { type: 'string' },
+              franchise_id: { type: 'string' },
+              hub_party_id: { type: 'string' },
+              transaction_amount: { type: 'number' },
+              franchise_share_pct: { type: 'number' },
+              hub_share_pct: { type: 'number' },
+              franchise_amount: { type: 'number' },
+              hub_amount: { type: 'number' }
+            }
+          },
+          sample_payload: {
+            transaction_id: 'TXN-FRAN-001',
+            franchise_id: 'FRAN-DOWNTOWN',
+            hub_party_id: 'PTY-HUB-MAIN',
+            transaction_amount: 200,
+            franchise_share_pct: 70,
+            hub_share_pct: 30,
+            franchise_amount: 140,
+            hub_amount: 60
+          }
+        }
+      ]
     }
   ];
 

@@ -234,6 +234,23 @@ exports.previewCanonicalChain = async (req, res) => {
   }
 };
 
+exports.previewFranchiseSplit = async (req, res) => {
+  try {
+    const transactionAmount = req.query.transaction_amount || req.query.amount || 200.00;
+    const franchiseSplitPct = req.query.franchise_split_pct || 70;
+    const hubSplitPct = req.query.hub_split_pct || 30;
+
+    const split = commissionsService.calculateFranchiseCommission({
+      transactionAmount,
+      franchiseSplitPct,
+      hubSplitPct
+    });
+    return res.json({ status: 'success', data: split });
+  } catch (err) {
+    return res.status(400).json({ status: 'error', message: err.message });
+  }
+};
+
 // 5. Profit Commission Schedule
 exports.getProfitCommissionSchedules = async (req, res) => {
   try {

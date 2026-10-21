@@ -557,8 +557,10 @@ async function executeCloseStep({ tenantId, userId, fiscalPeriodId, stepNumber }
 /**
  * 6. Generate Financial Reports (Balance Sheet & Income Statement)
  */
-async function generateFinancialReports({ tenantId }) {
-  const accounts = await LedgerAccount.find({ tenant_id: tenantId, status: 'ACTIVE' });
+async function generateFinancialReports({ tenantId, companyId = null }) {
+  const query = { tenant_id: tenantId, status: 'ACTIVE' };
+  if (companyId) query.company_id = companyId;
+  const accounts = await LedgerAccount.find(query);
 
   const balanceSheet = {
     assets: [],
@@ -566,7 +568,10 @@ async function generateFinancialReports({ tenantId }) {
     equity: [],
     total_assets: '0.00',
     total_liabilities: '0.00',
-    total_equity: '0.00'
+    total_equity: '0.00',
+    current_period_net_income: '0.00',
+    total_liabilities_and_equity: '0.00',
+    is_balanced: true
   };
 
   const incomeStatement = {
@@ -609,13 +614,19 @@ async function generateFinancialReports({ tenantId }) {
     }
   }
 
+  const netIncomeBN = totRev.minus(totExp);
+  const totalLiabAndEquity = totLiab.plus(totEq).plus(netIncomeBN);
+
   balanceSheet.total_assets = totAssets.toFixed(2);
   balanceSheet.total_liabilities = totLiab.toFixed(2);
   balanceSheet.total_equity = totEq.toFixed(2);
+  balanceSheet.current_period_net_income = netIncomeBN.toFixed(2);
+  balanceSheet.total_liabilities_and_equity = totalLiabAndEquity.toFixed(2);
+  balanceSheet.is_balanced = totAssets.isEqualTo(totalLiabAndEquity);
 
   incomeStatement.total_revenue = totRev.toFixed(2);
   incomeStatement.total_expenses = totExp.toFixed(2);
-  incomeStatement.net_income = totRev.minus(totExp).toFixed(2);
+  incomeStatement.net_income = netIncomeBN.toFixed(2);
 
   return { balanceSheet, incomeStatement };
 }

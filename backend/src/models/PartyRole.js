@@ -32,7 +32,9 @@ const PartyRoleSchema = new mongoose.Schema(
         'POLICYHOLDER',
         'PRODUCER',
         'REINSURER',
-        'REGULATOR'
+        'REGULATOR',
+        'MAIN_HUB',
+        'FRANCHISE'
       ],
       required: true,
       uppercase: true

@@ -275,6 +275,40 @@ function calculateCanonicalChain(grossPremiumAmount) {
 }
 
 /**
+ * 3b. Calculate Franchise Commission Split
+ * Standard commercial franchise scenario:
+ * Total eligible transaction amount: ₹200.00
+ * Franchise share: 70% = ₹140.00
+ * Main Hub share: 30% = ₹60.00
+ */
+function calculateFranchiseCommission({
+  transactionAmount = 200,
+  franchiseSplitPct = 70,
+  hubSplitPct = 30
+} = {}) {
+  const basis = new BigNumber(transactionAmount);
+  const fPct = new BigNumber(franchiseSplitPct);
+  const hPct = new BigNumber(hubSplitPct);
+
+  if (!fPct.plus(hPct).isEqualTo(100)) {
+    throw new Error(`Split percentages must total 100% (got ${fPct.plus(hPct).toString()}%)`);
+  }
+
+  const franchiseAmount = basis.multipliedBy(fPct.dividedBy(100)).decimalPlaces(2, BigNumber.ROUND_HALF_UP);
+  const hubAmount = basis.multipliedBy(hPct.dividedBy(100)).decimalPlaces(2, BigNumber.ROUND_HALF_UP);
+
+  return {
+    transaction_amount: basis.toFixed(2),
+    franchise_share_pct: fPct.toFixed(2),
+    hub_share_pct: hPct.toFixed(2),
+    franchise_amount: franchiseAmount.toFixed(2),
+    hub_amount: hubAmount.toFixed(2),
+    total_split: franchiseAmount.plus(hubAmount).toFixed(2),
+    is_split_balanced: franchiseAmount.plus(hubAmount).isEqualTo(basis)
+  };
+}
+
+/**
  * 4. Process and Persist Commission Transaction
  */
 async function processCommissionTransaction({
@@ -1063,6 +1097,7 @@ module.exports = {
   seedTenantCommissions,
   resolveCommissionSchedule,
   calculateCanonicalChain,
+  calculateFranchiseCommission,
   processCommissionTransaction,
   executeFiduciarySweep,
   generateBordereauRun,

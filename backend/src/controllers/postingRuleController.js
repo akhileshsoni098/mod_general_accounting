@@ -534,8 +534,11 @@ async function simulateEvent(req, res) {
       return res.error('event_code is required', 400);
     }
 
+    const companyId = req.companyId || req.body.company_id || payload.company_id || null;
+
     const simResult = await simulateJournalFromEvent({
       tenantId,
+      companyId,
       eventCode: event_code,
       schemaVersion: schema_version,
       occurrenceDate: occurrence_date || new Date(),
@@ -560,15 +563,19 @@ async function postSimulatedJournal(req, res) {
       occurrence_date,
       payload = {},
       source_reference,
-      memo
+      memo,
+      company_id
     } = req.body;
 
     if (!event_code) {
       return res.error('event_code is required', 400);
     }
 
+    const companyId = req.companyId || company_id || payload.company_id || null;
+
     const postResult = await postJournalFromResolvedRule({
       tenantId,
+      companyId,
       userId,
       eventCode: event_code,
       schemaVersion: schema_version,

@@ -58,8 +58,24 @@ const EventDefinitionSchema = new mongoose.Schema(
     source_module: {
       type: String,
       required: true,
-      enum: ['BILLING', 'TREASURY', 'COMMISSIONS', 'FINANCE_CLOSE', 'POLICY', 'CLAIMS', 'REINSURANCE', 'MANUAL'],
-      default: 'BILLING'
+      enum: [
+        'COMMERCIAL',
+        'COMMISSIONS',
+        'BILLING',
+        'TREASURY',
+        'FINANCE_CLOSE',
+        'POLICY',
+        'CLAIMS',
+        'REINSURANCE',
+        'MANUAL',
+        'RETAIL_POS',
+        'RESTAURANT',
+        'HOTEL_PMS',
+        'MANUFACTURING',
+        'SERVICES',
+        'GL'
+      ],
+      default: 'COMMERCIAL'
     },
     category: {
       type: String,

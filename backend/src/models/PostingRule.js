@@ -76,7 +76,22 @@ const PostingRuleSchema = new mongoose.Schema(
     },
     applicable_module: {
       type: String,
-      enum: ['GL', 'BILLING_AR', 'COMMISSIONS_FIDUCIARY', 'TREASURY_BANK_REC', 'FINANCE_CLOSE', 'POLICY', 'CLAIMS', 'REINSURANCE'],
+      enum: [
+        'GL',
+        'COMMERCIAL',
+        'BILLING_AR',
+        'COMMISSIONS_FIDUCIARY',
+        'TREASURY_BANK_REC',
+        'FINANCE_CLOSE',
+        'POLICY',
+        'CLAIMS',
+        'REINSURANCE',
+        'RETAIL_POS',
+        'RESTAURANT',
+        'HOTEL_PMS',
+        'MANUFACTURING',
+        'SERVICES'
+      ],
       default: 'GL'
     },
     accounting_basis: {

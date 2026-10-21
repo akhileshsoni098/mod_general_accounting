@@ -68,6 +68,7 @@ function evaluateCondition(condition, context) {
  */
 async function resolvePublishedPostingRule({
   tenantId,
+  companyId = null,
   eventCode,
   schemaVersion = '1.0.0',
   occurrenceDate = new Date(),
@@ -75,6 +76,7 @@ async function resolvePublishedPostingRule({
   payload = {}
 }) {
   const occDate = new Date(occurrenceDate);
+  const resolvedCompanyId = companyId || payload.company_id || null;
 
   // 1. Query candidate rules: PUBLISHED or ACTIVE status within tenant
   const query = {
@@ -84,6 +86,17 @@ async function resolvePublishedPostingRule({
     effective_from: { $lte: occDate },
     $or: [{ effective_to: null }, { effective_to: { $gte: occDate } }]
   };
+
+  if (resolvedCompanyId) {
+    query.$and = [
+      {
+        $or: [
+          { company_id: resolvedCompanyId },
+          { company_id: null }
+        ]
+      }
+    ];
+  }
 
   const candidates = await PostingRule.find(query).sort({ priority: 1, created_at: -1 });
 
@@ -164,9 +177,15 @@ async function resolvePublishedPostingRule({
   }
 
   // Sort matching rules by:
-  // 1. Condition specificity DESC (most specific criteria wins)
-  // 2. Explicit priority ASC (lower priority number wins)
+  // 1. Company specificity (company-specific rule ahead of tenant-wide)
+  // 2. Condition specificity DESC (most specific criteria wins)
+  // 3. Explicit priority ASC (lower priority number wins)
   matching.sort((a, b) => {
+    const aCompanySpecific = a.rule.company_id ? 1 : 0;
+    const bCompanySpecific = b.rule.company_id ? 1 : 0;
+    if (bCompanySpecific !== aCompanySpecific) {
+      return bCompanySpecific - aCompanySpecific;
+    }
     if (b.condition_count !== a.condition_count) {
       return b.condition_count - a.condition_count;
     }
