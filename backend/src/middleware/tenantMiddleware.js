@@ -70,18 +70,20 @@ function requirePermission(requiredPermissionCode) {
       }
 
       const roleIds = userRoles.map(ur => ur.role_id?._id || ur.role_id);
-      const permDoc = await Permission.findOne({ code: requiredPermissionCode });
-      if (!permDoc) {
-        return res.error(`Unknown permission requirement: ${requiredPermissionCode}`, 500);
+      const permCodes = Array.isArray(requiredPermissionCode) ? requiredPermissionCode : [requiredPermissionCode];
+      const permDocs = await Permission.find({ code: { $in: permCodes } });
+      if (!permDocs || permDocs.length === 0) {
+        return res.error(`Unknown permission requirement: ${permCodes.join(' or ')}`, 500);
       }
+      const permIds = permDocs.map(p => p._id);
 
       const hasPerm = await RolePermission.exists({
         role_id: { $in: roleIds },
-        permission_id: permDoc._id
+        permission_id: { $in: permIds }
       });
 
       if (!hasPerm) {
-        return res.error(`Forbidden: Missing required permission [${requiredPermissionCode}]`, 403);
+        return res.error(`Forbidden: Missing required permission [${permCodes.join(' or ')}]`, 403);
       }
 
       next();

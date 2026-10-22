@@ -7,9 +7,6 @@ const { EventDefinition } = require('../models');
 async function seedDefaultEventDefinitions(tenantId) {
   if (!tenantId) return [];
 
-  const existingCount = await EventDefinition.countDocuments({ tenant_id: tenantId });
-  if (existingCount > 0) return [];
-
   const defaultEvents = [
     {
       tenant_id: tenantId,
@@ -221,7 +218,18 @@ async function seedDefaultEventDefinitions(tenantId) {
     }
   ];
 
-  return await EventDefinition.insertMany(defaultEvents);
+  const seeded = [];
+  for (const def of defaultEvents) {
+    const exists = await EventDefinition.findOne({
+      tenant_id: tenantId,
+      event_code: def.event_code
+    });
+    if (!exists) {
+      const created = await EventDefinition.create(def);
+      seeded.push(created);
+    }
+  }
+  return seeded;
 }
 
 module.exports = { seedDefaultEventDefinitions };

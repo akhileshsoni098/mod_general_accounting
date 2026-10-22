@@ -50,20 +50,19 @@ export default function PostingRulesPage() {
     lines: []
   });
 
-  // Form State for New Rule
-  const [newRuleForm, setNewRuleForm] = useState({
+  const DEFAULT_NEW_RULE = {
     rule_code: '',
     rule_name: '',
     description: '',
     event_code: '',
     priority: 100,
     accounting_basis: 'GAAP',
-    conditions: [{ field_path: 'payload.transaction_type', operator: 'EQUALS', value: 'DIRECT_BILL' }],
+    conditions: [],
     lines: [
       {
         line_number: 1,
         line_key: 'DR_AR',
-        account_code: '1100',
+        account_code: '1101',
         direction: 'DEBIT',
         amount_expression: 'payload.subtotal + payload.tax_amount',
         description_template: 'Trade Receivable for Invoice {{payload.invoice_id}}'
@@ -71,7 +70,7 @@ export default function PostingRulesPage() {
       {
         line_number: 2,
         line_key: 'CR_REVENUE',
-        account_code: '4000',
+        account_code: '4001',
         direction: 'CREDIT',
         amount_expression: 'payload.subtotal',
         description_template: 'Commercial Sales Revenue'
@@ -79,13 +78,16 @@ export default function PostingRulesPage() {
       {
         line_number: 3,
         line_key: 'CR_TAX',
-        account_code: '2110',
+        account_code: '2101',
         direction: 'CREDIT',
         amount_expression: 'payload.tax_amount',
         description_template: 'Output GST / Sales Tax Payable'
       }
     ]
-  });
+  };
+
+  // Form State for New Rule
+  const [newRuleForm, setNewRuleForm] = useState(DEFAULT_NEW_RULE);
 
   const loadData = async () => {
     try {
@@ -213,6 +215,7 @@ export default function PostingRulesPage() {
       setActionLoading(true);
       await rulesApi.createRule(newRuleForm);
       setShowCreateModal(false);
+      setNewRuleForm(DEFAULT_NEW_RULE);
       loadData();
     } catch (err) {
       alert(err.message);

@@ -993,4 +993,231 @@ test('24. Business Profile Catalog: GET /api/v1/companies/profiles returns norma
   }
 });
 
+// ==========================================
+// Test 25: Complete Posting Rules CRUD Lifecycle
+// ==========================================
+test('25. Posting Rules CRUD: Full lifecycle (Create, Read, Update, Delete) across GL and Rules Engine suites', async () => {
+  // Ensure RULES_ENGINE module is enabled on companySimple for rulesApi testing
+  await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'RULES_ENGINE',
+      is_enabled: true
+    }
+  });
+
+  // --- Part A: GL Posting Rules (/api/v1/gl/posting-rules) ---
+  // 1. CREATE posting rule via GL suite
+  const glCreateRes = await makeRequest({
+    method: 'POST',
+    path: '/api/v1/gl/posting-rules',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    },
+    body: {
+      rule_code: 'RULE_TEST_COMMERCIAL_SALES',
+      event_type: 'commercial.sales.invoice',
+      rule_name: 'Test Commercial Sales AR Recognition',
+      description: 'Debit Trade Receivables 1101, Credit Sales Revenue 4001',
+      applicable_module: 'GL',
+      lines: [
+        {
+          account_code: '1101',
+          direction: 'DEBIT',
+          amount_field: 'subtotal',
+          description_template: 'Trade AR for customer'
+        },
+        {
+          account_code: '4001',
+          direction: 'CREDIT',
+          amount_field: 'subtotal',
+          description_template: 'Recognized Sales Revenue'
+        }
+      ]
+    }
+  });
+
+  assert.equal(glCreateRes.status, 201, `GL Rule creation should return 201: ${JSON.stringify(glCreateRes.body)}`);
+  assert.ok(glCreateRes.body.data.rule._id, 'Created rule must have an _id');
+  assert.equal(glCreateRes.body.data.rule.rule_code, 'RULE_TEST_COMMERCIAL_SALES');
+  assert.equal(glCreateRes.body.data.lines.length, 2, 'Should create 2 double-entry lines');
+  const glRuleId = glCreateRes.body.data.rule._id;
+
+  // 2. READ ALL posting rules
+  const glListRes = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/gl/posting-rules',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(glListRes.status, 200);
+  assert.ok(Array.isArray(glListRes.body.data));
+  const foundGl = glListRes.body.data.find(r => r._id === glRuleId);
+  assert.ok(foundGl, 'Created rule must appear in the list');
+
+  // 3. READ ONE posting rule by ID
+  const glGetRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/gl/posting-rules/${glRuleId}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(glGetRes.status, 200);
+  assert.equal(glGetRes.body.data.rule.rule_code, 'RULE_TEST_COMMERCIAL_SALES');
+  assert.equal(glGetRes.body.data.lines.length, 2);
+
+  // 4. UPDATE posting rule (modify rule name and lines)
+  const glUpdateRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/gl/posting-rules/${glRuleId}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    },
+    body: {
+      rule_name: 'Updated Commercial Sales AR Recognition',
+      lines: [
+        {
+          account_code: '1101',
+          direction: 'DEBIT',
+          amount_field: 'total_amount',
+          description_template: 'Updated Trade AR'
+        },
+        {
+          account_code: '4001',
+          direction: 'CREDIT',
+          amount_field: 'subtotal',
+          description_template: 'Recognized Sales Revenue'
+        },
+        {
+          account_code: '2101',
+          direction: 'CREDIT',
+          amount_field: 'tax_amount',
+          description_template: 'Output GST Tax'
+        }
+      ]
+    }
+  });
+  assert.equal(glUpdateRes.status, 200);
+  assert.equal(glUpdateRes.body.data.rule.rule_name, 'Updated Commercial Sales AR Recognition');
+  assert.equal(glUpdateRes.body.data.lines.length, 3, 'Updated rule should now have 3 lines');
+
+  // 5. DELETE posting rule
+  const glDeleteRes = await makeRequest({
+    method: 'DELETE',
+    path: `/api/v1/gl/posting-rules/${glRuleId}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(glDeleteRes.status, 200);
+
+  // Verify it is gone
+  const glVerifyRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/gl/posting-rules/${glRuleId}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(glVerifyRes.status, 404, 'Deleted rule must return 404');
+
+  // --- Part B: Rules Engine Suite (/api/v1/rules) ---
+  // 6. CREATE posting rule via Rules Engine suite
+  const rulesEngineCreateRes = await makeRequest({
+    method: 'POST',
+    path: '/api/v1/rules',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      rule_code: 'RULE_ENGINE_COMMERCIAL_INVOICE',
+      rule_name: 'Commercial Invoice Revenue & Tax Posting',
+      event_code: 'commercial.sales.invoice',
+      priority: 50,
+      lines: [
+        {
+          line_number: 1,
+          line_key: 'DR_AR',
+          account_code: '1101',
+          direction: 'DEBIT',
+          amount_expression: 'payload.subtotal + payload.tax_amount',
+          description_template: 'Trade Receivable'
+        },
+        {
+          line_number: 2,
+          line_key: 'CR_REV',
+          account_code: '4001',
+          direction: 'CREDIT',
+          amount_expression: 'payload.subtotal',
+          description_template: 'Commercial Sales Revenue'
+        },
+        {
+          line_number: 3,
+          line_key: 'CR_TAX',
+          account_code: '2101',
+          direction: 'CREDIT',
+          amount_expression: 'payload.tax_amount',
+          description_template: 'Output GST Tax'
+        }
+      ]
+    }
+  });
+  assert.equal(rulesEngineCreateRes.status, 201, `Rules engine creation should return 201: ${JSON.stringify(rulesEngineCreateRes.body)}`);
+  const engineRuleId = rulesEngineCreateRes.body.data.rule._id;
+
+  // 7. Validate and Publish
+  const valRes = await makeRequest({
+    method: 'POST',
+    path: `/api/v1/rules/${engineRuleId}/validate`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+  assert.equal(valRes.status, 200);
+
+  const pubRes = await makeRequest({
+    method: 'POST',
+    path: `/api/v1/rules/${engineRuleId}/publish`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+  assert.equal(pubRes.status, 200);
+  assert.equal(pubRes.body.data.status, 'PUBLISHED');
+
+  // 8. Delete / Clean up rule engine rule
+  const engineDeleteRes = await makeRequest({
+    method: 'DELETE',
+    path: `/api/v1/rules/${engineRuleId}`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+  assert.equal(engineDeleteRes.status, 200);
+});
+
+
 

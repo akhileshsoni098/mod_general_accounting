@@ -4,6 +4,9 @@ import { authApi } from '../services/api';
 import {
   BookOpen,
   PlusCircle,
+  Plus,
+  Trash2,
+  Edit3,
   Lock,
   Unlock,
   CheckCircle2,
@@ -98,20 +101,32 @@ export default function GLWorkspacePage() {
     }
   };
 
-  // New Posting Rule Modal
-  const [showNewRuleModal, setShowNewRuleModal] = useState(false);
-  const [newRuleForm, setNewRuleForm] = useState({
+  // Posting Rule States (CRUD)
+  const DEFAULT_GL_RULE = {
     rule_code: 'RULE_COMMERCIAL_SALES',
     event_type: 'COMMERCIAL_INVOICE_ISSUED',
     rule_name: 'Commercial Sales Invoice AR & Revenue Recognition',
-    description: 'Debit Trade Receivables 1100, Credit Sales Revenue 4000',
+    description: 'Debit Trade Receivables 1101, Credit Sales Revenue 4001',
     applicable_module: 'GL',
     lines: [
-      { account_code: '1100', direction: 'DEBIT', amount_field: 'subtotal', description_template: 'Trade AR' },
-      { account_code: '4000', direction: 'CREDIT', amount_field: 'subtotal', description_template: 'Sales Revenue' }
+      { account_code: '1101', direction: 'DEBIT', amount_field: 'subtotal', description_template: 'Trade AR' },
+      { account_code: '4001', direction: 'CREDIT', amount_field: 'subtotal', description_template: 'Sales Revenue' }
     ]
+  };
+  const [showNewRuleModal, setShowNewRuleModal] = useState(false);
+  const [newRuleForm, setNewRuleForm] = useState(DEFAULT_GL_RULE);
+  const [showEditRuleModal, setShowEditRuleModal] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState(null);
+  const [editRuleForm, setEditRuleForm] = useState({
+    rule_code: '',
+    event_type: '',
+    rule_name: '',
+    description: '',
+    applicable_module: 'GL',
+    lines: []
   });
   const [submittingRule, setSubmittingRule] = useState(false);
+  const [deletingRuleId, setDeletingRuleId] = useState(null);
 
   // New FX Rate Modal
   const [showNewFxModal, setShowNewFxModal] = useState(false);
@@ -148,8 +163,12 @@ export default function GLWorkspacePage() {
         const res = await authApi.getPeriods();
         if (res.success) setPeriods(res.data);
       } else if (activeTab === 'rules') {
-        const res = await authApi.getPostingRules();
-        if (res.success) setPostingRules(res.data);
+        const [rulesRes, accsRes] = await Promise.all([
+          authApi.getPostingRules(),
+          authApi.getAccounts()
+        ]);
+        if (rulesRes.success) setPostingRules(rulesRes.data);
+        if (accsRes.success) setAccounts(accsRes.data);
       } else if (activeTab === 'fx') {
         const res = await authApi.getExchangeRates();
         if (res.success) setExchangeRates(res.data);
@@ -301,7 +320,34 @@ export default function GLWorkspacePage() {
     }
   };
 
-  // Create Posting Rule
+  // Posting Rule CRUD Operations
+  const handleAddRuleLine = () => {
+    const nextNum = newRuleForm.lines.length + 1;
+    setNewRuleForm({
+      ...newRuleForm,
+      lines: [
+        ...newRuleForm.lines,
+        {
+          account_code: accounts.length > 0 ? accounts[0].account_code : '1101',
+          direction: 'CREDIT',
+          amount_field: 'subtotal',
+          description_template: `Line ${nextNum}`
+        }
+      ]
+    });
+  };
+
+  const handleRemoveRuleLine = (idxToRemove) => {
+    if (newRuleForm.lines.length <= 2) {
+      setErrorMsg('A valid double-entry posting rule requires at least 2 lines (Debit and Credit).');
+      return;
+    }
+    setNewRuleForm({
+      ...newRuleForm,
+      lines: newRuleForm.lines.filter((_, idx) => idx !== idxToRemove)
+    });
+  };
+
   const handleCreatePostingRule = async (e) => {
     e.preventDefault();
     setSubmittingRule(true);
@@ -309,14 +355,105 @@ export default function GLWorkspacePage() {
     try {
       const res = await authApi.createPostingRule(newRuleForm);
       if (res.success) {
-        setSuccessMsg(`Posting rule ${newRuleForm.rule_code} created!`);
+        setSuccessMsg(`Posting rule ${newRuleForm.rule_code} created successfully!`);
         setShowNewRuleModal(false);
+        setNewRuleForm(DEFAULT_GL_RULE);
         await loadData();
       }
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
       setSubmittingRule(false);
+    }
+  };
+
+  const handleOpenEditRule = (rule) => {
+    setEditingRuleId(rule._id);
+    setEditRuleForm({
+      rule_code: rule.rule_code,
+      event_type: rule.event_type || rule.event_code || 'COMMERCIAL_INVOICE_ISSUED',
+      rule_name: rule.rule_name,
+      description: rule.description || '',
+      applicable_module: rule.applicable_module || 'GL',
+      lines: (rule.lines && rule.lines.length > 0)
+        ? rule.lines.map((l, idx) => ({
+            line_key: l.line_key || `LINE_${idx + 1}`,
+            account_code: l.account_code || '',
+            direction: l.direction || 'DEBIT',
+            amount_field: l.amount_field || 'subtotal',
+            description_template: l.description_template || ''
+          }))
+        : [
+            { account_code: '1101', direction: 'DEBIT', amount_field: 'subtotal', description_template: 'Trade AR' },
+            { account_code: '4001', direction: 'CREDIT', amount_field: 'subtotal', description_template: 'Sales Revenue' }
+          ]
+    });
+    setShowEditRuleModal(true);
+  };
+
+  const handleAddEditRuleLine = () => {
+    const nextNum = editRuleForm.lines.length + 1;
+    setEditRuleForm({
+      ...editRuleForm,
+      lines: [
+        ...editRuleForm.lines,
+        {
+          account_code: accounts.length > 0 ? accounts[0].account_code : '1101',
+          direction: 'CREDIT',
+          amount_field: 'subtotal',
+          description_template: `Line ${nextNum}`
+        }
+      ]
+    });
+  };
+
+  const handleRemoveEditRuleLine = (idxToRemove) => {
+    if (editRuleForm.lines.length <= 2) {
+      setErrorMsg('A valid double-entry posting rule requires at least 2 lines (Debit and Credit).');
+      return;
+    }
+    setEditRuleForm({
+      ...editRuleForm,
+      lines: editRuleForm.lines.filter((_, idx) => idx !== idxToRemove)
+    });
+  };
+
+  const handleUpdatePostingRule = async (e) => {
+    e.preventDefault();
+    if (!editingRuleId) return;
+    setSubmittingRule(true);
+    setErrorMsg(null);
+    try {
+      const res = await authApi.updatePostingRule(editingRuleId, editRuleForm);
+      if (res.success) {
+        setSuccessMsg(`Posting rule ${editRuleForm.rule_code} updated successfully!`);
+        setShowEditRuleModal(false);
+        setEditingRuleId(null);
+        await loadData();
+      }
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setSubmittingRule(false);
+    }
+  };
+
+  const handleDeletePostingRule = async (ruleId, ruleCode) => {
+    if (!window.confirm(`Are you sure you want to permanently delete posting rule "${ruleCode}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeletingRuleId(ruleId);
+    setErrorMsg(null);
+    try {
+      const res = await authApi.deletePostingRule(ruleId);
+      if (res.success) {
+        setSuccessMsg(`Posting rule ${ruleCode} deleted successfully`);
+        await loadData();
+      }
+    } catch (err) {
+      setErrorMsg(err.message);
+    } finally {
+      setDeletingRuleId(null);
     }
   };
 
@@ -1066,51 +1203,102 @@ export default function GLWorkspacePage() {
       {/* Tab: Posting Rules */}
       {activeTab === 'rules' && (
         <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-2">Event-Driven Accounting Posting Rules</h3>
-            <p className="text-xs text-slate-400">
-              Posting rules translate operational commercial events (e.g., Sales Invoicing, Commercial Receipt, Goods Purchase, Stock Adjustments) into double-entry balanced journals without arbitrary scripts.
-            </p>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-1 flex items-center space-x-2">
+                <Sliders className="w-4 h-4 text-brand-400" />
+                <span>Event-Driven Accounting Posting Rules</span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Posting rules translate operational commercial events (e.g., Sales Invoicing, Commercial Receipt, Goods Purchase, Stock Adjustments) into double-entry balanced journals without arbitrary scripts.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowNewRuleModal(true)}
+              className="py-2 px-3.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-brand-600/20 transition shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Create Posting Rule</span>
+            </button>
           </div>
 
           <div className="space-y-3">
             {loading ? (
               <div className="p-8 text-center text-slate-500 text-xs">Loading posting rules...</div>
             ) : postingRules.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs bg-slate-900 border border-slate-800 rounded-xl">
-                No custom posting rules defined. Standard hardcoded engine defaults active.
+              <div className="p-12 text-center text-slate-500 space-y-3 bg-slate-900 border border-slate-800 rounded-xl">
+                <Sliders className="w-8 h-8 mx-auto text-slate-600" />
+                <div className="text-xs font-semibold text-slate-400">No custom posting rules defined.</div>
+                <p className="text-[11px] text-slate-500">Define custom double-entry rules to automate GL journal generation.</p>
+                <button
+                  onClick={() => setShowNewRuleModal(true)}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create First Posting Rule</span>
+                </button>
               </div>
             ) : (
               postingRules.map(r => (
-                <div key={r._id} className="bg-slate-900 border border-slate-800 rounded-xl p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 font-bold">
+                <div key={r._id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 font-bold border border-brand-500/20">
                           {r.rule_code}
                         </span>
                         <h4 className="text-sm font-bold text-white">{r.rule_name}</h4>
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
-                          {r.event_type}
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                          {r.event_type || r.event_code}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          {r.status || 'ACTIVE'}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">{r.description}</p>
+                      {r.description && <p className="text-xs text-slate-400">{r.description}</p>}
                     </div>
-                    <span className="text-[11px] font-semibold text-emerald-400 uppercase">{r.status}</span>
+
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditRule(r)}
+                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-amber-600 text-slate-300 hover:text-white rounded-lg text-xs font-medium flex items-center space-x-1.5 transition border border-slate-700"
+                        title="Edit Posting Rule"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePostingRule(r._id, r.rule_code)}
+                        disabled={deletingRuleId === r._id}
+                        className="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-600 text-slate-400 hover:text-white rounded-lg text-xs font-medium flex items-center space-x-1.5 transition border border-slate-700 disabled:opacity-50"
+                        title="Delete Posting Rule"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{deletingRuleId === r._id ? 'Deleting...' : 'Delete'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {r.lines && r.lines.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-slate-800">
-                      <div className="text-[11px] font-semibold text-slate-400 mb-1.5">Rule Lines:</div>
-                      <div className="space-y-1">
+                    <div className="mt-3 pt-3 border-t border-slate-800/80">
+                      <div className="text-[11px] font-semibold text-slate-400 mb-2">Double-Entry Posting Lines:</div>
+                      <div className="space-y-1.5">
                         {r.lines.map((l, idx) => (
-                          <div key={idx} className="flex items-center space-x-3 text-xs font-mono text-slate-300">
-                            <span className={l.direction === 'DEBIT' ? 'text-emerald-400 font-bold' : 'text-blue-400 font-bold'}>
+                          <div key={idx} className="flex items-center space-x-3 text-xs font-mono bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800/60">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              l.direction === 'DEBIT'
+                                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            }`}>
                               {l.direction}
                             </span>
-                            <span>Account {l.account_code}</span>
-                            <span className="text-slate-500">← {l.amount_field}</span>
-                            <span className="text-slate-400 italic text-[11px]">"{l.description_template}"</span>
+                            <span className="text-white font-semibold">Account {l.account_code}</span>
+                            <span className="text-slate-400">← {l.amount_expression || l.amount_field || 'amount'}</span>
+                            {l.description_template && (
+                              <span className="text-slate-500 italic text-[11px]">"{l.description_template}"</span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1741,6 +1929,371 @@ export default function GLWorkspacePage() {
                 Close Ledger Drilldown
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Create Posting Rule */}
+      {showNewRuleModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Sliders className="w-5 h-5 text-brand-400" />
+                <span>Create Double-Entry Posting Rule</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowNewRuleModal(false)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreatePostingRule} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Rule Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. RULE_COMMERCIAL_SALES"
+                    value={newRuleForm.rule_code}
+                    onChange={(e) => setNewRuleForm({ ...newRuleForm, rule_code: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Trigger Event Code / Type *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. commercial.sales.invoice"
+                    value={newRuleForm.event_type}
+                    onChange={(e) => setNewRuleForm({ ...newRuleForm, event_type: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Rule Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Commercial Sales Invoice AR & Revenue Recognition"
+                  value={newRuleForm.rule_name}
+                  onChange={(e) => setNewRuleForm({ ...newRuleForm, rule_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Description</label>
+                <input
+                  type="text"
+                  placeholder="Describe what double-entry journal is generated by this rule"
+                  value={newRuleForm.description}
+                  onChange={(e) => setNewRuleForm({ ...newRuleForm, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Posting Rule Lines */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-300">
+                    Double-Entry Posting Lines ({newRuleForm.lines.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddRuleLine}
+                    className="px-2.5 py-1 bg-brand-600/20 hover:bg-brand-600/30 text-brand-400 border border-brand-500/30 rounded text-xs font-semibold flex items-center space-x-1 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Line</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {newRuleForm.lines.map((l, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg flex items-center space-x-2">
+                      <span className="text-slate-500 font-mono text-[11px] w-5 text-center shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <select
+                        required
+                        value={l.account_code}
+                        onChange={(e) => {
+                          const updated = [...newRuleForm.lines];
+                          updated[idx].account_code = e.target.value;
+                          setNewRuleForm({ ...newRuleForm, lines: updated });
+                        }}
+                        className="w-48 bg-slate-800 border border-slate-700 rounded p-1.5 font-mono text-xs text-white shrink-0 focus:border-brand-500 focus:outline-none"
+                      >
+                        <option value="">-- Select GL Account --</option>
+                        {accounts.length > 0 ? (
+                          accounts.map((acc) => (
+                            <option key={acc._id || acc.account_code} value={acc.account_code}>
+                              {acc.account_code} - {acc.account_name} ({acc.account_type})
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="1101">1101 - Sundry Debtors (ASSET)</option>
+                            <option value="1000">1000 - Operating Cash (ASSET)</option>
+                            <option value="1002">1002 - Bank Current Account (ASSET)</option>
+                            <option value="2001">2001 - Sundry Creditors (LIABILITY)</option>
+                            <option value="2101">2101 - Output CGST (LIABILITY)</option>
+                            <option value="4001">4001 - Sales Revenue (REVENUE)</option>
+                            <option value="5001">5001 - Purchase Cost (EXPENSE)</option>
+                          </>
+                        )}
+                      </select>
+                      <select
+                        value={l.direction}
+                        onChange={(e) => {
+                          const updated = [...newRuleForm.lines];
+                          updated[idx].direction = e.target.value;
+                          setNewRuleForm({ ...newRuleForm, lines: updated });
+                        }}
+                        className={`w-24 rounded p-1.5 text-xs font-semibold border shrink-0 ${
+                          l.direction === 'DEBIT'
+                            ? 'bg-blue-950/40 text-blue-400 border-blue-800/60'
+                            : 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                        }`}
+                      >
+                        <option value="DEBIT">DEBIT</option>
+                        <option value="CREDIT">CREDIT</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Amount Field / Expr (e.g. subtotal)"
+                        required
+                        value={l.amount_field}
+                        onChange={(e) => {
+                          const updated = [...newRuleForm.lines];
+                          updated[idx].amount_field = e.target.value;
+                          setNewRuleForm({ ...newRuleForm, lines: updated });
+                        }}
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded p-1.5 font-mono text-xs text-white min-w-0 focus:border-brand-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRuleLine(idx)}
+                        disabled={newRuleForm.lines.length <= 2}
+                        className={`p-1.5 rounded transition shrink-0 ${
+                          newRuleForm.lines.length <= 2
+                            ? 'text-slate-600 cursor-not-allowed opacity-40'
+                            : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/40'
+                        }`}
+                        title={newRuleForm.lines.length <= 2 ? 'Minimum 2 lines required for double-entry' : 'Delete line'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowNewRuleModal(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRule}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-brand-600 hover:bg-brand-500 shadow-md shadow-brand-500/20 transition disabled:opacity-50"
+                >
+                  {submittingRule ? 'Saving Rule...' : 'Create Posting Rule'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Posting Rule */}
+      {showEditRuleModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 className="text-base font-bold text-white flex items-center space-x-2">
+                <Sliders className="w-5 h-5 text-amber-400" />
+                <span>Edit Posting Rule ({editRuleForm.rule_code})</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowEditRuleModal(false)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePostingRule} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-medium mb-1">Rule Code</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={editRuleForm.rule_code}
+                    className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800 rounded-lg text-slate-400 font-mono cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Trigger Event Code / Type *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editRuleForm.event_type}
+                    onChange={(e) => setEditRuleForm({ ...editRuleForm, event_type: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Rule Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editRuleForm.rule_name}
+                  onChange={(e) => setEditRuleForm({ ...editRuleForm, rule_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Description</label>
+                <input
+                  type="text"
+                  value={editRuleForm.description}
+                  onChange={(e) => setEditRuleForm({ ...editRuleForm, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Posting Rule Lines */}
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-300">
+                    Double-Entry Posting Lines ({editRuleForm.lines.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddEditRuleLine}
+                    className="px-2.5 py-1 bg-brand-600/20 hover:bg-brand-600/30 text-brand-400 border border-brand-500/30 rounded text-xs font-semibold flex items-center space-x-1 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Line</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {editRuleForm.lines.map((l, idx) => (
+                    <div key={idx} className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg flex items-center space-x-2">
+                      <span className="text-slate-500 font-mono text-[11px] w-5 text-center shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <select
+                        required
+                        value={l.account_code}
+                        onChange={(e) => {
+                          const updated = [...editRuleForm.lines];
+                          updated[idx].account_code = e.target.value;
+                          setEditRuleForm({ ...editRuleForm, lines: updated });
+                        }}
+                        className="w-48 bg-slate-800 border border-slate-700 rounded p-1.5 font-mono text-xs text-white shrink-0 focus:border-brand-500 focus:outline-none"
+                      >
+                        <option value="">-- Select GL Account --</option>
+                        {accounts.length > 0 ? (
+                          accounts.map((acc) => (
+                            <option key={acc._id || acc.account_code} value={acc.account_code}>
+                              {acc.account_code} - {acc.account_name} ({acc.account_type})
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="1101">1101 - Sundry Debtors (ASSET)</option>
+                            <option value="1000">1000 - Operating Cash (ASSET)</option>
+                            <option value="1002">1002 - Bank Current Account (ASSET)</option>
+                            <option value="2001">2001 - Sundry Creditors (LIABILITY)</option>
+                            <option value="2101">2101 - Output CGST (LIABILITY)</option>
+                            <option value="4001">4001 - Sales Revenue (REVENUE)</option>
+                            <option value="5001">5001 - Purchase Cost (EXPENSE)</option>
+                          </>
+                        )}
+                      </select>
+                      <select
+                        value={l.direction}
+                        onChange={(e) => {
+                          const updated = [...editRuleForm.lines];
+                          updated[idx].direction = e.target.value;
+                          setEditRuleForm({ ...editRuleForm, lines: updated });
+                        }}
+                        className={`w-24 rounded p-1.5 text-xs font-semibold border shrink-0 ${
+                          l.direction === 'DEBIT'
+                            ? 'bg-blue-950/40 text-blue-400 border-blue-800/60'
+                            : 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60'
+                        }`}
+                      >
+                        <option value="DEBIT">DEBIT</option>
+                        <option value="CREDIT">CREDIT</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Amount Field / Expr (e.g. subtotal)"
+                        required
+                        value={l.amount_field}
+                        onChange={(e) => {
+                          const updated = [...editRuleForm.lines];
+                          updated[idx].amount_field = e.target.value;
+                          setEditRuleForm({ ...editRuleForm, lines: updated });
+                        }}
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded p-1.5 font-mono text-xs text-white min-w-0 focus:border-brand-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEditRuleLine(idx)}
+                        disabled={editRuleForm.lines.length <= 2}
+                        className={`p-1.5 rounded transition shrink-0 ${
+                          editRuleForm.lines.length <= 2
+                            ? 'text-slate-600 cursor-not-allowed opacity-40'
+                            : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/40'
+                        }`}
+                        title={editRuleForm.lines.length <= 2 ? 'Minimum 2 lines required for double-entry' : 'Delete line'}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditRuleModal(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRule}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-500/20 transition disabled:opacity-50"
+                >
+                  {submittingRule ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

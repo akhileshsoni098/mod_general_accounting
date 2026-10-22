@@ -1019,6 +1019,17 @@ test('08. Commercial Transactions & Full Inventory-to-GL Integration', async () 
 });
 
 test('09. Industry Module APIs: Retail POS, Restaurant, Hotel PMS, Manufacturing', async () => {
+  // Enable optional industry modules for companyA
+  const enableInd = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${headersA['x-company-id']}/modules`,
+    headers: headersA,
+    body: {
+      enable: ['RESTAURANT', 'HOTEL_PMS', 'MANUFACTURING']
+    }
+  });
+  assert.strictEqual(enableInd.status, 200, `Enabling industry modules failed: ${JSON.stringify(enableInd.body)}`);
+
   // A. RETAIL POS
   // 1. Open shift
   const openShift = await makeRequest({
@@ -1382,6 +1393,17 @@ test('10. Data Exchange: Import & Export Operations', async () => {
 });
 
 test('11. Finance Close & Reporting APIs', async () => {
+  // Enable FINANCE_CLOSE module on companyA
+  const enableClose = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${headersA['x-company-id']}/modules`,
+    headers: headersA,
+    body: {
+      enable: ['FINANCE_CLOSE']
+    }
+  });
+  assert.strictEqual(enableClose.status, 200, `Enabling close module failed: ${JSON.stringify(enableClose.body)}`);
+
   // GET /api/v1/close/overview
   const overviewRes = await makeRequest({
     method: 'GET',
@@ -1436,6 +1458,17 @@ test('11. Finance Close & Reporting APIs', async () => {
 });
 
 test('12. Accounting Dimensions & Event Engine APIs', async () => {
+  // Enable DIMENSIONS & RULES_ENGINE modules on companyA
+  const enableDim = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${headersA['x-company-id']}/modules`,
+    headers: headersA,
+    body: {
+      enable: ['DIMENSIONS', 'RULES_ENGINE']
+    }
+  });
+  assert.strictEqual(enableDim.status, 200, `Enabling dimensions module failed: ${JSON.stringify(enableDim.body)}`);
+
   // 1. Create Dimension
   const createDim = await makeRequest({
     method: 'POST',

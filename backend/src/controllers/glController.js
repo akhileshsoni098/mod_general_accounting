@@ -476,17 +476,38 @@ async function getPostingRules(req, res) {
   }
 }
 
+async function getPostingRuleById(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const rule = await PostingRule.findOne({
+      _id: id,
+      $or: [{ tenant_id: tenantId }, { tenant_id: null }]
+    });
+    if (!rule) return res.error('Posting rule not found', 404);
+    const lines = await PostingRuleLine.find({ posting_rule_id: rule._id }).sort({ line_number: 1 });
+    const ruleObj = rule.toObject();
+    return res.success({ ...ruleObj, rule: ruleObj, lines });
+  } catch (err) {
+    return res.error('Failed to get posting rule', 500, err.message);
+  }
+}
+
 async function createPostingRule(req, res) {
   try {
     const tenantId = req.tenantId;
     const companyId = req.companyId;
-    const { rule_code, event_type, rule_name, description, applicable_module, lines } = req.body;
+    const { rule_code, event_type, event_code, rule_name, description, applicable_module, lines } = req.body;
 
-    if (!rule_code || !event_type || !rule_name || !lines || lines.length < 2) {
-      return res.error('rule_code, event_type, rule_name, and at least 2 rule lines are required', 400);
+    if (!rule_code || (!event_type && !event_code) || !rule_name || !lines || lines.length < 2) {
+      return res.error('rule_code, event_type/event_code, rule_name, and at least 2 rule lines are required', 400);
     }
 
-    const dupQuery = { tenant_id: tenantId, rule_code: rule_code.toUpperCase().trim() };
+    const cleanCode = rule_code.toUpperCase().trim();
+    const cleanEventType = (event_type || event_code).toUpperCase().trim();
+    const cleanEventCode = (event_code || event_type).toLowerCase().trim();
+
+    const dupQuery = { tenant_id: tenantId, rule_code: cleanCode };
     if (companyId) dupQuery.company_id = companyId;
 
     const exists = await PostingRule.findOne(dupQuery);
@@ -497,8 +518,9 @@ async function createPostingRule(req, res) {
     const rule = await PostingRule.create({
       tenant_id: tenantId,
       company_id: companyId || null,
-      rule_code: rule_code.toUpperCase().trim(),
-      event_type: event_type.toUpperCase().trim(),
+      rule_code: cleanCode,
+      event_code: cleanEventCode,
+      event_type: cleanEventType,
       rule_name: rule_name.trim(),
       description: description || '',
       applicable_module: applicable_module || 'GL',
@@ -510,18 +532,89 @@ async function createPostingRule(req, res) {
       const l = lines[i];
       const lineDoc = await PostingRuleLine.create({
         posting_rule_id: rule._id,
+        tenant_id: tenantId,
         line_number: i + 1,
-        account_code: l.account_code,
-        direction: l.direction.toUpperCase(),
-        amount_field: l.amount_field,
+        line_key: l.line_key || `LINE_${i + 1}`,
+        account_code: l.account_code ? l.account_code.trim() : '',
+        direction: (l.direction || 'DEBIT').toUpperCase(),
+        amount_field: l.amount_field || null,
+        amount_expression: l.amount_expression || (l.amount_field ? `payload.${l.amount_field}` : 'payload.amount'),
         description_template: l.description_template || ''
       });
       createdLines.push(lineDoc);
     }
 
-    return res.success({ rule, lines: createdLines }, { message: 'Posting rule created' }, 201);
+    return res.success({ rule, lines: createdLines }, { message: 'Posting rule created successfully' }, 201);
   } catch (err) {
     return res.error('Failed to create posting rule', 500, err.message);
+  }
+}
+
+async function updatePostingRule(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const { rule_name, description, event_type, event_code, applicable_module, status, lines } = req.body;
+
+    const rule = await PostingRule.findOne({ _id: id, tenant_id: tenantId });
+    if (!rule) return res.error('Posting rule not found', 404);
+
+    if (rule_name) rule.rule_name = rule_name.trim();
+    if (typeof description === 'string') rule.description = description.trim();
+    if (event_type || event_code) {
+      rule.event_type = (event_type || event_code).toUpperCase().trim();
+      rule.event_code = (event_code || event_type).toLowerCase().trim();
+    }
+    if (applicable_module) rule.applicable_module = applicable_module;
+    if (status) rule.status = status.toUpperCase();
+
+    await rule.save();
+
+    if (lines && Array.isArray(lines) && lines.length >= 2) {
+      await PostingRuleLine.deleteMany({ posting_rule_id: rule._id });
+      const createdLines = [];
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        const lineDoc = await PostingRuleLine.create({
+          posting_rule_id: rule._id,
+          tenant_id: tenantId,
+          line_number: i + 1,
+          line_key: l.line_key || `LINE_${i + 1}`,
+          account_code: l.account_code ? l.account_code.trim() : '',
+          direction: (l.direction || 'DEBIT').toUpperCase(),
+          amount_field: l.amount_field || null,
+          amount_expression: l.amount_expression || (l.amount_field ? `payload.${l.amount_field}` : 'payload.amount'),
+          description_template: l.description_template || ''
+        });
+        createdLines.push(lineDoc);
+      }
+      return res.success({ rule, lines: createdLines }, { message: 'Posting rule updated successfully' });
+    }
+
+    const existingLines = await PostingRuleLine.find({ posting_rule_id: rule._id }).sort({ line_number: 1 });
+    return res.success({ rule, lines: existingLines }, { message: 'Posting rule updated successfully' });
+  } catch (err) {
+    return res.error('Failed to update posting rule', 500, err.message);
+  }
+}
+
+async function deletePostingRule(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    const rule = await PostingRule.findOne({ _id: id, tenant_id: tenantId });
+    if (!rule) return res.error('Posting rule not found', 404);
+
+    await PostingRuleLine.deleteMany({ posting_rule_id: rule._id });
+    await PostingRule.deleteOne({ _id: rule._id });
+
+    return res.success(
+      { id: rule._id, rule_code: rule.rule_code },
+      { message: `Posting rule ${rule.rule_code} deleted successfully` }
+    );
+  } catch (err) {
+    return res.error('Failed to delete posting rule', 500, err.message);
   }
 }
 
@@ -595,7 +688,10 @@ module.exports = {
   getTrialBalance,
   getFinancialStatements,
   getPostingRules,
+  getPostingRuleById,
   createPostingRule,
+  updatePostingRule,
+  deletePostingRule,
   getExchangeRates,
   createExchangeRate
 };

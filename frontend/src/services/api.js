@@ -89,7 +89,10 @@ export const authApi = {
   getTrialBalance: () => apiRequest('/gl/trial-balance'),
   getFinancialStatements: () => apiRequest('/gl/financial-statements'),
   getPostingRules: () => apiRequest('/gl/posting-rules'),
+  getPostingRuleById: (id) => apiRequest(`/gl/posting-rules/${id}`),
   createPostingRule: (payload) => apiRequest('/gl/posting-rules', { method: 'POST', body: payload }),
+  updatePostingRule: (id, payload) => apiRequest(`/gl/posting-rules/${id}`, { method: 'PATCH', body: payload }),
+  deletePostingRule: (id) => apiRequest(`/gl/posting-rules/${id}`, { method: 'DELETE' }),
   getExchangeRates: () => apiRequest('/gl/exchange-rates'),
   createExchangeRate: (payload) => apiRequest('/gl/exchange-rates', { method: 'POST', body: payload }),
 

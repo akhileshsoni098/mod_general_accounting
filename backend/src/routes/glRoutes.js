@@ -41,9 +41,13 @@ router.post('/journals/:id/reverse', requirePermission('GL:POST'), glController.
 router.get('/trial-balance', requirePermission('GL:VIEW'), glController.getTrialBalance);
 router.get('/financial-statements', requirePermission('GL:VIEW'), glController.getFinancialStatements);
 
-// Posting Rules
+// Posting Rules CRUD
 router.get('/posting-rules', requirePermission('GL:VIEW'), glController.getPostingRules);
-router.post('/posting-rules', requirePermission('GL:ADMIN'), glController.createPostingRule);
+router.get('/posting-rules/:id', requirePermission('GL:VIEW'), glController.getPostingRuleById);
+router.post('/posting-rules', requirePermission(['GL:ADMIN', 'GL:POST']), glController.createPostingRule);
+router.patch('/posting-rules/:id', requirePermission(['GL:ADMIN', 'GL:POST']), glController.updatePostingRule);
+router.put('/posting-rules/:id', requirePermission(['GL:ADMIN', 'GL:POST']), glController.updatePostingRule);
+router.delete('/posting-rules/:id', requirePermission(['GL:ADMIN', 'GL:POST']), glController.deletePostingRule);
 
 // Exchange Rates
 router.get('/exchange-rates', requirePermission('GL:VIEW'), glController.getExchangeRates);
