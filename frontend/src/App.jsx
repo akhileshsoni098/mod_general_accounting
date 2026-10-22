@@ -418,28 +418,83 @@ export default function App() {
 
         {/* Content View */}
         <main className="flex-1 p-8 overflow-y-auto max-w-7xl">
-          {activeTab === 'dashboard' && <TenantDashboardPage onNavigateTab={setActiveTab} />}
-          {activeTab === 'gl' && <GLWorkspacePage />}
-          {activeTab === 'inventory' && <InventoryWorkspacePage />}
-          {activeTab === 'commercial' && <CommercialWorkspacePage />}
-          {activeTab === 'retail_pos' && <RetailPosPage />}
-          {activeTab === 'restaurant' && <RestaurantWorkspacePage />}
-          {activeTab === 'hotel' && <HotelWorkspacePage />}
-          {activeTab === 'manufacturing' && <ManufacturingWorkspacePage />}
+          {(() => {
+            const tabModuleMap = {
+              commercial: { key: 'COMMERCIAL_BILLING', name: 'Commercial Sales & Purchases (GST)' },
+              inventory: { key: 'INVENTORY', name: 'Inventory & Stock Masters' },
+              finance_close: { key: 'FINANCE_CLOSE', name: 'Finance Close & Period Lock' },
+              retail_pos: { key: 'RETAIL_POS', name: 'Retail POS Checkout' },
+              restaurant: { key: 'RESTAURANT', name: 'Restaurant & Kitchen Orders' },
+              hotel: { key: 'HOTEL_PMS', name: 'Hotel PMS & Hospitality' },
+              manufacturing: { key: 'MANUFACTURING', name: 'Manufacturing & Assembly' },
+              event_definitions: { key: 'RULES_ENGINE', name: 'Event Definitions' },
+              posting_rules: { key: 'RULES_ENGINE', name: 'Journal Entry Rules' },
+              dimensions: { key: 'DIMENSIONS', name: 'Accounting Dimensions' },
+              event_simulator: { key: 'RULES_ENGINE', name: 'Event Simulator' },
+              event_operations: { key: 'RULES_ENGINE', name: 'Event Operations' },
+              rule_tests: { key: 'RULES_ENGINE', name: 'Rule Test Cases' },
+              config_bundle: { key: 'RULES_ENGINE', name: 'Configuration Bundle' }
+            };
 
-          {activeTab === 'finance_close' && <FinanceCloseWorkspacePage />}
-          {activeTab === 'counterparties' && <CounterpartiesPage />}
-          {activeTab === 'event_definitions' && <EventDefinitionsPage />}
-          {activeTab === 'posting_rules' && <PostingRulesPage />}
-          {activeTab === 'dimensions' && <DimensionsPage />}
-          {activeTab === 'event_simulator' && <EventSimulatorPage />}
-          {activeTab === 'event_operations' && <EventOperationsPage />}
-          {activeTab === 'rule_tests' && <RuleTestCasesPage />}
-          {activeTab === 'config_bundle' && <ConfigBundlePage />}
-          {activeTab === 'users' && <UserManagementPage />}
-          {activeTab === 'settings' && <OrganizationSettingsPage />}
-          {activeTab === 'modules' && <ModuleConfigPage />}
-          {activeTab === 'platform_admin' && <PlatformAdminPage />}
+            const required = tabModuleMap[activeTab];
+            if (required && !isModuleEnabled(required.key)) {
+              return (
+                <div className="p-8 max-w-xl mx-auto my-12 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-4 shadow-xl">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                    <ShieldAlert className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-base font-bold text-white">Module Not Active</h2>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    The <strong className="text-slate-200">{required.name}</strong> module is currently disabled for <strong className="text-slate-200">{currentCompany?.company_name || 'this company'}</strong>.
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    You can enable this module anytime from Business Modules & Setup. Historical accounting data and records remain safely stored in the database.
+                  </p>
+                  <div className="pt-2 flex items-center justify-center space-x-3">
+                    <button
+                      onClick={() => setActiveTab('modules')}
+                      className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition cursor-pointer"
+                    >
+                      Configure Business Modules
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('dashboard')}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition cursor-pointer border border-slate-700"
+                    >
+                      Return to Dashboard
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <>
+                {activeTab === 'dashboard' && <TenantDashboardPage onNavigateTab={setActiveTab} />}
+                {activeTab === 'gl' && <GLWorkspacePage />}
+                {activeTab === 'inventory' && <InventoryWorkspacePage />}
+                {activeTab === 'commercial' && <CommercialWorkspacePage />}
+                {activeTab === 'retail_pos' && <RetailPosPage />}
+                {activeTab === 'restaurant' && <RestaurantWorkspacePage />}
+                {activeTab === 'hotel' && <HotelWorkspacePage />}
+                {activeTab === 'manufacturing' && <ManufacturingWorkspacePage />}
+
+                {activeTab === 'finance_close' && <FinanceCloseWorkspacePage />}
+                {activeTab === 'counterparties' && <CounterpartiesPage />}
+                {activeTab === 'event_definitions' && <EventDefinitionsPage />}
+                {activeTab === 'posting_rules' && <PostingRulesPage />}
+                {activeTab === 'dimensions' && <DimensionsPage />}
+                {activeTab === 'event_simulator' && <EventSimulatorPage />}
+                {activeTab === 'event_operations' && <EventOperationsPage />}
+                {activeTab === 'rule_tests' && <RuleTestCasesPage />}
+                {activeTab === 'config_bundle' && <ConfigBundlePage />}
+                {activeTab === 'users' && <UserManagementPage />}
+                {activeTab === 'settings' && <OrganizationSettingsPage />}
+                {activeTab === 'modules' && <ModuleConfigPage />}
+                {activeTab === 'platform_admin' && <PlatformAdminPage />}
+              </>
+            );
+          })()}
         </main>
       </div>
     </div>

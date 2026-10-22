@@ -803,3 +803,170 @@ test('20. 1-Click Reset: Applying GENERAL_ACCOUNTING preset disables all optiona
   assert.equal(resetRes.body.data.enabled_modules.includes('RULES_ENGINE'), false);
 });
 
+// ==========================================
+// Test 21: Preset Replacement Semantics
+// ==========================================
+test('21. Preset Replacement: Applying RESTAURANT_CAFE after RETAIL_TRADING replaces RETAIL_POS with RESTAURANT without module accumulation', async () => {
+  // 1. Apply RETAIL_TRADING preset
+  const retailRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      template_id: 'RETAIL_TRADING'
+    }
+  });
+
+  assert.equal(retailRes.status, 200);
+  assert.ok(retailRes.body.data.enabled_modules.includes('RETAIL_POS'), 'RETAIL_POS must be enabled in Retail preset');
+  assert.equal(retailRes.body.data.enabled_modules.includes('RESTAURANT'), false, 'RESTAURANT should not be enabled yet');
+
+  // 2. Apply RESTAURANT_CAFE preset (replaces configuration)
+  const restaurantRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      template_id: 'RESTAURANT_CAFE'
+    }
+  });
+
+  assert.equal(restaurantRes.status, 200);
+  assert.ok(restaurantRes.body.data.enabled_modules.includes('RESTAURANT'), 'RESTAURANT must now be enabled');
+  assert.equal(
+    restaurantRes.body.data.enabled_modules.includes('RETAIL_POS'),
+    false,
+    'RETAIL_POS must be cleanly replaced and NOT accumulated'
+  );
+  // Shared dependencies like INVENTORY and COMMERCIAL_BILLING are preserved
+  assert.ok(restaurantRes.body.data.enabled_modules.includes('INVENTORY'));
+  assert.ok(restaurantRes.body.data.enabled_modules.includes('COMMERCIAL_BILLING'));
+});
+
+// ==========================================
+// Test 22: Integrity & State Retention on Failed / Cancelled Updates
+// ==========================================
+test('22. State Retention: Invalid or rejected module update attempts leave existing database configuration unchanged', async () => {
+  // 1. Capture current enabled modules
+  const beforeRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+  assert.equal(beforeRes.status, 200);
+  const beforeModules = [...beforeRes.body.data.enabled_modules].sort();
+
+  // 2. Attempt illegal action: disabling a core module (GL)
+  const failRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'GL',
+      is_enabled: false
+    }
+  });
+  assert.equal(failRes.status, 400, 'Attempt to disable core GL must return 400 Bad Request');
+
+  // 3. Verify database configuration is completely untouched
+  const afterRes = await makeRequest({
+    method: 'GET',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    }
+  });
+  assert.equal(afterRes.status, 200);
+  assert.deepEqual(afterRes.body.data.enabled_modules.sort(), beforeModules, 'Configuration must remain unchanged');
+});
+
+// ==========================================
+// Test 23: Toggle Cycle & Profile Refresh Persistence
+// ==========================================
+test('23. Toggle Cycle: Enabling and disabling an optional module via individual switch persists across getMe and session refresh', async () => {
+  // 1. Clean reset to core
+  await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      template_id: 'GENERAL_ACCOUNTING'
+    }
+  });
+
+  // 2. Enable COMMERCIAL_BILLING via switch (is_enabled: true)
+  const enableSwitchRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'COMMERCIAL_BILLING',
+      is_enabled: true
+    }
+  });
+  assert.equal(enableSwitchRes.status, 200);
+  assert.ok(enableSwitchRes.body.data.enabled_modules.includes('COMMERCIAL_BILLING'));
+
+  // 3. Verify getMe (session refresh) reflects COMMERCIAL_BILLING
+  const meRes1 = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/auth/me',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(meRes1.status, 200);
+  assert.ok(meRes1.body.data.current_company.enabled_modules.includes('COMMERCIAL_BILLING'));
+
+  // 4. Disable COMMERCIAL_BILLING via switch (is_enabled: false)
+  const disableSwitchRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'COMMERCIAL_BILLING',
+      is_enabled: false
+    }
+  });
+  assert.equal(disableSwitchRes.status, 200);
+  assert.equal(disableSwitchRes.body.data.enabled_modules.includes('COMMERCIAL_BILLING'), false);
+
+  // 5. Verify getMe reflects the disabled state after refresh
+  const meRes2 = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/auth/me',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString(),
+      'x-company-id': companySimple._id.toString()
+    }
+  });
+  assert.equal(meRes2.status, 200);
+  assert.equal(meRes2.body.data.current_company.enabled_modules.includes('COMMERCIAL_BILLING'), false);
+});
+
+

@@ -24,7 +24,10 @@ import {
   Lock,
   Tags,
   DollarSign,
-  RotateCcw
+  RotateCcw,
+  Plus,
+  Minus,
+  AlertTriangle
 } from 'lucide-react';
 
 const MODULE_ICONS = {
@@ -98,6 +101,12 @@ export default function ModuleConfigPage() {
   const [updatingModule, setUpdatingModule] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
+  // Preset replacement & safeguard modals
+  const [pendingPreset, setPendingPreset] = useState(null);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [pendingCascade, setPendingCascade] = useState(null);
+  const [modalSubmitting, setModalSubmitting] = useState(false);
+
   // Franchise config modal state
   const [franchiseModalOpen, setFranchiseModalOpen] = useState(false);
   const [franchiseLoading, setFranchiseLoading] = useState(false);
@@ -150,11 +159,13 @@ export default function ModuleConfigPage() {
       );
 
       if (activeDependents.length > 0) {
-        const depNames = activeDependents.map(d => d.name).join(', ');
-        const confirmCascade = window.confirm(
-          `Disabling "${targetMod?.name || moduleKey}" will also automatically disable dependent module(s):\n\n• ${depNames}\n\nDo you want to proceed?`
-        );
-        if (!confirmCascade) return;
+        setPendingCascade({
+          moduleKey,
+          targetMod,
+          dependentNames: activeDependents.map(d => d.name),
+          currentStatus
+        });
+        return;
       }
     }
 
@@ -181,13 +192,60 @@ export default function ModuleConfigPage() {
     }
   };
 
-  const handleResetToCoreAccounting = async () => {
-    const confirmed = window.confirm(
-      `Reset all modules for "${currentCompany?.company_name}" to Core General Accounting only?\n\nThis will disable all optional modules (${activeOptionalCount} currently active).\n\nExisting transactions, ledgers, vouchers, and accounts will NOT be deleted.`
-    );
-    if (!confirmed) return;
+  const initiateApplyTemplate = (template) => {
+    if (template.id === 'GENERAL_ACCOUNTING') {
+      setResetModalOpen(true);
+      return;
+    }
 
-    setLoading(true);
+    const targetModules = template.modules;
+    const currentlyEnabledKeys = catalog.filter(m => !m.is_core && m.is_enabled).map(m => m.key);
+    const toEnable = targetModules
+      .filter(m => !['GL', 'BANKING_CASH', 'PARTIES', 'REPORTS'].includes(m) && !currentlyEnabledKeys.includes(m))
+      .map(k => catalog.find(m => m.key === k) || { key: k, name: k });
+
+    const toDisable = currentlyEnabledKeys
+      .filter(k => !targetModules.includes(k))
+      .map(k => catalog.find(m => m.key === k) || { key: k, name: k });
+
+    const toRetain = targetModules
+      .filter(m => !['GL', 'BANKING_CASH', 'PARTIES', 'REPORTS'].includes(m) && currentlyEnabledKeys.includes(m))
+      .map(k => catalog.find(m => m.key === k) || { key: k, name: k });
+
+    setPendingPreset({
+      template,
+      toEnable,
+      toDisable,
+      toRetain
+    });
+  };
+
+  const confirmApplyPreset = async () => {
+    if (!pendingPreset) return;
+    setModalSubmitting(true);
+    setFeedback(null);
+    try {
+      const res = await authApi.updateCompanyModules(currentCompany.id, {
+        template_id: pendingPreset.template.id
+      });
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          text: res.message || `Applied preset "${pendingPreset.template.name}" successfully.`
+        });
+        setPendingPreset(null);
+        await loadCompanyModules();
+        await reloadProfile();
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message });
+    } finally {
+      setModalSubmitting(false);
+    }
+  };
+
+  const confirmResetToCore = async () => {
+    setModalSubmitting(true);
     setFeedback(null);
     try {
       const res = await authApi.updateCompanyModules(currentCompany.id, {
@@ -198,35 +256,33 @@ export default function ModuleConfigPage() {
           type: 'success',
           text: res.message || `Reset to Core General Accounting completed! All optional modules are now disabled.`
         });
+        setResetModalOpen(false);
         await loadCompanyModules();
         await reloadProfile();
       }
     } catch (err) {
       setFeedback({ type: 'error', text: err.message });
     } finally {
-      setLoading(false);
+      setModalSubmitting(false);
     }
   };
 
-  const handleApplyTemplate = async (template) => {
-    const isReset = template.id === 'GENERAL_ACCOUNTING';
-    const message = isReset
-      ? `Reset to "${template.name}" for "${currentCompany?.company_name}"?\n\nThis will disable all optional modules and keep only Core General Accounting. Existing data will NOT be deleted.`
-      : `Apply preset "${template.name}" for "${currentCompany?.company_name}"?\n\nThis will configure ${template.modules.length} active business modules. Existing data will NOT be deleted.`;
-
-    const confirmed = window.confirm(message);
-    if (!confirmed) return;
-
-    setLoading(true);
+  const confirmCascadeDisable = async () => {
+    if (!pendingCascade) return;
+    const { moduleKey, targetMod, currentStatus } = pendingCascade;
+    setPendingCascade(null);
+    setUpdatingModule(moduleKey);
     setFeedback(null);
     try {
       const res = await authApi.updateCompanyModules(currentCompany.id, {
-        template_id: template.id
+        module_code: moduleKey,
+        is_enabled: !currentStatus,
+        auto_resolve_dependencies: false
       });
       if (res.success) {
         setFeedback({
           type: 'success',
-          text: res.message || `Applied "${template.name}" successfully.`
+          text: res.message || `Disabled ${targetMod?.name || moduleKey} and dependent module(s).`
         });
         await loadCompanyModules();
         await reloadProfile();
@@ -234,7 +290,7 @@ export default function ModuleConfigPage() {
     } catch (err) {
       setFeedback({ type: 'error', text: err.message });
     } finally {
-      setLoading(false);
+      setUpdatingModule(null);
     }
   };
 
@@ -351,7 +407,7 @@ export default function ModuleConfigPage() {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={handleResetToCoreAccounting}
+            onClick={() => setResetModalOpen(true)}
             disabled={loading || activeOptionalCount === 0}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
               activeOptionalCount > 0
@@ -383,14 +439,24 @@ export default function ModuleConfigPage() {
 
       {feedback && (
         <div
-          className={`p-3 rounded-lg text-xs flex items-center space-x-2 ${
+          className={`p-3 rounded-lg text-xs flex items-center justify-between ${
             feedback.type === 'success'
               ? 'bg-emerald-950/40 border border-emerald-500/40 text-emerald-400'
               : 'bg-rose-950/40 border border-rose-500/40 text-rose-400'
           }`}
         >
-          {feedback.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-          <span>{feedback.text}</span>
+          <div className="flex items-center space-x-2">
+            {feedback.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+            <span>{feedback.text}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="p-1 text-slate-400 hover:text-white rounded transition cursor-pointer"
+            title="Dismiss notice"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -470,7 +536,7 @@ export default function ModuleConfigPage() {
               </div>
 
               <button
-                onClick={() => handleApplyTemplate(tmpl)}
+                onClick={() => initiateApplyTemplate(tmpl)}
                 disabled={loading}
                 className={`mt-3.5 w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${
                   tmpl.isResetPreset
@@ -534,7 +600,7 @@ export default function ModuleConfigPage() {
                             <div
                               className={`p-2 rounded-lg ${
                                 isEnabled
-                                  ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                   : 'bg-slate-800 text-slate-500 border border-slate-700'
                               }`}
                             >
@@ -553,7 +619,7 @@ export default function ModuleConfigPage() {
                                     Core (Always Active)
                                   </span>
                                 ) : isEnabled ? (
-                                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     Active & Enabled
                                   </span>
                                 ) : (
@@ -582,11 +648,13 @@ export default function ModuleConfigPage() {
                               </div>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => handleToggleModule(mod.key, isEnabled)}
                                 disabled={isUpdating || loading}
+                                title={isEnabled ? `Enabled (click to disable ${mod.name})` : `Disabled (click to enable ${mod.name})`}
                                 className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
-                                  isEnabled ? 'bg-brand-600' : 'bg-slate-700'
-                                } ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                  isEnabled ? 'bg-emerald-500' : 'bg-slate-700'
+                                } ${isUpdating || loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                               >
                                 <span
                                   className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
@@ -845,6 +913,283 @@ export default function ModuleConfigPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 1. Preset Replacement Confirmation Modal */}
+      {pendingPreset && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Apply Preset: {pendingPreset.template.name}</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Target Company: <strong className="text-slate-200">{currentCompany.company_name}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingPreset(null)}
+                className="text-slate-400 hover:text-white p-1 rounded transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div className="font-semibold text-slate-100 flex items-center space-x-2">
+                <Layers className="w-4 h-4 text-brand-400" />
+                <span>Preset Replacement Semantics</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Applying this preset will <strong>replace</strong> your optional module selection with the standard modules configured for <strong>{pendingPreset.template.name}</strong>. Core general accounting remains permanently active.
+              </p>
+            </div>
+
+            {/* Modules to Enable (Adding) */}
+            {pendingPreset.toEnable.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-emerald-400 flex items-center space-x-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Modules to be Enabled ({pendingPreset.toEnable.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {pendingPreset.toEnable.map((m) => (
+                    <span
+                      key={m.key}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1"
+                    >
+                      <Plus className="w-3 h-3 shrink-0" />
+                      <span>{m.name}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modules to Disable (Removing) */}
+            {pendingPreset.toDisable.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-rose-400 flex items-center space-x-1.5">
+                  <Minus className="w-3.5 h-3.5" />
+                  <span>Modules to be Disabled ({pendingPreset.toDisable.length})</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {pendingPreset.toDisable.map((m) => (
+                    <span
+                      key={m.key}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-300 border border-rose-500/30 flex items-center space-x-1"
+                    >
+                      <Minus className="w-3 h-3 shrink-0" />
+                      <span>{m.name}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Note: Disabling these modules will hide their workspace navigation. Historical vouchers, ledgers, and transactions remain completely intact in the database.
+                </p>
+              </div>
+            )}
+
+            {/* Modules Remaining Active */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-semibold text-slate-400 flex items-center space-x-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <span>Modules Remaining Active</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300 border border-slate-700">General Ledger (GL)</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300 border border-slate-700">Banking & Cash</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300 border border-slate-700">Parties & Ledgers</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300 border border-slate-700">Financial Reports</span>
+                {pendingPreset.toRetain.map((m) => (
+                  <span
+                    key={m.key}
+                    className="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-slate-300 border border-slate-700"
+                  >
+                    {m.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPendingPreset(null)}
+                disabled={modalSubmitting}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmApplyPreset}
+                disabled={modalSubmitting}
+                className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-500/20 transition cursor-pointer flex items-center space-x-1.5"
+              >
+                {modalSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                <span>{modalSubmitting ? 'Applying Preset...' : 'Confirm & Replace Configuration'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Reset to Core Accounting Confirmation Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Reset to Core Accounting</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Company: <strong className="text-slate-200">{currentCompany.company_name}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-2">
+              <p className="leading-relaxed">
+                This action will disable all <strong className="text-white">{activeOptionalCount} optional business modules</strong> (Retail POS, Restaurant, Manufacturing, Inventory, Commercial Trade, Rules Engine, etc.).
+              </p>
+              <div className="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 text-[11px] flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>
+                  <strong>Data Preservation Guarantee:</strong> All posted transactions, journals, vouchers, stock items, and ledger balances remain permanently preserved. You can re-enable modules anytime.
+                </span>
+              </div>
+            </div>
+
+            {activeOptionalModules.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-rose-400">
+                  Modules Being Disabled:
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeOptionalModules.map((m) => (
+                    <span
+                      key={m.key}
+                      className="px-2 py-0.5 rounded text-[11px] bg-rose-500/10 text-rose-300 border border-rose-500/30"
+                    >
+                      {m.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-semibold text-emerald-400">
+                Core Accounting Retained (Always Active):
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">General Ledger (GL)</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Banking & Cash</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Parties & Ledgers</span>
+                <span className="px-2 py-0.5 rounded text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">Financial Reports</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setResetModalOpen(false)}
+                disabled={modalSubmitting}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmResetToCore}
+                disabled={modalSubmitting}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md shadow-rose-600/20 transition cursor-pointer flex items-center space-x-1.5"
+              >
+                {modalSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                <span>{modalSubmitting ? 'Resetting...' : 'Confirm Reset to Core Only'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Dependency Cascade Confirmation Modal */}
+      {pendingCascade && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Dependency Safeguard</h3>
+                  <p className="text-[11px] text-slate-400">
+                    Disabling {pendingCascade.targetMod?.name || pendingCascade.moduleKey}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPendingCascade(null)}
+                className="text-slate-400 hover:text-white p-1 rounded transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <p className="leading-relaxed">
+                The module <strong className="text-white">{pendingCascade.targetMod?.name || pendingCascade.moduleKey}</strong> has active dependent modules. To preserve system integrity, the following dependent modules will also be safely disabled:
+              </p>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                {pendingCascade.dependentNames.map((name) => (
+                  <div key={name} className="flex items-center space-x-2 text-rose-300 text-xs font-medium">
+                    <Minus className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>{name}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                You can re-enable these modules anytime. Existing transactions and records will remain safely saved in the database.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPendingCascade(null)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmCascadeDisable}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5"
+              >
+                <span>Confirm & Disable All</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
