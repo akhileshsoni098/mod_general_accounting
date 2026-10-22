@@ -1027,7 +1027,7 @@ export default function BillingWorkspacePage() {
                       const rolesStr = (cp.roles || []).map((r) => r.role_type || r).join(', ') || 'Counterparty';
                       return (
                         <option key={cp._id} value={cp._id}>
-                          {cp.legal_name} [{rolesStr}] ({cp.party_code})
+                          {cp.legal_name || cp.trade_name || cp.party_code} [{rolesStr}] ({cp.party_code})
                         </option>
                       );
                     })}

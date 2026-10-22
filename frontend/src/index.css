@@ -11,6 +11,12 @@ code, pre {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Ensure dark mode select options always have solid dark background and bright text */
+select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
 /* =====================================================================
    DARK / NIGHT THEME (DEFAULT)
    ===================================================================== */

@@ -969,4 +969,28 @@ test('23. Toggle Cycle: Enabling and disabling an optional module via individual
   assert.equal(meRes2.body.data.current_company.enabled_modules.includes('COMMERCIAL_BILLING'), false);
 });
 
+test('24. Business Profile Catalog: GET /api/v1/companies/profiles returns normalized objects with valid non-empty id, code, label, and name strings', async () => {
+  const res = await makeRequest({
+    method: 'GET',
+    path: '/api/v1/companies/profiles',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  assert.equal(res.status, 200);
+  assert.ok(Array.isArray(res.body.data));
+  assert.ok(res.body.data.length >= 10);
+
+  for (const profile of res.body.data) {
+    assert.ok(typeof profile.id === 'string' && profile.id.length > 0, 'Profile id must be non-empty string');
+    assert.ok(typeof profile.code === 'string' && profile.code.length > 0, 'Profile code must be non-empty string');
+    assert.ok(typeof profile.label === 'string' && profile.label.length > 0, 'Profile label must be non-empty string');
+    assert.ok(typeof profile.name === 'string' && profile.name.length > 0, 'Profile name must be non-empty string');
+    assert.equal(profile.id, profile.code);
+    assert.equal(profile.label, profile.name);
+    assert.ok(Array.isArray(profile.recommended_modules));
+  }
+});
+
 

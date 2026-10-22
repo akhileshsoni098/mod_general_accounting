@@ -301,7 +301,7 @@ export default function ManufacturingWorkspacePage() {
                   <option value="">-- Choose Raw Materials Godown --</option>
                   {godowns.map((g) => (
                     <option key={g._id} value={g._id}>
-                      {g.name} ({g.godown_code})
+                      {g.godown_name || g.name || g.godown_code} ({g.godown_code})
                     </option>
                   ))}
                 </select>
@@ -317,7 +317,7 @@ export default function ManufacturingWorkspacePage() {
                   <option value="">-- Choose Finished Goods Godown --</option>
                   {godowns.map((g) => (
                     <option key={g._id} value={g._id}>
-                      {g.name} ({g.godown_code})
+                      {g.godown_name || g.name || g.godown_code} ({g.godown_code})
                     </option>
                   ))}
                 </select>

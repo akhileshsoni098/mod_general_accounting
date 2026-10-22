@@ -460,7 +460,12 @@ async function addMember(req, res) {
  * Return all available business profiles.
  */
 function getBusinessProfilesList(req, res) {
-  return res.success(getAllProfiles());
+  const profiles = getAllProfiles().map(p => ({
+    ...p,
+    code: p.id,
+    name: p.label
+  }));
+  return res.success(profiles);
 }
 
 /**

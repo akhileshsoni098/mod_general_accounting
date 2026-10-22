@@ -269,11 +269,11 @@ export default function CompanySelector() {
                     onChange={(e) => setFormData({ ...formData, base_currency: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500"
                   >
-                    <option value="USD">USD ($)</option>
-                    <option value="INR">INR (₹)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="AED">AED (AED)</option>
+                    <option value="USD" className="bg-slate-800 text-white">USD ($)</option>
+                    <option value="INR" className="bg-slate-800 text-white">INR (₹)</option>
+                    <option value="EUR" className="bg-slate-800 text-white">EUR (€)</option>
+                    <option value="GBP" className="bg-slate-800 text-white">GBP (£)</option>
+                    <option value="AED" className="bg-slate-800 text-white">AED (AED)</option>
                   </select>
                 </div>
               </div>
@@ -316,14 +316,18 @@ export default function CompanySelector() {
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500"
                   >
                     {profiles.length > 0 ? (
-                      profiles.map((p) => (
-                        <option key={p.code} value={p.code}>
-                          {p.name}
-                        </option>
-                      ))
+                      profiles.map((p) => {
+                        const code = p.id || p.code;
+                        const label = p.label || p.name || PROFILE_LABELS[code]?.label || code;
+                        return (
+                          <option key={code} value={code} className="bg-slate-800 text-white">
+                            {label}
+                          </option>
+                        );
+                      })
                     ) : (
                       Object.keys(PROFILE_LABELS).map((code) => (
-                        <option key={code} value={code}>
+                        <option key={code} value={code} className="bg-slate-800 text-white">
                           {PROFILE_LABELS[code].label}
                         </option>
                       ))
@@ -340,10 +344,10 @@ export default function CompanySelector() {
                     onChange={(e) => setFormData({ ...formData, financial_year_start_month: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-brand-500"
                   >
-                    <option value={1}>January (Calendar Year)</option>
-                    <option value={4}>April (Standard India/UK FY)</option>
-                    <option value={7}>July (Standard Australia FY)</option>
-                    <option value={10}>October (US Federal FY)</option>
+                    <option value={1} className="bg-slate-800 text-white">January (Calendar Year)</option>
+                    <option value={4} className="bg-slate-800 text-white">April (Standard India/UK FY)</option>
+                    <option value={7} className="bg-slate-800 text-white">July (Standard Australia FY)</option>
+                    <option value={10} className="bg-slate-800 text-white">October (US Federal FY)</option>
                   </select>
                 </div>
               </div>

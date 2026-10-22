@@ -748,7 +748,7 @@ export default function ModuleConfigPage() {
                   <option value="">-- Select Main Hub Counterparty --</option>
                   {counterparties.map((cp) => (
                     <option key={cp._id || cp.id} value={cp._id || cp.id}>
-                      {cp.legal_name || cp.trade_name} ({cp.party_code || 'Party'})
+                      {cp.legal_name || cp.trade_name || cp.party_code || 'Counterparty'} ({cp.party_code || 'Party'})
                     </option>
                   ))}
                 </select>
