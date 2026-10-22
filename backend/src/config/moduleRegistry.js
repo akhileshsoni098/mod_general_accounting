@@ -332,6 +332,34 @@ function getModuleCatalog(enabledList = []) {
   }));
 }
 
+/**
+ * Find all enabled modules that depend on any of the specified target module keys (directly or transitively).
+ * Used for cascading disable so removing a parent module also safely prunes downstream dependents.
+ */
+function getDownstreamDependents(keysToDisable = [], currentEnabled = []) {
+  const disableSet = new Set(keysToDisable.map(k => String(k).toUpperCase().trim()));
+  const activeSet = new Set(currentEnabled.map(k => String(k).toUpperCase().trim()));
+  const cascadingDependents = new Set();
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const activeKey of activeSet) {
+      if (disableSet.has(activeKey) || cascadingDependents.has(activeKey)) continue;
+      const def = MODULE_DEFINITIONS[activeKey];
+      if (def && Array.isArray(def.dependencies)) {
+        const hasDisabledDep = def.dependencies.some(dep => disableSet.has(dep) || cascadingDependents.has(dep));
+        if (hasDisabledDep) {
+          cascadingDependents.add(activeKey);
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return Array.from(cascadingDependents);
+}
+
 module.exports = {
   MODULE_DEFINITIONS,
   MODULE_CATEGORIES,
@@ -346,5 +374,7 @@ module.exports = {
   getDefaultModulesForProfile,
   validateModuleDependencies,
   resolveModuleDependencies,
+  getDownstreamDependents,
   getModuleCatalog
 };
+

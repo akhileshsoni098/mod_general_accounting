@@ -721,3 +721,85 @@ test('18. Module Enabling & Allowance: Enabling COMMERCIAL_BILLING unlocks comme
   assert.equal(commRes.status, 200, 'Commercial route should return 200 OK after enabling COMMERCIAL_BILLING');
   assert.ok(Array.isArray(commRes.body.data.documents));
 });
+
+// ==========================================
+// Test 19: Cascading Disable & Pruning
+// ==========================================
+test('19. Cascading Disable: Disabling INVENTORY when RETAIL_POS is active disables both without resurrecting INVENTORY', async () => {
+  // 1. Ensure RETAIL_POS and INVENTORY are both enabled on companySimple
+  const enableRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['RETAIL_POS', 'INVENTORY']
+    }
+  });
+
+  assert.equal(enableRes.status, 200);
+  assert.ok(enableRes.body.data.enabled_modules.includes('RETAIL_POS'));
+  assert.ok(enableRes.body.data.enabled_modules.includes('INVENTORY'));
+
+  // 2. Disable INVENTORY individually via toggle (is_enabled: false)
+  const disableRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      module_code: 'INVENTORY',
+      is_enabled: false,
+      auto_resolve_dependencies: false
+    }
+  });
+
+  assert.equal(disableRes.status, 200, `Disable should succeed: ${JSON.stringify(disableRes.body)}`);
+  assert.equal(disableRes.body.data.enabled_modules.includes('INVENTORY'), false, 'INVENTORY must be disabled');
+  assert.equal(disableRes.body.data.enabled_modules.includes('RETAIL_POS'), false, 'RETAIL_POS must be cascaded and disabled');
+  assert.ok(disableRes.body.data.cascaded_disabled.includes('RETAIL_POS'), 'cascaded_disabled should list RETAIL_POS');
+});
+
+// ==========================================
+// Test 20: 1-Click Clean General Accounting Reset
+// ==========================================
+test('20. 1-Click Reset: Applying GENERAL_ACCOUNTING preset disables all optional modules cleanly', async () => {
+  // 1. Enable multiple optional modules on companySimple
+  await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      enable: ['INVENTORY', 'COMMERCIAL_BILLING', 'GST_TAX', 'RULES_ENGINE']
+    }
+  });
+
+  // 2. Apply GENERAL_ACCOUNTING preset
+  const resetRes = await makeRequest({
+    method: 'PATCH',
+    path: `/api/v1/companies/${companySimple._id}/modules`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenant._id.toString()
+    },
+    body: {
+      template_id: 'GENERAL_ACCOUNTING'
+    }
+  });
+
+  assert.equal(resetRes.status, 200);
+  const coreOnly = ['GL', 'BANKING_CASH', 'PARTIES', 'REPORTS'].sort();
+  assert.deepEqual(resetRes.body.data.enabled_modules.sort(), coreOnly, 'Only core general accounting modules must remain');
+  assert.equal(resetRes.body.data.enabled_modules.includes('INVENTORY'), false);
+  assert.equal(resetRes.body.data.enabled_modules.includes('COMMERCIAL_BILLING'), false);
+  assert.equal(resetRes.body.data.enabled_modules.includes('GST_TAX'), false);
+  assert.equal(resetRes.body.data.enabled_modules.includes('RULES_ENGINE'), false);
+});
+

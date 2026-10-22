@@ -6,6 +6,8 @@ const {
   getModuleCatalog,
   validateModuleDependencies,
   resolveModuleDependencies,
+  getDownstreamDependents,
+  getModuleDefinition,
   INDUSTRY_TEMPLATES,
   MODULE_CATEGORIES
 } = require('../config/moduleRegistry');
@@ -521,9 +523,10 @@ async function updateCompanyModules(req, res) {
     }
 
     let currentSet = new Set((company.enabled_modules && company.enabled_modules.length > 0 ? company.enabled_modules : CORE_MODULE_KEYS).map(m => String(m).toUpperCase().trim()));
+    const cascadedDisabled = [];
 
     if (template_id && INDUSTRY_TEMPLATES[template_id]) {
-      // Apply industry template
+      // Apply industry template (e.g. GENERAL_ACCOUNTING cleanly resets to core modules only)
       const template = INDUSTRY_TEMPLATES[template_id];
       currentSet = new Set([...CORE_MODULE_KEYS, ...template.modules]);
     } else if (Array.isArray(enabled_modules)) {
@@ -534,11 +537,14 @@ async function updateCompanyModules(req, res) {
         for (const k of enable) currentSet.add(String(k).toUpperCase().trim());
       }
       if (Array.isArray(disable)) {
-        for (const k of disable) {
-          const normK = String(k).toUpperCase().trim();
-          if (!CORE_MODULE_KEYS.includes(normK)) {
-            currentSet.delete(normK);
-          }
+        const disableKeys = disable.map(k => String(k).toUpperCase().trim()).filter(k => !CORE_MODULE_KEYS.includes(k));
+        const dependents = getDownstreamDependents(disableKeys, Array.from(currentSet));
+        for (const k of disableKeys) {
+          currentSet.delete(k);
+        }
+        for (const dep of dependents) {
+          currentSet.delete(dep);
+          if (!cascadedDisabled.includes(dep)) cascadedDisabled.push(dep);
         }
       }
       if (module_code !== undefined && is_enabled !== undefined) {
@@ -550,6 +556,12 @@ async function updateCompanyModules(req, res) {
             return res.error(`Core module "${normK}" cannot be disabled. It is fundamental to General Accounting.`, 400);
           }
           currentSet.delete(normK);
+          // Automatically cascade disable to any active modules that depend on normK
+          const dependents = getDownstreamDependents([normK], Array.from(currentSet));
+          for (const dep of dependents) {
+            currentSet.delete(dep);
+            if (!cascadedDisabled.includes(dep)) cascadedDisabled.push(dep);
+          }
         }
       }
     }
@@ -566,6 +578,11 @@ async function updateCompanyModules(req, res) {
     if (!valid) {
       if (auto_resolve_dependencies) {
         targetModules = resolveModuleDependencies(targetModules);
+        // Safety guard: if an explicit disable was requested, ensure the disabled module and its dependents are not re-added
+        if (module_code !== undefined && !is_enabled) {
+          const normK = String(module_code).toUpperCase().trim();
+          targetModules = targetModules.filter(m => m !== normK && !cascadedDisabled.includes(m));
+        }
       } else {
         return res.error(
           `Module dependency validation failed: ${JSON.stringify(missingDependencies)}`,
@@ -579,12 +596,31 @@ async function updateCompanyModules(req, res) {
     company.row_version = (company.row_version || 1) + 1;
     await company.save();
 
+    let successMessage = 'Company modules updated successfully';
+    if (template_id && INDUSTRY_TEMPLATES[template_id]) {
+      const tmpl = INDUSTRY_TEMPLATES[template_id];
+      successMessage = `Applied "${tmpl.name}" successfully. ${template_id === 'GENERAL_ACCOUNTING' ? 'All optional modules are now disabled.' : ''}`.trim();
+    } else if (module_code !== undefined && !is_enabled) {
+      const def = getModuleDefinition(module_code);
+      const modName = def?.name || module_code;
+      if (cascadedDisabled.length > 0) {
+        const depNames = cascadedDisabled.map(k => getModuleDefinition(k)?.name || k).join(', ');
+        successMessage = `Disabled "${modName}" and dependent module(s): ${depNames}.`;
+      } else {
+        successMessage = `Disabled "${modName}" successfully.`;
+      }
+    } else if (module_code !== undefined && is_enabled) {
+      const def = getModuleDefinition(module_code);
+      successMessage = `Enabled "${def?.name || module_code}" successfully.`;
+    }
+
     return res.success({
       company_id: company._id.toString(),
       company_name: company.company_name,
       enabled_modules: company.enabled_modules,
+      cascaded_disabled: cascadedDisabled,
       modules_catalog: getModuleCatalog(company.enabled_modules)
-    }, { message: 'Company modules updated successfully' });
+    }, { message: successMessage });
   } catch (err) {
     return res.error('Failed to update company modules', 500, err.message);
   }

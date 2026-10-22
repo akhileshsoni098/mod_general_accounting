@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+// Configure public DNS resolvers to ensure SRV records resolve reliably on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore in environments where setServers is restricted
+}
 
 function sanitizeUri(uri) {
   if (!uri) return 'UNDEFINED';
@@ -8,6 +16,7 @@ function sanitizeUri(uri) {
 async function connectDB(retries = 3, delayMs = 2000) {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/veridex_finance';
   const sanitized = sanitizeUri(uri);
+
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

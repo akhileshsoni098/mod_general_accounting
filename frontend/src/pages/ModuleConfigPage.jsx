@@ -23,7 +23,8 @@ import {
   Share2,
   Lock,
   Tags,
-  DollarSign
+  DollarSign,
+  RotateCcw
 } from 'lucide-react';
 
 const MODULE_ICONS = {
@@ -48,8 +49,9 @@ const TEMPLATE_PRESETS = [
   {
     id: 'GENERAL_ACCOUNTING',
     name: 'General Accounting Only (Simple Default)',
-    badge: 'Core Accounting',
-    description: 'Pure general ledger, chart of accounts, party sub-ledgers, banking/contra vouchers, and standard financial reports.',
+    badge: 'Clean Reset',
+    isResetPreset: true,
+    description: 'Pure general ledger, chart of accounts, party sub-ledgers, banking/contra vouchers, and standard financial reports. (Disables all optional modules in 1 click).',
     modules: ['GL', 'BANKING_CASH', 'PARTIES', 'REPORTS']
   },
   {
@@ -133,19 +135,41 @@ export default function ModuleConfigPage() {
     }
   }
 
+  const catalog = modulesData?.modules_catalog || [];
+  const activeOptionalModules = catalog.filter(m => !m.is_core && m.is_enabled);
+  const activeOptionalCount = activeOptionalModules.length;
+
   const handleToggleModule = async (moduleKey, currentStatus) => {
+    const targetMod = catalog.find(m => m.key === moduleKey);
+
+    // If currently enabled, user is turning it OFF (disabling)
+    if (currentStatus) {
+      // Check if any currently enabled modules depend on this module
+      const activeDependents = catalog.filter(
+        m => m.is_enabled && !m.is_core && Array.isArray(m.dependencies) && m.dependencies.includes(moduleKey)
+      );
+
+      if (activeDependents.length > 0) {
+        const depNames = activeDependents.map(d => d.name).join(', ');
+        const confirmCascade = window.confirm(
+          `Disabling "${targetMod?.name || moduleKey}" will also automatically disable dependent module(s):\n\n• ${depNames}\n\nDo you want to proceed?`
+        );
+        if (!confirmCascade) return;
+      }
+    }
+
     setUpdatingModule(moduleKey);
     setFeedback(null);
     try {
       const res = await authApi.updateCompanyModules(currentCompany.id, {
         module_code: moduleKey,
         is_enabled: !currentStatus,
-        auto_resolve_dependencies: true
+        auto_resolve_dependencies: !currentStatus
       });
       if (res.success) {
         setFeedback({
           type: 'success',
-          text: `Module ${moduleKey} ${!currentStatus ? 'enabled' : 'disabled'} successfully for ${currentCompany.company_name}.`
+          text: res.message || `Module ${targetMod?.name || moduleKey} ${!currentStatus ? 'enabled' : 'disabled'} successfully for ${currentCompany.company_name}.`
         });
         await loadCompanyModules();
         await reloadProfile();
@@ -157,10 +181,40 @@ export default function ModuleConfigPage() {
     }
   };
 
-  const handleApplyTemplate = async (template) => {
+  const handleResetToCoreAccounting = async () => {
     const confirmed = window.confirm(
-      `Apply preset "${template.name}" for "${currentCompany?.company_name}"?\n\nThis will configure ${template.modules.length} active business modules. Existing data will NOT be deleted.`
+      `Reset all modules for "${currentCompany?.company_name}" to Core General Accounting only?\n\nThis will disable all optional modules (${activeOptionalCount} currently active).\n\nExisting transactions, ledgers, vouchers, and accounts will NOT be deleted.`
     );
+    if (!confirmed) return;
+
+    setLoading(true);
+    setFeedback(null);
+    try {
+      const res = await authApi.updateCompanyModules(currentCompany.id, {
+        template_id: 'GENERAL_ACCOUNTING'
+      });
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          text: res.message || `Reset to Core General Accounting completed! All optional modules are now disabled.`
+        });
+        await loadCompanyModules();
+        await reloadProfile();
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', text: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyTemplate = async (template) => {
+    const isReset = template.id === 'GENERAL_ACCOUNTING';
+    const message = isReset
+      ? `Reset to "${template.name}" for "${currentCompany?.company_name}"?\n\nThis will disable all optional modules and keep only Core General Accounting. Existing data will NOT be deleted.`
+      : `Apply preset "${template.name}" for "${currentCompany?.company_name}"?\n\nThis will configure ${template.modules.length} active business modules. Existing data will NOT be deleted.`;
+
+    const confirmed = window.confirm(message);
     if (!confirmed) return;
 
     setLoading(true);
@@ -172,7 +226,7 @@ export default function ModuleConfigPage() {
       if (res.success) {
         setFeedback({
           type: 'success',
-          text: `Applied "${template.name}" successfully.`
+          text: res.message || `Applied "${template.name}" successfully.`
         });
         await loadCompanyModules();
         await reloadProfile();
@@ -254,7 +308,6 @@ export default function ModuleConfigPage() {
     );
   }
 
-  const catalog = modulesData?.modules_catalog || [];
   const categories = modulesData?.categories || {
     CORE: { key: 'CORE', label: 'Core Accounting' },
     OPERATIONS: { key: 'OPERATIONS', label: 'Commercial Operations' },
@@ -298,6 +351,19 @@ export default function ModuleConfigPage() {
 
         <div className="flex items-center space-x-3">
           <button
+            onClick={handleResetToCoreAccounting}
+            disabled={loading || activeOptionalCount === 0}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+              activeOptionalCount > 0
+                ? 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300'
+                : 'bg-slate-800/60 text-slate-500 border-slate-700/60 cursor-not-allowed opacity-60'
+            }`}
+            title="Disable all optional modules and keep only core general accounting"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+            <span>Reset to Core Only {activeOptionalCount > 0 ? `(${activeOptionalCount} Active)` : ''}</span>
+          </button>
+          <button
             onClick={openFranchiseSettings}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-semibold transition cursor-pointer"
           >
@@ -328,6 +394,36 @@ export default function ModuleConfigPage() {
         </div>
       )}
 
+      {/* Guidance Banner on How to Disable & Remove Modules */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start space-x-3.5">
+        <HelpCircle className="w-5 h-5 text-brand-400 mt-0.5 shrink-0" />
+        <div className="space-y-1 text-xs">
+          <div className="font-semibold text-slate-100 flex items-center space-x-2">
+            <span>Modules ko Disable ya Remove kaise karein? (How to disable/remove modules)</span>
+            {activeOptionalCount > 0 ? (
+              <span className="text-[10px] px-2 py-0.2 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
+                {activeOptionalCount} optional modules currently active
+              </span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                Pure Core General Accounting Active
+              </span>
+            )}
+          </div>
+          <div className="text-slate-400 leading-relaxed text-[11px] space-y-0.5">
+            <p>
+              • <strong>Ek module band karna:</strong> Neeche diye gaye module card par toggle switch click karein. Agar koi doosra module ispe depend karta hai (jaise Inventory par Retail POS), toh dono safely ek saath band ho jayenge.
+            </p>
+            <p>
+              • <strong>Saare optional modules ek saath hatana:</strong> Upar diye gaye <span className="text-rose-400 font-medium">"Reset to Core Only"</span> button par click karein ya pehle preset <strong className="text-slate-200">"General Accounting Only"</strong> ko apply karein.
+            </p>
+            <p>
+              • <strong>Data Surakshit Hai:</strong> Module band karne se aapke puraane vouchers, bills ya ledgers delete nahi hote. Jab chahein dobara chalu kar sakte hain.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Quick Industry Presets */}
       <div className="space-y-3">
         <div className="flex items-center space-x-2">
@@ -344,11 +440,21 @@ export default function ModuleConfigPage() {
           {TEMPLATE_PRESETS.map((tmpl) => (
             <div
               key={tmpl.id}
-              className="bg-slate-900 border border-slate-800 hover:border-brand-500/50 rounded-xl p-4 flex flex-col justify-between transition group"
+              className={`border rounded-xl p-4 flex flex-col justify-between transition group ${
+                tmpl.isResetPreset
+                  ? 'bg-slate-900/90 border-emerald-500/30 hover:border-emerald-500/60'
+                  : 'bg-slate-900 border-slate-800 hover:border-brand-500/50'
+              }`}
             >
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">
+                  <span
+                    className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
+                      tmpl.isResetPreset
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-brand-500/10 text-brand-400 border-brand-500/20'
+                    }`}
+                  >
                     {tmpl.badge}
                   </span>
                   <span className="text-[11px] text-slate-400 font-mono">
@@ -366,10 +472,23 @@ export default function ModuleConfigPage() {
               <button
                 onClick={() => handleApplyTemplate(tmpl)}
                 disabled={loading}
-                className="mt-3.5 w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-850 hover:bg-brand-600 text-slate-300 hover:text-white border border-slate-700 hover:border-brand-500 text-xs font-medium transition cursor-pointer"
+                className={`mt-3.5 w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer border ${
+                  tmpl.isResetPreset
+                    ? 'bg-emerald-950/40 hover:bg-emerald-600 text-emerald-300 hover:text-white border-emerald-500/40 hover:border-emerald-500'
+                    : 'bg-slate-850 hover:bg-brand-600 text-slate-300 hover:text-white border-slate-700 hover:border-brand-500'
+                }`}
               >
-                <span>Apply Preset</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {tmpl.isResetPreset ? (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset to General Accounting Only</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Apply Preset</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </div>
           ))}
