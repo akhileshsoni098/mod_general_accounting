@@ -21,15 +21,18 @@ import {
 const ROLE_COLORS = {
   CUSTOMER: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   SUPPLIER: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  VENDOR: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+  DEBTOR: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  CREDITOR: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  FRANCHISE: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  MAIN_HUB: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  PARTNER: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  AGENT: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+  PRODUCER: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   CARRIER: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   MGA: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   BROKER: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  POLICYHOLDER: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  DEBTOR: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  PRODUCER: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  VENDOR: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
-  REINSURER: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  REGULATOR: 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+  POLICYHOLDER: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
 };
 
 export default function CounterpartiesPage() {
@@ -63,7 +66,7 @@ export default function CounterpartiesPage() {
   });
 
   // Form State for Add Role
-  const [newRoleType, setNewRoleType] = useState('BROKER');
+  const [newRoleType, setNewRoleType] = useState('SUPPLIER');
   const [newRoleDetails, setNewRoleDetails] = useState('');
 
   useEffect(() => {
@@ -92,7 +95,7 @@ export default function CounterpartiesPage() {
       setError(null);
       const res = await counterpartiesApi.seedParties();
       if (res.success) {
-        setSuccessMsg(`Default counterparties (Summit, Southlake, ClearSpring, Brightline, Lone Star, Austin Risk, Harbor, Lone Pine) loaded successfully.`);
+        setSuccessMsg(`Commercial counterparties (Apex Wholesale Mart, Metro Hypermarket, Horizon Tech, Bharat Logistics, Global Goods, Premier Packaging, Mumbai Central Franchise, Veridex Central Hub) loaded successfully.`);
         await loadParties();
       }
     } catch (err) {
@@ -135,7 +138,7 @@ export default function CounterpartiesPage() {
           tax_id: '',
           email: '',
           phone: '',
-          initial_role_type: 'POLICYHOLDER',
+          initial_role_type: 'CUSTOMER',
           street1: '',
           city: '',
           state: '',
@@ -190,10 +193,10 @@ export default function CounterpartiesPage() {
 
   // Calculate KPI Counts
   const totalCount = parties.length;
-  const carrierCount = parties.filter(p => p.roles?.some(r => r.role_type === 'CARRIER')).length;
-  const mgaCount = parties.filter(p => p.roles?.some(r => r.role_type === 'MGA')).length;
-  const brokerCount = parties.filter(p => p.roles?.some(r => r.role_type === 'BROKER')).length;
   const customerCount = parties.filter(p => p.roles?.some(r => ['CUSTOMER', 'DEBTOR', 'POLICYHOLDER'].includes(r.role_type))).length;
+  const supplierCount = parties.filter(p => p.roles?.some(r => ['SUPPLIER', 'VENDOR', 'CREDITOR'].includes(r.role_type))).length;
+  const franchiseCount = parties.filter(p => p.roles?.some(r => r.role_type === 'FRANCHISE')).length;
+  const hubPartnerCount = parties.filter(p => p.roles?.some(r => ['MAIN_HUB', 'PARTNER', 'AGENT', 'CARRIER', 'BROKER', 'MGA'].includes(r.role_type))).length;
 
   return (
     <div className="space-y-6">
@@ -207,7 +210,7 @@ export default function CounterpartiesPage() {
             <h2 className="text-xl font-bold text-white tracking-tight">Counterparties & Business Roles</h2>
           </div>
           <p className="text-xs text-slate-400 max-w-3xl">
-            Directory of commercial business counterparties: Sundry Debtors (Customers), Sundry Creditors (Vendors/Suppliers), Financial Institutions, and Partners. Scoped to the active company workspace.
+            Directory of commercial business counterparties: Sundry Debtors (Customers), Sundry Creditors (Suppliers & Vendors), Franchise Stores, and Corporate Hub. Scoped to the active company workspace.
           </p>
         </div>
 
@@ -216,7 +219,7 @@ export default function CounterpartiesPage() {
             onClick={handleSeedDefaults}
             disabled={seeding}
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-2 transition disabled:opacity-50"
-            title="Seed standard Southlake, Summit, ClearSpring, Brightline, Lone Star, Austin Risk default counterparties"
+            title="Seed standard commercial counterparties (Apex Mart, Metro Hypermarket, Bharat Logistics, Global Goods, Franchise Store, Hub)"
           >
             <Sparkles className={`w-3.5 h-3.5 text-amber-400 ${seeding ? 'animate-spin' : ''}`} />
             <span>{seeding ? 'Seeding...' : 'Seed Default Parties'}</span>
@@ -259,20 +262,20 @@ export default function CounterpartiesPage() {
           <div className="text-xl font-bold text-white mt-1">{totalCount}</div>
         </div>
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <div className="text-[10px] text-blue-400 font-mono uppercase">Carriers</div>
-          <div className="text-xl font-bold text-blue-400 mt-1">{carrierCount}</div>
-        </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <div className="text-[10px] text-emerald-400 font-mono uppercase">MGAs</div>
-          <div className="text-xl font-bold text-emerald-400 mt-1">{mgaCount}</div>
-        </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <div className="text-[10px] text-purple-400 font-mono uppercase">Brokers</div>
-          <div className="text-xl font-bold text-purple-400 mt-1">{brokerCount}</div>
-        </div>
-        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
-          <div className="text-[10px] text-amber-400 font-mono uppercase">Customers / Debtors</div>
+          <div className="text-[10px] text-amber-400 font-mono uppercase">Customers (Debtors)</div>
           <div className="text-xl font-bold text-amber-400 mt-1">{customerCount}</div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
+          <div className="text-[10px] text-emerald-400 font-mono uppercase">Suppliers & Vendors (Creditors)</div>
+          <div className="text-xl font-bold text-emerald-400 mt-1">{supplierCount}</div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
+          <div className="text-[10px] text-purple-400 font-mono uppercase">Franchise Stores</div>
+          <div className="text-xl font-bold text-purple-400 mt-1">{franchiseCount}</div>
+        </div>
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3">
+          <div className="text-[10px] text-indigo-400 font-mono uppercase">Corporate Hub & Partners</div>
+          <div className="text-xl font-bold text-indigo-400 mt-1">{hubPartnerCount}</div>
         </div>
       </div>
 
@@ -298,13 +301,13 @@ export default function CounterpartiesPage() {
             className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
           >
             <option value="">All Business Roles</option>
-            <option value="CUSTOMER">Customer / Debtor</option>
-            <option value="VENDOR">Vendor / Supplier</option>
-            <option value="CARRIER">Carrier / Partner</option>
-            <option value="MGA">MGA / Wholesale</option>
-            <option value="BROKER">Broker / Agent</option>
-            <option value="PRODUCER">Producer</option>
-            <option value="SUPPLIER">Supplier / Vendor</option>
+            <option value="CUSTOMER">Customers (Sundry Debtors)</option>
+            <option value="SUPPLIER">Suppliers (Sundry Creditors)</option>
+            <option value="VENDOR">Vendors & Contractors</option>
+            <option value="FRANCHISE">Franchise Stores</option>
+            <option value="MAIN_HUB">Corporate Hub</option>
+            <option value="PARTNER">Business Partners</option>
+            <option value="AGENT">Agents & Distributors</option>
           </select>
         </div>
       </div>
@@ -439,7 +442,7 @@ export default function CounterpartiesPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. PTY-CUST-001"
+                    placeholder="e.g. CUST-APEX-001 or SUPP-001"
                     value={formData.party_code}
                     onChange={(e) => setFormData({ ...formData, party_code: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
@@ -452,13 +455,13 @@ export default function CounterpartiesPage() {
                     onChange={(e) => setFormData({ ...formData, initial_role_type: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="POLICYHOLDER">Customer / Sundry Debtor</option>
-                    <option value="VENDOR">Supplier / Sundry Creditor</option>
-                    <option value="BROKER">Sales Agent / Distributor</option>
-                    <option value="CARRIER">Commercial Partner</option>
-                    <option value="MGA">Wholesale / Regional Agent</option>
-                    <option value="PRODUCER">Service Provider</option>
-                    <option value="REINSURER">Financial Institution / Bank</option>
+                    <option value="CUSTOMER">Customer / Sundry Debtor</option>
+                    <option value="SUPPLIER">Supplier / Sundry Creditor</option>
+                    <option value="VENDOR">Vendor / Contractor</option>
+                    <option value="FRANCHISE">Franchise Store</option>
+                    <option value="MAIN_HUB">Corporate / Main Hub</option>
+                    <option value="PARTNER">Commercial Partner</option>
+                    <option value="AGENT">Sales Agent / Distributor</option>
                   </select>
                 </div>
               </div>
@@ -468,7 +471,7 @@ export default function CounterpartiesPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Lone Pine Freight LLC"
+                  placeholder="e.g. Apex Wholesale Mart Private Limited"
                   value={formData.legal_name}
                   onChange={(e) => setFormData({ ...formData, legal_name: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
@@ -480,17 +483,17 @@ export default function CounterpartiesPage() {
                   <label className="text-[11px] text-slate-400 block mb-1">Trade Name (DBA)</label>
                   <input
                     type="text"
-                    placeholder="e.g. Lone Pine Express"
+                    placeholder="e.g. Apex Mart"
                     value={formData.trade_name}
                     onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">Tax ID / EIN</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">Tax ID / GSTIN</label>
                   <input
                     type="text"
-                    placeholder="e.g. 74-1234567"
+                    placeholder="e.g. 27AABCA1234F1Z8"
                     value={formData.tax_id}
                     onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
@@ -503,7 +506,7 @@ export default function CounterpartiesPage() {
                   <label className="text-[11px] text-slate-400 block mb-1">Email</label>
                   <input
                     type="email"
-                    placeholder="contact@entity.com"
+                    placeholder="commercial@apexmart.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
@@ -513,7 +516,7 @@ export default function CounterpartiesPage() {
                   <label className="text-[11px] text-slate-400 block mb-1">Phone</label>
                   <input
                     type="text"
-                    placeholder="e.g. 512-555-0100"
+                    placeholder="e.g. 022-25550122"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
@@ -526,7 +529,7 @@ export default function CounterpartiesPage() {
                   <label className="text-[11px] text-slate-400 block mb-1">Street Address</label>
                   <input
                     type="text"
-                    placeholder="Street line"
+                    placeholder="e.g. Shop 12-14, Commercial Market"
                     value={formData.street1}
                     onChange={(e) => setFormData({ ...formData, street1: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
@@ -536,7 +539,7 @@ export default function CounterpartiesPage() {
                   <label className="text-[11px] text-slate-400 block mb-1">State</label>
                   <input
                     type="text"
-                    placeholder="TX"
+                    placeholder="MH"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 uppercase"
@@ -595,10 +598,10 @@ export default function CounterpartiesPage() {
                   <option value="CUSTOMER">Customer / Sundry Debtor</option>
                   <option value="SUPPLIER">Supplier / Sundry Creditor</option>
                   <option value="VENDOR">Vendor / Contractor</option>
-                  <option value="CARRIER">Carrier / Shipping Partner</option>
-                  <option value="MGA">Wholesaler / Distributor</option>
-                  <option value="BROKER">Broker / Sales Agent</option>
-                  <option value="PRODUCER">Producer / Agent</option>
+                  <option value="FRANCHISE">Franchise Store</option>
+                  <option value="MAIN_HUB">Corporate / Main Hub</option>
+                  <option value="PARTNER">Commercial Partner</option>
+                  <option value="AGENT">Sales Agent / Distributor</option>
                 </select>
               </div>
 
@@ -606,7 +609,7 @@ export default function CounterpartiesPage() {
                 <label className="text-[11px] text-slate-400 block mb-1">Role Details / Metadata (JSON or text)</label>
                 <textarea
                   rows="3"
-                  placeholder='e.g. {"license": "TX-1049", "producer_tier": "GOLD"}'
+                  placeholder='e.g. {"subledger_code": "1101", "credit_limit": 500000, "credit_days": 30}'
                   value={newRoleDetails}
                   onChange={(e) => setNewRoleDetails(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"

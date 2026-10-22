@@ -1,211 +1,263 @@
 const { Party, PartyRole } = require('../models');
 
-const DEFAULT_COUNTERPARTIES = [
-  // 1. Carriers
+/**
+ * Legacy Insurance Counterparty Codes that must be cleaned up / replaced in General Accounting ERP
+ */
+const LEGACY_INSURANCE_PARTY_CODES = [
+  'CARRIER-SUMMIT',
+  'CARRIER-SOUTHLAKE',
+  'CARRIER-CLEARSPRING',
+  'BROKER-BRIGHTLINE',
+  'BROKER-LONESTAR',
+  'BROKER-AUSTIN',
+  'MGA-HARBOR',
+  'POLICYHOLDER-LONEPINE'
+];
+
+/**
+ * Standard Commercial General Accounting ERP Counterparties:
+ * Customers (Sundry Debtors), Suppliers (Sundry Creditors), Vendors, Franchise Stores, and Corporate Hub.
+ */
+const DEFAULT_COMMERCIAL_COUNTERPARTIES = [
+  // 1. Customers / Sundry Debtors
   {
-    party_code: 'CARRIER-SUMMIT',
-    legal_name: 'Summit Mutual Insurance Company',
-    trade_name: 'Summit Mutual Group',
+    party_code: 'CUST-APEX-001',
+    legal_name: 'Apex Wholesale Mart Private Limited',
+    trade_name: 'Apex Mart',
     party_type: 'ORGANIZATION',
-    tax_id: '12-3456780',
-    email: 'underwriting@summitmutual.com',
-    phone: '212-555-0100',
+    tax_id: '27AABCA1234F1Z8',
+    email: 'commercial@apexmart.com',
+    phone: '022-25550122',
     address: {
-      street1: '100 Wall Street',
-      city: 'New York',
-      state: 'NY',
-      postal_code: '10005',
-      country: 'USA'
+      street1: 'Shop 12-14, APMC Commercial Market',
+      city: 'Navi Mumbai',
+      state: 'MH',
+      postal_code: '400703',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'CARRIER',
+    role_type: 'CUSTOMER',
     role_details: {
-      naic_code: '23450',
-      am_best_rating: 'A+',
-      state_of_domicile: 'NY',
-      paper_type: 'ADMITTED',
-      remittance_split_pct: 80.0
+      subledger_code: '1101',
+      credit_limit: 500000,
+      credit_days: 30,
+      customer_category: 'WHOLESALE_TRADER',
+      gstin: '27AABCA1234F1Z8',
+      pan: 'AABCA1234F',
+      state_code: '27'
     }
   },
   {
-    party_code: 'CARRIER-SOUTHLAKE',
-    legal_name: 'Southlake Specialty Insurance Company',
-    trade_name: 'Southlake Specialty',
+    party_code: 'CUST-METRO-002',
+    legal_name: 'Metro Hypermarket Retail Enterprises LLP',
+    trade_name: 'Metro Hypermarket',
     party_type: 'ORGANIZATION',
-    tax_id: '75-4422119',
-    email: 'programs@southlakespecialty.com',
-    phone: '817-555-0144',
+    tax_id: '27AABCM2234G1Z9',
+    email: 'finance@metrohyper.com',
+    phone: '022-25550180',
     address: {
-      street1: '1200 E Southlake Blvd',
-      city: 'Southlake',
-      state: 'TX',
-      postal_code: '76092',
-      country: 'USA'
+      street1: 'Plot 45, MIDC Industrial Area',
+      city: 'Pune',
+      state: 'MH',
+      postal_code: '411018',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'CARRIER',
+    role_type: 'CUSTOMER',
     role_details: {
-      naic_code: '16832',
-      am_best_rating: 'A',
-      state_of_domicile: 'TX',
-      paper_type: 'SURPLUS_LINES',
-      remittance_split_pct: 82.5
+      subledger_code: '1101',
+      credit_limit: 750000,
+      credit_days: 45,
+      customer_category: 'RETAIL_CHAIN',
+      gstin: '27AABCM2234G1Z9',
+      pan: 'AABCM2234G',
+      state_code: '27'
     }
   },
   {
-    party_code: 'CARRIER-CLEARSPRING',
-    legal_name: 'ClearSpring Property & Casualty Company',
-    trade_name: 'ClearSpring P&C',
+    party_code: 'CUST-HORIZON-003',
+    legal_name: 'Horizon Tech Solutions & Trading Pvt Ltd',
+    trade_name: 'Horizon Corp',
     party_type: 'ORGANIZATION',
-    tax_id: '36-8899221',
-    email: 'commercial@clearspring.com',
-    phone: '312-555-0188',
+    tax_id: '27AABCH3344H1Z1',
+    email: 'accounts@horizoncorp.in',
+    phone: '020-25550199',
     address: {
-      street1: '300 S Wacker Dr',
-      city: 'Chicago',
-      state: 'IL',
-      postal_code: '60606',
-      country: 'USA'
+      street1: 'Tower B, Cyber City Park',
+      city: 'Nagpur',
+      state: 'MH',
+      postal_code: '440022',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'CARRIER',
+    role_type: 'CUSTOMER',
     role_details: {
-      naic_code: '15563',
-      am_best_rating: 'A-',
-      state_of_domicile: 'TX',
-      paper_type: 'ADMITTED',
-      remittance_split_pct: 77.5
+      subledger_code: '1101',
+      credit_limit: 300000,
+      credit_days: 15,
+      customer_category: 'CORPORATE_SERVICES',
+      gstin: '27AABCH3344H1Z1',
+      pan: 'AABCH3344H',
+      state_code: '27'
     }
   },
 
-  // 2. Retail Brokers (Producers)
+  // 2. Suppliers / Sundry Creditors
   {
-    party_code: 'BROKER-BRIGHTLINE',
-    legal_name: 'Brightline Retail Risk Agency LLC',
-    trade_name: 'Brightline Agency',
+    party_code: 'SUPP-BHARAT-001',
+    legal_name: 'Bharat Logistics & Commercial Suppliers',
+    trade_name: 'Bharat Logistics',
     party_type: 'ORGANIZATION',
-    tax_id: '75-9876543',
-    email: 'producers@brightlineagency.com',
-    phone: '214-555-0180',
+    tax_id: '27AABCB5566J1Z3',
+    email: 'orders@bharatlogistics.in',
+    phone: '022-25550144',
     address: {
-      street1: '2100 Ross Ave',
-      city: 'Dallas',
-      state: 'TX',
-      postal_code: '75201',
-      country: 'USA'
+      street1: 'Warehouse 8, Transport Nagar',
+      city: 'Thane',
+      state: 'MH',
+      postal_code: '400601',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'BROKER',
+    role_type: 'SUPPLIER',
     role_details: {
-      license_number: 'TX-BRK-9921',
-      producer_tier: 'PLATINUM',
-      commission_split_pct: 10.0
+      subledger_code: '2001',
+      payment_terms: 'NET_30',
+      vendor_category: 'RAW_MATERIALS_LOGISTICS',
+      gstin: '27AABCB5566J1Z3',
+      pan: 'AABCB5566J',
+      msme_registered: true
     }
   },
   {
-    party_code: 'BROKER-LONESTAR',
-    legal_name: 'Lone Star Freight Risk Agency Inc.',
-    trade_name: 'Lone Star Risk',
+    party_code: 'SUPP-GLOBAL-002',
+    legal_name: 'Global Goods Trading & Distributors Ltd',
+    trade_name: 'Global Supply Co',
     party_type: 'ORGANIZATION',
-    tax_id: '74-3322110',
-    email: 'service@lonestarrisk.com',
-    phone: '713-555-0199',
+    tax_id: '27AABCG7788K1Z5',
+    email: 'dispatch@globalsupply.in',
+    phone: '022-25550100',
     address: {
-      street1: '1000 Louisiana St',
-      city: 'Houston',
-      state: 'TX',
-      postal_code: '77002',
-      country: 'USA'
+      street1: 'Trade Center, Sector 17',
+      city: 'Navi Mumbai',
+      state: 'MH',
+      postal_code: '400705',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'BROKER',
+    role_type: 'SUPPLIER',
     role_details: {
-      license_number: 'TX-BRK-8842',
-      producer_tier: 'GOLD',
-      commission_split_pct: 10.0
-    }
-  },
-  {
-    party_code: 'BROKER-AUSTIN',
-    legal_name: 'Austin Commercial Risk Partners LLC',
-    trade_name: 'Austin Risk Partners',
-    party_type: 'ORGANIZATION',
-    tax_id: '74-5544332',
-    email: 'commercial@austinrisk.com',
-    phone: '512-555-0122',
-    address: {
-      street1: '500 W 2nd St',
-      city: 'Austin',
-      state: 'TX',
-      postal_code: '78701',
-      country: 'USA'
-    },
-    status: 'ACTIVE',
-    role_type: 'BROKER',
-    role_details: {
-      license_number: 'TX-BRK-7719',
-      producer_tier: 'SILVER',
-      commission_split_pct: 12.0
+      subledger_code: '2001',
+      payment_terms: 'NET_45',
+      vendor_category: 'TRADING_MERCHANDISE',
+      gstin: '27AABCG7788K1Z5',
+      pan: 'AABCG7788K',
+      msme_registered: false
     }
   },
 
-  // 3. Managing General Agent (MGA)
+  // 3. Vendors / Contractors
   {
-    party_code: 'MGA-HARBOR',
-    legal_name: 'Harbor Risk Underwriting Managers LLC',
-    trade_name: 'Harbor Specialty MGA',
+    party_code: 'VEND-PREMIER-001',
+    legal_name: 'Premier Commercial Packaging & Facilities',
+    trade_name: 'Premier Packaging',
     party_type: 'ORGANIZATION',
-    tax_id: '74-1234567',
-    email: 'underwriting@harborspecialty.com',
-    phone: '512-555-0150',
+    tax_id: '27AABCP9900L1Z7',
+    email: 'billing@premierpack.in',
+    phone: '022-25550150',
     address: {
-      street1: '900 Congress Ave',
-      city: 'Austin',
-      state: 'TX',
-      postal_code: '78701',
-      country: 'USA'
+      street1: 'Plot 22, Ambad Industrial Estate',
+      city: 'Nashik',
+      state: 'MH',
+      postal_code: '422010',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'MGA',
+    role_type: 'VENDOR',
     role_details: {
-      underwriting_authority_limit: 5000000,
-      agreement_ref: 'AGR-HARBOR-SUMMIT-2026',
-      retained_commission_pct: 10.0
+      subledger_code: '2001',
+      service_type: 'PACKAGING_AND_MAINTENANCE',
+      gstin: '27AABCP9900L1Z7',
+      pan: 'AABCP9900L',
+      msme_registered: true
     }
   },
 
-  // 4. Policyholder (Insured Customer)
+  // 4. Franchise & Main Hub Partners
   {
-    party_code: 'POLICYHOLDER-LONEPINE',
-    legal_name: 'Lone Pine Trucking LLC',
-    trade_name: 'Lone Pine Freight',
+    party_code: 'FRANCHISE-MUM-01',
+    legal_name: 'Mumbai Central Franchise Retail Store',
+    trade_name: 'Veridex Hub Store #1',
     party_type: 'ORGANIZATION',
-    tax_id: '74-9876543',
-    email: 'dispatch@lonepinetrucking.com',
-    phone: '432-555-0199',
+    tax_id: '27AABCF1122M1Z2',
+    email: 'operations@mumbaicentral-store.in',
+    phone: '022-25550188',
     address: {
-      street1: '400 W Wall St',
-      city: 'Midland',
-      state: 'TX',
-      postal_code: '79701',
-      country: 'USA'
+      street1: 'Unit 5, Prime Commercial Galleria',
+      city: 'Mumbai',
+      state: 'MH',
+      postal_code: '400001',
+      country: 'IND'
     },
     status: 'ACTIVE',
-    role_type: 'POLICYHOLDER',
+    role_type: 'FRANCHISE',
     role_details: {
-      dot_number: '3189201',
-      mc_number: 'MC-992144',
-      primary_line: 'COMMERCIAL_AUTO'
+      subledger_code: '1150',
+      franchise_store_id: 'FR-MUM-01',
+      commission_split_pct: 70.0,
+      hub_split_pct: 30.0,
+      agreement_ref: 'AGR-FR-2026-01',
+      gstin: '27AABCF1122M1Z2'
+    }
+  },
+  {
+    party_code: 'HUB-CENTRAL-01',
+    legal_name: 'Veridex Central Corporate Hub Operations',
+    trade_name: 'Veridex Corporate Hub',
+    party_type: 'ORGANIZATION',
+    tax_id: '27AABCV3344N1Z4',
+    email: 'centralhub@veridexsolutions.ai',
+    phone: '022-25550190',
+    address: {
+      street1: 'HQ Tower, BKC Commercial Complex',
+      city: 'Mumbai',
+      state: 'MH',
+      postal_code: '400051',
+      country: 'IND'
+    },
+    status: 'ACTIVE',
+    role_type: 'MAIN_HUB',
+    role_details: {
+      subledger_code: '2020',
+      hub_code: 'HUB-CENTRAL-01',
+      hub_split_pct: 30.0,
+      hub_type: 'CENTRAL_DISTRIBUTION_AND_ROYALTY',
+      gstin: '27AABCV3344N1Z4'
     }
   }
 ];
 
+const DEFAULT_COUNTERPARTIES = DEFAULT_COMMERCIAL_COUNTERPARTIES;
+
 async function seedDefaultCounterparties(tenantId) {
   if (!tenantId) return [];
 
+  // 1. Clean up legacy insurance parties if present for this tenant
+  const legacyParties = await Party.find({
+    tenant_id: tenantId,
+    party_code: { $in: LEGACY_INSURANCE_PARTY_CODES }
+  });
+
+  if (legacyParties.length > 0) {
+    const legacyIds = legacyParties.map(p => p._id);
+    await PartyRole.deleteMany({ tenant_id: tenantId, party_id: { $in: legacyIds } });
+    await Party.deleteMany({ tenant_id: tenantId, _id: { $in: legacyIds } });
+  }
+
+  // 2. Seed standard commercial general accounting counterparties
   const createdParties = [];
 
-  for (const item of DEFAULT_COUNTERPARTIES) {
+  for (const item of DEFAULT_COMMERCIAL_COUNTERPARTIES) {
     const { role_type, role_details, ...partyProps } = item;
 
     let party = await Party.findOne({
@@ -225,6 +277,7 @@ async function seedDefaultCounterparties(tenantId) {
       party.phone = partyProps.phone;
       party.address = partyProps.address;
       party.status = partyProps.status;
+      party.tax_id = partyProps.tax_id;
       await party.save();
     }
 
@@ -257,6 +310,8 @@ async function seedDefaultCounterparties(tenantId) {
 }
 
 module.exports = {
+  LEGACY_INSURANCE_PARTY_CODES,
+  DEFAULT_COMMERCIAL_COUNTERPARTIES,
   DEFAULT_COUNTERPARTIES,
   seedDefaultCounterparties
 };

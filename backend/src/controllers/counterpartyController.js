@@ -1,5 +1,5 @@
 const { Party, PartyRole } = require('../models');
-const { seedDefaultCounterparties } = require('../utils/seedDefaultCounterparties');
+const { seedDefaultCounterparties, LEGACY_INSURANCE_PARTY_CODES } = require('../utils/seedDefaultCounterparties');
 
 /**
  * List all Counterparties for active tenant with populated roles
@@ -21,8 +21,9 @@ async function listParties(req, res) {
 
     let parties = await Party.find(query).sort({ legal_name: 1 }).lean();
 
-    // Auto-seed default counterparties if none exist for this tenant
-    if (parties.length === 0 && !search && !status) {
+    // Auto-seed default commercial counterparties if none exist, or if legacy insurance counterparties are detected
+    const hasLegacy = parties.some(p => LEGACY_INSURANCE_PARTY_CODES.includes(p.party_code));
+    if ((parties.length === 0 && !search && !status) || hasLegacy) {
       await seedDefaultCounterparties(tenantId);
       parties = await Party.find(query).sort({ legal_name: 1 }).lean();
     }
@@ -254,13 +255,13 @@ async function addPartyRole(req, res) {
 }
 
 /**
- * Seed standard default counterparties (Summit, Southlake, ClearSpring, Brightline, Lone Star, Austin Risk, Harbor, Lone Pine)
+ * Seed standard default commercial counterparties (Apex Wholesale, Metro Hypermarket, Horizon Tech, Bharat Logistics, Global Goods, Premier Packaging, Franchise Store, Corporate Hub)
  */
 async function seedParties(req, res) {
   try {
     const tenantId = req.tenantId;
     const seeded = await seedDefaultCounterparties(tenantId);
-    return res.success(seeded, { message: `Seeded ${seeded.length} default counterparties successfully` });
+    return res.success(seeded, { message: `Seeded ${seeded.length} default commercial counterparties successfully` });
   } catch (err) {
     return res.error('Failed to seed default counterparties', 500, err.message);
   }
