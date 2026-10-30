@@ -22,35 +22,137 @@ class ManufacturingService {
     finishedItemId,
     outputQuantity = 1,
     outputUomId,
-    rawMaterials,
+    rawMaterials = [],
     overheadCosts = []
   }) {
+    if (!finishedItemId) throw new Error('Finished item is required for BOM');
+    if (!rawMaterials || rawMaterials.length === 0) {
+      throw new Error('At least one raw material component is required');
+    }
+
+    // Validation: Check for duplicates & positive quantity
+    const seenItems = new Set();
+    for (const rm of rawMaterials) {
+      const itemIdStr = String(rm.item_id?._id || rm.item_id);
+      if (seenItems.has(itemIdStr)) {
+        throw new Error('Duplicate raw material component detected in BOM');
+      }
+      seenItems.add(itemIdStr);
+      if (!rm.quantity || Number(rm.quantity) <= 0) {
+        throw new Error('Component quantity must be greater than zero');
+      }
+    }
+
+    const existing = await ManufacturingBOM.findOne({
+      company_id: companyId,
+      bom_number: bomNumber.toUpperCase().trim()
+    });
+
+    const newVersion = existing ? (existing.version || 1) + 1 : 1;
+
     return ManufacturingBOM.findOneAndUpdate(
-      { company_id: companyId, bom_number: bomNumber.toUpperCase() },
+      { company_id: companyId, bom_number: bomNumber.toUpperCase().trim() },
       {
         $set: {
           tenant_id: tenantId,
           company_id: companyId,
-          bom_number: bomNumber.toUpperCase(),
-          bomName,
+          bom_number: bomNumber.toUpperCase().trim(),
+          bom_name: bomName.trim(),
           finished_item_id: finishedItemId,
-          output_quantity: Number(outputQuantity),
-          output_uom_id: outputUomId,
+          output_quantity: Number(outputQuantity) || 1,
+          output_uom_id: outputUomId || null,
           raw_materials: rawMaterials,
-          overhead_costs: overheadCosts,
-          is_active: true
+          overhead_costs: overheadCosts || [],
+          is_active: true,
+          version: newVersion
         }
       },
-      { upsert: true, new: true }
-    );
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).populate('finished_item_id output_uom_id raw_materials.item_id raw_materials.uom_id');
   }
 
   /**
    * Get all active BOMs
    */
-  async getBOMs(companyId) {
-    return ManufacturingBOM.find({ company_id: companyId, is_active: true })
-      .populate('finished_item_id raw_materials.item_id');
+  async getBOMs(companyId, { includeArchived = false, search = '' } = {}) {
+    const filter = { company_id: companyId };
+    if (!includeArchived) {
+      filter.is_active = true;
+    }
+    if (search) {
+      filter.$or = [
+        { bom_number: { $regex: search, $options: 'i' } },
+        { bom_name: { $regex: search, $options: 'i' } }
+      ];
+    }
+    return ManufacturingBOM.find(filter)
+      .populate('finished_item_id output_uom_id raw_materials.item_id raw_materials.uom_id')
+      .sort({ created_at: -1 });
+  }
+
+  /**
+   * Get single BOM by ID
+   */
+  async getBOMById(companyId, bomId) {
+    const bom = await ManufacturingBOM.findOne({ _id: bomId, company_id: companyId })
+      .populate('finished_item_id output_uom_id raw_materials.item_id raw_materials.uom_id');
+    if (!bom) throw new Error('BOM not found');
+    return bom;
+  }
+
+  /**
+   * Update existing BOM
+   */
+  async updateBOM(companyId, bomId, updateData) {
+    const existing = await ManufacturingBOM.findOne({ _id: bomId, company_id: companyId });
+    if (!existing) throw new Error('BOM not found');
+
+    const updatePayload = {
+      version: (existing.version || 1) + 1
+    };
+
+    if (updateData.bom_name) updatePayload.bom_name = updateData.bom_name.trim();
+    if (updateData.output_quantity) updatePayload.output_quantity = Number(updateData.output_quantity);
+    if (updateData.output_uom_id) updatePayload.output_uom_id = updateData.output_uom_id;
+    if (updateData.overhead_costs) updatePayload.overhead_costs = updateData.overhead_costs;
+
+    if (updateData.raw_materials) {
+      if (updateData.raw_materials.length === 0) {
+        throw new Error('At least one raw material component is required');
+      }
+      const seen = new Set();
+      for (const rm of updateData.raw_materials) {
+        const idStr = String(rm.item_id?._id || rm.item_id);
+        if (seen.has(idStr)) throw new Error('Duplicate raw material component in BOM');
+        seen.add(idStr);
+        if (!rm.quantity || Number(rm.quantity) <= 0) {
+          throw new Error('Component quantity must be greater than zero');
+        }
+      }
+      updatePayload.raw_materials = updateData.raw_materials;
+    }
+
+    if (updateData.is_active !== undefined) {
+      updatePayload.is_active = Boolean(updateData.is_active);
+    }
+
+    return ManufacturingBOM.findOneAndUpdate(
+      { _id: bomId, company_id: companyId },
+      { $set: updatePayload },
+      { new: true }
+    ).populate('finished_item_id output_uom_id raw_materials.item_id raw_materials.uom_id');
+  }
+
+  /**
+   * Archive / Deactivate BOM (Soft Delete)
+   */
+  async archiveBOM(companyId, bomId) {
+    const bom = await ManufacturingBOM.findOne({ _id: bomId, company_id: companyId });
+    if (!bom) throw new Error('BOM not found');
+
+    bom.is_active = false;
+    await bom.save();
+    return bom;
   }
 
   /**

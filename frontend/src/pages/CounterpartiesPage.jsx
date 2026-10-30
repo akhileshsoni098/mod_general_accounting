@@ -15,7 +15,10 @@ import {
   X,
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Edit2,
+  Trash2,
+  Power
 } from 'lucide-react';
 
 const ROLE_COLORS = {
@@ -42,10 +45,13 @@ export default function CounterpartiesPage() {
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedParty, setSelectedParty] = useState(null);
 
@@ -65,19 +71,40 @@ export default function CounterpartiesPage() {
     postal_code: ''
   });
 
+  // Form State for Edit
+  const [editFormData, setEditFormData] = useState({
+    _id: '',
+    party_code: '',
+    legal_name: '',
+    trade_name: '',
+    party_type: 'ORGANIZATION',
+    status: 'ACTIVE',
+    tax_id: '',
+    email: '',
+    phone: '',
+    initial_role_type: '',
+    street1: '',
+    city: '',
+    state: '',
+    postal_code: ''
+  });
+
   // Form State for Add Role
   const [newRoleType, setNewRoleType] = useState('SUPPLIER');
   const [newRoleDetails, setNewRoleDetails] = useState('');
 
   useEffect(() => {
     loadParties();
-  }, [roleFilter]);
+  }, [roleFilter, statusFilter]);
 
   async function loadParties() {
     try {
       setLoading(true);
       setError(null);
-      const params = roleFilter ? `?role_type=${roleFilter}` : '';
+      const q = [];
+      if (roleFilter) q.push(`role_type=${roleFilter}`);
+      if (statusFilter) q.push(`status=${statusFilter}`);
+      const params = q.length ? `?${q.join('&')}` : '';
       const res = await counterpartiesApi.getParties(params);
       if (res.success && res.data) {
         setParties(res.data);
@@ -151,6 +178,89 @@ export default function CounterpartiesPage() {
     }
   }
 
+  function openEditModal(party) {
+    setSelectedParty(party);
+    setEditFormData({
+      _id: party._id,
+      party_code: party.party_code || '',
+      legal_name: party.legal_name || '',
+      trade_name: party.trade_name || '',
+      party_type: party.party_type || 'ORGANIZATION',
+      status: party.status || 'ACTIVE',
+      tax_id: party.tax_id || '',
+      email: party.email || '',
+      phone: party.phone || '',
+      initial_role_type: (party.roles && party.roles[0]?.role_type) || party.initial_role_type || 'CUSTOMER',
+      street1: party.address?.street1 || '',
+      city: party.address?.city || '',
+      state: party.address?.state || '',
+      postal_code: party.address?.postal_code || ''
+    });
+    setShowEditModal(true);
+  }
+
+  async function handleUpdate(e) {
+    e.preventDefault();
+    if (!editFormData._id) return;
+    try {
+      setError(null);
+      const payload = {
+        party_code: editFormData.party_code,
+        legal_name: editFormData.legal_name,
+        trade_name: editFormData.trade_name,
+        party_type: editFormData.party_type,
+        status: editFormData.status,
+        tax_id: editFormData.tax_id,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        initial_role_type: editFormData.initial_role_type,
+        address: {
+          street1: editFormData.street1,
+          city: editFormData.city,
+          state: editFormData.state,
+          postal_code: editFormData.postal_code
+        }
+      };
+
+      const res = await counterpartiesApi.updateParty(editFormData._id, payload);
+      if (res.success) {
+        setSuccessMsg(`Counterparty "${editFormData.legal_name}" updated successfully.`);
+        setShowEditModal(false);
+        loadParties();
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleToggleStatus(party) {
+    try {
+      setError(null);
+      const nextStatus = party.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      const res = await counterpartiesApi.updateParty(party._id, { status: nextStatus });
+      if (res.success) {
+        setSuccessMsg(`Status of "${party.legal_name}" changed to ${nextStatus}.`);
+        loadParties();
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handleArchiveParty(party) {
+    if (!window.confirm(`Are you sure you want to archive "${party.legal_name}"?`)) return;
+    try {
+      setError(null);
+      const res = await counterpartiesApi.archiveParty(party._id);
+      if (res.success) {
+        setSuccessMsg(`Counterparty "${party.legal_name}" archived successfully.`);
+        loadParties();
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleAddRole(e) {
     e.preventDefault();
     if (!selectedParty) return;
@@ -180,14 +290,17 @@ export default function CounterpartiesPage() {
     }
   }
 
-  // Filtered by search term
+  // Filtered by search term, status, and entity type
   const displayedParties = parties.filter((p) => {
+    if (statusFilter && p.status !== statusFilter) return false;
+    if (typeFilter && p.party_type !== typeFilter) return false;
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
       p.legal_name?.toLowerCase().includes(term) ||
       p.party_code?.toLowerCase().includes(term) ||
-      p.trade_name?.toLowerCase().includes(term)
+      p.trade_name?.toLowerCase().includes(term) ||
+      p.tax_id?.toLowerCase().includes(term)
     );
   });
 
@@ -280,35 +393,67 @@ export default function CounterpartiesPage() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-        <div className="relative flex-1 w-full sm:w-auto">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+        <div className="relative flex-1 w-full md:w-auto">
           <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
           <input
             type="text"
-            placeholder="Search by legal name, party code, or DBA..."
+            placeholder="Search by legal name, party code, DBA, or GSTIN..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
           />
         </div>
 
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-xs text-slate-400">Role:</span>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-brand-500"
-          >
-            <option value="">All Business Roles</option>
-            <option value="CUSTOMER">Customers (Sundry Debtors)</option>
-            <option value="SUPPLIER">Suppliers (Sundry Creditors)</option>
-            <option value="VENDOR">Vendors & Contractors</option>
-            <option value="FRANCHISE">Franchise Stores</option>
-            <option value="MAIN_HUB">Corporate Hub</option>
-            <option value="PARTNER">Business Partners</option>
-            <option value="AGENT">Agents & Distributors</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Role Filter */}
+          <div className="flex items-center space-x-1.5 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+            <Filter className="w-3 h-3 text-slate-400" />
+            <span className="text-[11px] text-slate-400">Role:</span>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-transparent text-xs text-slate-200 focus:outline-none"
+            >
+              <option value="" className="bg-slate-800">All Roles</option>
+              <option value="CUSTOMER" className="bg-slate-800">Customers (Debtors)</option>
+              <option value="SUPPLIER" className="bg-slate-800">Suppliers (Creditors)</option>
+              <option value="VENDOR" className="bg-slate-800">Vendors & Contractors</option>
+              <option value="FRANCHISE" className="bg-slate-800">Franchise Stores</option>
+              <option value="MAIN_HUB" className="bg-slate-800">Corporate Hub</option>
+              <option value="PARTNER" className="bg-slate-800">Partners</option>
+              <option value="AGENT" className="bg-slate-800">Agents</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center space-x-1.5 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+            <span className="text-[11px] text-slate-400">Status:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-transparent text-xs text-slate-200 focus:outline-none"
+            >
+              <option value="" className="bg-slate-800">All Statuses</option>
+              <option value="ACTIVE" className="bg-slate-800 text-emerald-400">Active Only</option>
+              <option value="INACTIVE" className="bg-slate-800 text-rose-400">Inactive Only</option>
+              <option value="ARCHIVED" className="bg-slate-800 text-slate-400">Archived</option>
+            </select>
+          </div>
+
+          {/* Entity Type Filter */}
+          <div className="flex items-center space-x-1.5 bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700">
+            <span className="text-[11px] text-slate-400">Type:</span>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-transparent text-xs text-slate-200 focus:outline-none"
+            >
+              <option value="" className="bg-slate-800">All Types</option>
+              <option value="ORGANIZATION" className="bg-slate-800">Organization / Firm</option>
+              <option value="INDIVIDUAL" className="bg-slate-800">Individual / Person</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -354,14 +499,17 @@ export default function CounterpartiesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center space-x-1 text-[11px] text-slate-400">
-                        {party.party_type === 'ORGANIZATION' ? (
-                          <Building className="w-3 h-3 text-slate-400" />
-                        ) : (
-                          <User className="w-3 h-3 text-slate-400" />
-                        )}
-                        <span>{party.party_type}</span>
-                      </span>
+                      {party.party_type === 'INDIVIDUAL' ? (
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-amber-500/10 text-amber-300 border-amber-500/20">
+                          <User className="w-3 h-3 text-amber-400" />
+                          <span>INDIVIDUAL</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-mono border bg-sky-500/10 text-sky-300 border-sky-500/20">
+                          <Building className="w-3 h-3 text-sky-400" />
+                          <span>ORGANIZATION</span>
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -389,26 +537,47 @@ export default function CounterpartiesPage() {
                       {party.phone && <div className="text-[11px] text-slate-500">{party.phone}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold ${
+                      <button
+                        onClick={() => handleToggleStatus(party)}
+                        title={`Click to switch status to ${party.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}`}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition cursor-pointer border ${
                           party.status === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-rose-500/10 text-rose-400'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                            : party.status === 'ARCHIVED'
+                            ? 'bg-slate-500/10 text-slate-400 border-slate-500/30 hover:bg-slate-500/20'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
                         }`}
                       >
                         {party.status}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedParty(party);
-                          setShowRoleModal(true);
-                        }}
-                        className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition border border-slate-700"
-                      >
-                        + Add Role
-                      </button>
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <button
+                          onClick={() => openEditModal(party)}
+                          title="Edit Counterparty"
+                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition border border-slate-700 hover:border-brand-500 flex items-center space-x-1"
+                        >
+                          <Edit2 className="w-3 h-3 text-brand-400" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedParty(party);
+                            setShowRoleModal(true);
+                          }}
+                          className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition border border-slate-700"
+                        >
+                          + Role
+                        </button>
+                        <button
+                          onClick={() => handleArchiveParty(party)}
+                          title="Archive Counterparty"
+                          className="p-1 rounded bg-slate-800 hover:bg-rose-900/40 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-700 transition"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -436,7 +605,7 @@ export default function CounterpartiesPage() {
             </div>
 
             <form onSubmit={handleCreate} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] text-slate-400 block mb-1">Party Code *</label>
                   <input
@@ -447,6 +616,17 @@ export default function CounterpartiesPage() {
                     onChange={(e) => setFormData({ ...formData, party_code: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
                   />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Entity Type *</label>
+                  <select
+                    value={formData.party_type}
+                    onChange={(e) => setFormData({ ...formData, party_type: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="ORGANIZATION">Organization (Company/Firm)</option>
+                    <option value="INDIVIDUAL">Individual (Person/Proprietor)</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-[11px] text-slate-400 block mb-1">Initial Business Role</label>
@@ -560,6 +740,154 @@ export default function CounterpartiesPage() {
                   className="px-4 py-1.5 rounded bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold"
                 >
                   Create Counterparty
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Counterparty */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <Edit2 className="w-4 h-4 text-brand-400" />
+                <span>Edit Counterparty ({editFormData.party_code})</span>
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Party Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.party_code}
+                    onChange={(e) => setEditFormData({ ...editFormData, party_code: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Entity Type *</label>
+                  <select
+                    value={editFormData.party_type}
+                    onChange={(e) => setEditFormData({ ...editFormData, party_type: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="ORGANIZATION">Organization (Company/Firm)</option>
+                    <option value="INDIVIDUAL">Individual (Person/Proprietor)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Status *</label>
+                  <select
+                    value={editFormData.status}
+                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-semibold"
+                  >
+                    <option value="ACTIVE" className="text-emerald-400">ACTIVE</option>
+                    <option value="INACTIVE" className="text-rose-400">INACTIVE</option>
+                    <option value="ARCHIVED" className="text-slate-400">ARCHIVED</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-400 block mb-1">Legal Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.legal_name}
+                  onChange={(e) => setEditFormData({ ...editFormData, legal_name: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Trade Name (DBA)</label>
+                  <input
+                    type="text"
+                    value={editFormData.trade_name}
+                    onChange={(e) => setEditFormData({ ...editFormData, trade_name: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Tax ID / GSTIN</label>
+                  <input
+                    type="text"
+                    value={editFormData.tax_id}
+                    onChange={(e) => setEditFormData({ ...editFormData, tax_id: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">Phone</label>
+                  <input
+                    type="text"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="text-[11px] text-slate-400 block mb-1">Street Address</label>
+                  <input
+                    type="text"
+                    value={editFormData.street1}
+                    onChange={(e) => setEditFormData({ ...editFormData, street1: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 block mb-1">State</label>
+                  <input
+                    type="text"
+                    value={editFormData.state}
+                    onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-xs text-white focus:outline-none focus:border-brand-500 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-3 py-1.5 rounded bg-slate-800 text-slate-400 hover:text-white text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

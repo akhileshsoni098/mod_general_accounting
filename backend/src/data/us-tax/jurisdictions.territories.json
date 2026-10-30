@@ -1,0 +1,72 @@
+[
+  {
+    "jurisdiction_code": "US-PR",
+    "jurisdiction_name": "Puerto Rico",
+    "jurisdiction_type": "TERRITORY",
+    "country_code": "US",
+    "state_code": "PR",
+    "parent_code": "US-FED",
+    "fips_code": "72",
+    "gnis_id": "01779808",
+    "provider_coverage_status": "UNVERIFIED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  },
+  {
+    "jurisdiction_code": "US-VI",
+    "jurisdiction_name": "Virgin Islands of the United States",
+    "jurisdiction_type": "TERRITORY",
+    "country_code": "US",
+    "state_code": "VI",
+    "parent_code": "US-FED",
+    "fips_code": "78",
+    "gnis_id": "01802710",
+    "provider_coverage_status": "UNSUPPORTED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  },
+  {
+    "jurisdiction_code": "US-GU",
+    "jurisdiction_name": "Guam",
+    "jurisdiction_type": "TERRITORY",
+    "country_code": "US",
+    "state_code": "GU",
+    "parent_code": "US-FED",
+    "fips_code": "66",
+    "gnis_id": "01389634",
+    "provider_coverage_status": "UNSUPPORTED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  },
+  {
+    "jurisdiction_code": "US-AS",
+    "jurisdiction_name": "American Samoa",
+    "jurisdiction_type": "TERRITORY",
+    "country_code": "US",
+    "state_code": "AS",
+    "parent_code": "US-FED",
+    "fips_code": "60",
+    "gnis_id": "01802701",
+    "provider_coverage_status": "UNSUPPORTED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  },
+  {
+    "jurisdiction_code": "US-MP",
+    "jurisdiction_name": "Commonwealth of the Northern Mariana Islands",
+    "jurisdiction_type": "TERRITORY",
+    "country_code": "US",
+    "state_code": "MP",
+    "parent_code": "US-FED",
+    "fips_code": "69",
+    "gnis_id": "01779809",
+    "provider_coverage_status": "UNSUPPORTED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  }
+]

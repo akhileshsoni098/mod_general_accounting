@@ -10,6 +10,10 @@ router.use(requireAuth, requireTenantWorkspace);
 // Catalog of available business profiles
 router.get('/profiles', companyController.getBusinessProfilesList);
 
+// Industry taxonomy and dynamic recommendation engine
+router.get('/industries/taxonomy', companyController.getIndustriesTaxonomy);
+router.post('/industries/recommendations', companyController.getIndustryRecommendations);
+
 // List companies accessible to user
 router.get('/', requirePermission('COMPANY:VIEW'), companyController.listCompanies);
 

@@ -33,11 +33,27 @@ const BillAllocation = require('./BillAllocation');
 const CompanyPostingConfig = require('./CompanyPostingConfig');
 const TaxRateConfig = require('./TaxRateConfig');
 
+// Module: US Tax & Jurisdictions (Phase 2, 3, 5)
+const TaxJurisdiction = require('./TaxJurisdiction');
+const CompanyTaxProfile = require('./CompanyTaxProfile');
+const TaxRegistration = require('./TaxRegistration');
+const NexusReview = require('./NexusReview');
+const TaxProviderSyncLog = require('./TaxProviderSyncLog');
+const TaxCalculationSnapshot = require('./TaxCalculationSnapshot');
+const TaxReturnPeriod = require('./TaxReturnPeriod');
+const TaxLiabilityEntry = require('./TaxLiabilityEntry');
+const TaxReturn = require('./TaxReturn');
+const TaxPaymentRecord = require('./TaxPaymentRecord');
+
 // Industry Modules: Retail, Hospitality, Food & Manufacturing
 const PosShift = require('./PosShift');
 const RecipeBOM = require('./RecipeBOM');
 const RestaurantTable = require('./RestaurantTable');
 const RestaurantOrder = require('./RestaurantOrder');
+const StoreLocation = require('./StoreLocation');
+const RestaurantConfig = require('./RestaurantConfig');
+const ModifierGroup = require('./ModifierGroup');
+const ProductVariant = require('./ProductVariant');
 const HotelRoomType = require('./HotelRoomType');
 const HotelRoom = require('./HotelRoom');
 const HotelReservation = require('./HotelReservation');
@@ -48,6 +64,7 @@ const WorkOrder = require('./WorkOrder');
 // Module 14: Core General Ledger (7 Models)
 const LedgerAccount = require('./LedgerAccount');
 const FiscalPeriod = require('./FiscalPeriod');
+const AccountingCalendar = require('./AccountingCalendar');
 const PostingRule = require('./PostingRule');
 const PostingRuleLine = require('./PostingRuleLine');
 const EventDefinition = require('./EventDefinition');
@@ -59,6 +76,7 @@ const Journal = require('./Journal');
 const JournalEntry = require('./JournalEntry');
 const ExchangeRate = require('./ExchangeRate');
 const DimensionDefinition = require('./DimensionDefinition');
+const OpeningBalanceSetup = require('./OpeningBalanceSetup');
 
 // Module 12: Billing & Accounts Receivable (9 Models)
 const BillingPlan = require('./BillingPlan');
@@ -108,6 +126,21 @@ const GLExportBatch = require('./GLExportBatch');
 const CommissionAdjustment = require('./CommissionAdjustment');
 const CommissionDispute = require('./CommissionDispute');
 
+// Extended ERP Modules: Pricing, Landed Cost, Interest, Job Work, Fixed Assets, Cheque Printing, TDS, Budgets, Payroll
+const PriceList = require('./PriceList');
+const LandedCostAllocation = require('./LandedCostAllocation');
+const InterestRule = require('./InterestRule');
+const JobWorkOrder = require('./JobWorkOrder');
+const FixedAsset = require('./FixedAsset');
+const ChequeLayout = require('./ChequeLayout');
+const ChequeRegister = require('./ChequeRegister');
+const TdsSection = require('./TdsSection');
+const TdsDeduction = require('./TdsDeduction');
+const BudgetDefinition = require('./BudgetDefinition');
+const Employee = require('./Employee');
+const SalaryStructure = require('./SalaryStructure');
+const PayrollRun = require('./PayrollRun');
+
 module.exports = {
   // Identity & Tenancy
   Tenant,
@@ -150,6 +183,10 @@ module.exports = {
   RecipeBOM,
   RestaurantTable,
   RestaurantOrder,
+  StoreLocation,
+  RestaurantConfig,
+  ModifierGroup,
+  ProductVariant,
   HotelRoomType,
   HotelRoom,
   HotelReservation,
@@ -160,6 +197,7 @@ module.exports = {
   // Core General Ledger
   LedgerAccount,
   FiscalPeriod,
+  AccountingCalendar,
   PostingRule,
   PostingRuleLine,
   EventDefinition,
@@ -171,6 +209,7 @@ module.exports = {
   JournalEntry,
   ExchangeRate,
   DimensionDefinition,
+  OpeningBalanceSetup,
 
   // Billing & Accounts Receivable
   BillingPlan,
@@ -218,5 +257,32 @@ module.exports = {
   PeriodCloseTask,
   GLExportBatch,
   CommissionAdjustment,
-  CommissionDispute
+  CommissionDispute,
+
+  // Extended ERP Models
+  PriceList,
+  LandedCostAllocation,
+  InterestRule,
+  JobWorkOrder,
+  FixedAsset,
+  ChequeLayout,
+  ChequeRegister,
+  TdsSection,
+  TdsDeduction,
+  BudgetDefinition,
+  Employee,
+  SalaryStructure,
+  PayrollRun,
+
+  // US Tax & Jurisdictions (Phase 2, 3, 5)
+  TaxJurisdiction,
+  CompanyTaxProfile,
+  TaxRegistration,
+  NexusReview,
+  TaxProviderSyncLog,
+  TaxCalculationSnapshot,
+  TaxReturnPeriod,
+  TaxLiabilityEntry,
+  TaxReturn,
+  TaxPaymentRecord
 };

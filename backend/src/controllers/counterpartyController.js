@@ -191,8 +191,22 @@ async function updateParty(req, res) {
       return res.error('Counterparty not found', 404);
     }
 
+    if (updates.party_code && updates.party_code.trim().toUpperCase() !== party.party_code) {
+      const cleanCode = updates.party_code.trim().toUpperCase();
+      const existing = await Party.findOne({ tenant_id: tenantId, party_code: cleanCode, _id: { $ne: id } });
+      if (existing) {
+        return res.error(`Counterparty with code "${cleanCode}" already exists`, 409);
+      }
+      party.party_code = cleanCode;
+    }
     if (updates.legal_name) party.legal_name = updates.legal_name.trim();
     if (updates.trade_name !== undefined) party.trade_name = updates.trade_name.trim();
+    if (updates.party_type) {
+      const pType = updates.party_type.toUpperCase().trim();
+      if (['ORGANIZATION', 'INDIVIDUAL'].includes(pType)) {
+        party.party_type = pType;
+      }
+    }
     if (updates.tax_id !== undefined) party.tax_id = updates.tax_id.trim();
     if (updates.email !== undefined) party.email = updates.email.trim().toLowerCase();
     if (updates.phone !== undefined) party.phone = updates.phone.trim();
@@ -205,6 +219,21 @@ async function updateParty(req, res) {
     }
     party.row_version = (party.row_version || 1) + 1;
     await party.save();
+
+    // If role_type / initial_role_type provided in update, ensure role exists
+    const newRole = updates.role_type || updates.initial_role_type;
+    if (newRole) {
+      const normRole = newRole.toUpperCase().trim();
+      const existingRole = await PartyRole.findOne({ tenant_id: tenantId, party_id: party._id, role_type: normRole });
+      if (!existingRole) {
+        await PartyRole.create({
+          tenant_id: tenantId,
+          party_id: party._id,
+          role_type: normRole,
+          status: 'ACTIVE'
+        });
+      }
+    }
 
     const roles = await PartyRole.find({ tenant_id: tenantId, party_id: party._id }).lean();
 
@@ -267,11 +296,35 @@ async function seedParties(req, res) {
   }
 }
 
+/**
+ * Safe archive / soft delete for Counterparty
+ */
+async function archiveParty(req, res) {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+
+    const party = await Party.findOne({ _id: id, tenant_id: tenantId });
+    if (!party) {
+      return res.error('Counterparty not found', 404);
+    }
+
+    party.status = 'ARCHIVED';
+    party.row_version = (party.row_version || 1) + 1;
+    await party.save();
+
+    return res.success(party, { message: `Counterparty "${party.legal_name}" archived successfully` });
+  } catch (err) {
+    return res.error('Failed to archive counterparty', 500, err.message);
+  }
+}
+
 module.exports = {
   listParties,
   createParty,
   getPartyById,
   updateParty,
+  archiveParty,
   addPartyRole,
   seedParties
 };

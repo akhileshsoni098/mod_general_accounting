@@ -1,0 +1,90 @@
+[
+  {
+    "category_code": "GENERAL_TANGIBLE_GOODS",
+    "category_name": "General Tangible Personal Property",
+    "description": "Physical retail merchandise subject to standard statewide sales and use tax rates.",
+    "taxability_default": "TAXABLE",
+    "test_provider_codes": {
+      "mock": "TEST_TPP_01",
+      "avalara_sample": "P0000000",
+      "taxjar_sample": "20010"
+    }
+  },
+  {
+    "category_code": "SAAS_SOFTWARE",
+    "category_name": "Software as a Service (SaaS)",
+    "description": "Cloud-hosted subscription application software accessed over the internet.",
+    "taxability_default": "CONDITIONAL",
+    "test_provider_codes": {
+      "mock": "TEST_SAAS_02",
+      "avalara_sample": "SW054000",
+      "taxjar_sample": "30070"
+    }
+  },
+  {
+    "category_code": "DIGITAL_PRODUCTS",
+    "category_name": "Digital Audio, Video & Electronic Books",
+    "description": "Electronically delivered books, streaming audio, and digital media files.",
+    "taxability_default": "CONDITIONAL",
+    "test_provider_codes": {
+      "mock": "TEST_DIGITAL_03",
+      "avalara_sample": "D0000000",
+      "taxjar_sample": "31000"
+    }
+  },
+  {
+    "category_code": "UNPREPARED_FOOD_GROCERY",
+    "category_name": "Unprepared Food and Grocery",
+    "description": "Grocery food items intended for home preparation and consumption (exempt or reduced rate in many states).",
+    "taxability_default": "EXEMPT_OR_REDUCED",
+    "test_provider_codes": {
+      "mock": "TEST_GROCERY_04",
+      "avalara_sample": "OF040000",
+      "taxjar_sample": "40030"
+    }
+  },
+  {
+    "category_code": "PREPARED_FOOD_RESTAURANT",
+    "category_name": "Prepared Restaurant Food & QSR Meals",
+    "description": "Hot food, restaurant meals, and beverages prepared for immediate dining or takeout.",
+    "taxability_default": "TAXABLE",
+    "test_provider_codes": {
+      "mock": "TEST_RESTAURANT_05",
+      "avalara_sample": "FR020000",
+      "taxjar_sample": "40010"
+    }
+  },
+  {
+    "category_code": "PROFESSIONAL_SERVICES",
+    "category_name": "Professional and Technical Services",
+    "description": "Accounting, engineering, consulting, and administrative services (generally exempt from sales tax in majority of states).",
+    "taxability_default": "EXEMPT",
+    "test_provider_codes": {
+      "mock": "TEST_SERVICES_06",
+      "avalara_sample": "S0000000",
+      "taxjar_sample": "50010"
+    }
+  },
+  {
+    "category_code": "CLOTHING_APPAREL",
+    "category_name": "Clothing and Footwear",
+    "description": "Wearing apparel and shoes (subject to state-specific threshold exemptions such as NY <$110, PA exempt, MN exempt).",
+    "taxability_default": "CONDITIONAL",
+    "test_provider_codes": {
+      "mock": "TEST_CLOTHING_07",
+      "avalara_sample": "PC040100",
+      "taxjar_sample": "20010"
+    }
+  },
+  {
+    "category_code": "EXEMPT_HEALTHCARE",
+    "category_name": "Prescription Medicines and Medical Equipment",
+    "description": "Prescription pharmaceuticals, prosthetic devices, and medical necessities exempt under state statutory relief.",
+    "taxability_default": "EXEMPT",
+    "test_provider_codes": {
+      "mock": "TEST_HEALTHCARE_08",
+      "avalara_sample": "MED01000",
+      "taxjar_sample": "10010"
+    }
+  }
+]

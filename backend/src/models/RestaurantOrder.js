@@ -21,6 +21,12 @@ const RestaurantOrderItemSchema = new mongoose.Schema(
         trim: true
       }
     ],
+    excluded_ingredients: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'StockItem'
+      }
+    ],
     quantity: {
       type: Number,
       required: true,
@@ -51,7 +57,43 @@ const RestaurantOrderItemSchema = new mongoose.Schema(
       type: String,
       enum: ['PENDING', 'SENT_TO_KITCHEN', 'PREPARING', 'READY', 'SERVED'],
       default: 'PENDING'
-    }
+    },
+    kitchen_station: {
+      type: String,
+      default: 'OVEN',
+      uppercase: true
+    },
+    selected_modifiers: [
+      {
+        modifier_group_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'ModifierGroup'
+        },
+        option_id: {
+          type: mongoose.Schema.Types.ObjectId
+        },
+        name: {
+          type: String,
+          required: true
+        },
+        price_adjustment: {
+          type: Number,
+          default: 0
+        },
+        quantity: {
+          type: Number,
+          default: 1
+        },
+        ingredient_item_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'StockItem'
+        },
+        quantity_to_consume: {
+          type: Number,
+          default: 0
+        }
+      }
+    ]
   },
   { _id: true }
 );
@@ -81,6 +123,18 @@ const RestaurantOrderSchema = new mongoose.Schema(
       default: 'DINE_IN',
       index: true
     },
+    order_channel: {
+      type: String,
+      enum: ['POS', 'KIOSK', 'TABLE_QR', 'WEB', 'DELIVERY'],
+      default: 'POS',
+      index: true
+    },
+    location_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StoreLocation',
+      default: null,
+      index: true
+    },
     table_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'RestaurantTable'
@@ -92,6 +146,53 @@ const RestaurantOrderSchema = new mongoose.Schema(
     customer_phone: {
       type: String,
       default: ''
+    },
+    customer_email: {
+      type: String,
+      default: ''
+    },
+    customer_address: {
+      type: String,
+      default: ''
+    },
+    pickup_token: {
+      type: String,
+      default: ''
+    },
+    payment_details: {
+      method: {
+        type: String,
+        default: 'UPI_DYNAMIC_QR'
+      },
+      status: {
+        type: String,
+        enum: ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'],
+        default: 'PENDING'
+      },
+      provider_reference: {
+        type: String,
+        default: ''
+      },
+      idempotency_key: {
+        type: String,
+        default: ''
+      },
+      paid_at: {
+        type: Date,
+        default: null
+      },
+      amount_paid: {
+        type: Number,
+        default: 0
+      },
+      tendered_amount: {
+        type: Number,
+        default: 0
+      },
+      change_amount: {
+        type: Number,
+        default: 0
+      }
     },
     status: {
       type: String,

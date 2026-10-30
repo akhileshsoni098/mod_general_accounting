@@ -20,6 +20,11 @@ const StockMovementSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    stockItemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StockItem',
+      index: true
+    },
     godown_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Godown',
@@ -33,6 +38,7 @@ const StockMovementSchema = new mongoose.Schema(
         'OPENING_STOCK',
         'PURCHASE_RECEIPT',
         'SALES_ISSUE',
+        'SALES_RETURN',
         'TRANSFER_IN',
         'TRANSFER_OUT',
         'PHYSICAL_ADJUSTMENT',
@@ -40,7 +46,11 @@ const StockMovementSchema = new mongoose.Schema(
         'RECIPE_CONSUMPTION',
         'PRODUCTION_ISSUE',
         'PRODUCTION_RECEIPT',
-        'WASTAGE'
+        'WASTAGE',
+        'QUARANTINE_IN',
+        'QUARANTINE_RELEASE',
+        'SCRAP_DISPOSAL',
+        'SPOILAGE_DISPOSAL'
       ],
       index: true
     },
@@ -52,7 +62,8 @@ const StockMovementSchema = new mongoose.Schema(
     // The entered quantity in transaction UOM (always positive magnitude)
     quantity: {
       type: mongoose.Schema.Types.Decimal128,
-      required: true
+      required: true,
+      get: (v) => (v != null ? Number(v.toString()) : v)
     },
     // Signed quantity in base unit (+ for IN, - for OUT)
     base_quantity: {
@@ -90,6 +101,11 @@ const StockMovementSchema = new mongoose.Schema(
       default: null,
       index: true
     },
+    sourceDocumentId: {
+      type: String,
+      default: null,
+      index: true
+    },
     source_line_id: {
       type: String,
       default: null
@@ -104,6 +120,31 @@ const StockMovementSchema = new mongoose.Schema(
       required: true,
       default: Date.now,
       index: true
+    },
+    batch_number: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    serial_numbers: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
+    expiry_date: {
+      type: Date,
+      default: null
+    },
+    disposition: {
+      type: String,
+      enum: ['RESTOCK', 'QUARANTINE', 'SCRAP', 'SPOILAGE', 'PRICE_ADJUSTMENT_ONLY'],
+      default: 'RESTOCK'
+    },
+    inspection_status: {
+      type: String,
+      enum: ['PASSED', 'PENDING_INSPECTION', 'FAILED', 'NOT_APPLICABLE'],
+      default: 'NOT_APPLICABLE'
     },
     notes: {
       type: String,
@@ -144,13 +185,31 @@ const StockMovementSchema = new mongoose.Schema(
   },
   {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
-    collection: 'stock_movements'
+    collection: 'stock_movements',
+    toObject: { getters: true },
+    toJSON: { getters: true }
   }
 );
+
+StockMovementSchema.pre('validate', function () {
+  if (this.stock_item_id && !this.stockItemId) {
+    this.stockItemId = this.stock_item_id;
+  }
+  if (this.stockItemId && !this.stock_item_id) {
+    this.stock_item_id = this.stockItemId;
+  }
+  if (this.source_document_id && !this.sourceDocumentId) {
+    this.sourceDocumentId = this.source_document_id;
+  }
+  if (this.sourceDocumentId && !this.source_document_id) {
+    this.source_document_id = this.sourceDocumentId;
+  }
+});
 
 // Enforce unique idempotency key per company
 StockMovementSchema.index({ tenant_id: 1, company_id: 1, idempotency_key: 1 }, { unique: true });
 StockMovementSchema.index({ tenant_id: 1, company_id: 1, stock_item_id: 1, godown_id: 1, effective_date: -1 });
+StockMovementSchema.index({ tenant_id: 1, company_id: 1, stockItemId: 1, godown_id: 1, effective_date: -1 });
 StockMovementSchema.index({ tenant_id: 1, company_id: 1, movement_type: 1 });
 
 module.exports = mongoose.model('StockMovement', StockMovementSchema);

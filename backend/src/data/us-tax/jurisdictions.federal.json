@@ -1,0 +1,16 @@
+[
+  {
+    "jurisdiction_code": "US-FED",
+    "jurisdiction_name": "United States Federal Government",
+    "jurisdiction_type": "FEDERAL",
+    "country_code": "US",
+    "state_code": null,
+    "parent_code": null,
+    "fips_code": "00",
+    "gnis_id": null,
+    "provider_coverage_status": "SUPPORTED",
+    "reference_data_status": "REFERENCE_DATA_AVAILABLE",
+    "source": "US_CENSUS_BUREAU",
+    "source_version": "2024.1.0"
+  }
+]

@@ -8,12 +8,14 @@ const {
   StockMovement,
   BillAllocation,
   LedgerAccount,
-  FiscalPeriod
+  FiscalPeriod,
+  RecipeBOM,
+  ManufacturingBOM
 } = require('../models');
-const { withOptionalTransaction } = require('../utils/transactionHelper');
-const { postJournalEntry } = require('./journalPostingService');
+const transactionHelper = require('../utils/transactionHelper');
+const journalPostingService = require('./journalPostingService');
 const { recordStockMovement } = require('./stockMovementService');
-const { validateAndResolvePostingAccounts } = require('./commercialPostingConfigService');
+const commercialPostingConfigService = require('./commercialPostingConfigService');
 
 /**
  * Master Posting Service for all commercial documents.
@@ -28,7 +30,7 @@ const { validateAndResolvePostingAccounts } = require('./commercialPostingConfig
  * @param {Array<Object>} [params.allocations] - Optional bill-wise allocations for receipts/payments
  * @returns {Promise<Object>}
  */
-async function postCommercialDocument({ tenantId, companyId, documentId, userId, allocations = [] }) {
+async function postCommercialDocument({ tenantId, companyId, documentId, userId, allocations = [], customJournalLines = null, options = {} }) {
   if (!tenantId || !companyId || !documentId) {
     throw new Error('tenantId, companyId, and documentId are required');
   }
@@ -59,7 +61,7 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     }
 
     // 2. Validate posting configuration and accounts
-    const { config, accountMap } = await validateAndResolvePostingAccounts(tenantId, companyId, { session });
+    const { config, accountMap } = await commercialPostingConfigService.validateAndResolvePostingAccounts(tenantId, companyId, { session });
 
     // 3. Validate Fiscal Period Lock
     const pDate = doc.posting_date || doc.document_date || new Date();
@@ -78,7 +80,7 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     const recordedMovements = [];
 
     // 4. Process Inventory & Stock Movements
-    if (['SALES_INVOICE', 'PURCHASE_INVOICE', 'SALES_RETURN', 'PURCHASE_RETURN'].includes(doc.document_type)) {
+    if (['SALES_INVOICE', 'PURCHASE_INVOICE', 'SALES_RETURN', 'PURCHASE_RETURN', 'CREDIT_NOTE', 'DEBIT_NOTE'].includes(doc.document_type)) {
       const defaultGodown = await Godown.findOne({
         tenant_id: tenantId,
         company_id: companyId,
@@ -111,54 +113,208 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         // A. SALES INVOICE (Issue Goods)
         // ==========================================
         if (doc.document_type === 'SALES_INVOICE') {
-          let balance = await StockBalance.findOne({
-            tenant_id: tenantId,
-            company_id: companyId,
-            stock_item_id: line.stock_item_id,
-            godown_id: godownId
+          // Check if this item has an active Recipe BOM (Restaurant) or Manufacturing BOM (Production)
+          const recipeBom = await RecipeBOM.findOne({
+            $or: [
+              { company_id: companyId, menu_item_id: line.stock_item_id },
+              { tenant_id: tenantId, menu_item_id: line.stock_item_id },
+              { menu_item_id: line.stock_item_id }
+            ],
+            is_active: { $ne: false }
           }).session(session);
 
-          const currentQty = balance ? new BigNumber(balance.quantity_on_hand.toString()) : new BigNumber(0);
-
-          if (!config.allow_negative_stock && currentQty.isLessThan(baseQtyBn)) {
-            const err = new Error(
-              `INSUFFICIENT_STOCK: Stock item "${line.item_name}" has on-hand balance of ${currentQty.toFixed(4)}, but requested issue is ${baseQtyBn.toFixed(4)} in godown "${targetGodown.godown_name}".`
-            );
-            err.code = 'INSUFFICIENT_STOCK';
-            throw err;
+          let mfgBom = null;
+          if (!recipeBom) {
+            mfgBom = await ManufacturingBOM.findOne({
+              $or: [
+                { company_id: companyId, finished_item_id: line.stock_item_id },
+                { tenant_id: tenantId, finished_item_id: line.stock_item_id },
+                { finished_item_id: line.stock_item_id }
+              ],
+              is_active: { $ne: false }
+            }).session(session);
           }
 
-          // Read moving-average cost from balance
-          const issueUnitCostBn = balance ? new BigNumber(balance.average_unit_cost.toString()) : new BigNumber(0);
-          const lineCogsBn = baseQtyBn.times(issueUnitCostBn);
-          totalCogsBn = totalCogsBn.plus(lineCogsBn);
+          if (recipeBom && recipeBom.ingredients && recipeBom.ingredients.length > 0) {
+            // ==========================================
+            // A1. RECIPE BOM AUTO-CONSUMPTION FOR SALES
+            // Deduct ONLY non-excluded raw materials (e.g. skip Sauce if customer requested No Sauce)
+            // ==========================================
+            const excludedSet = new Set((line.excluded_ingredients || []).map(id => String(id)));
+            let totalBomCogsBn = new BigNumber(0);
 
-          line.issue_unit_cost = mongoose.Types.Decimal128.fromString(issueUnitCostBn.toFixed(2));
-          line.total_cogs_amount = mongoose.Types.Decimal128.fromString(lineCogsBn.toFixed(2));
+            for (const ing of recipeBom.ingredients) {
+              const ingItemId = String(ing.ingredient_item_id?._id || ing.ingredient_item_id);
+              if (excludedSet.has(ingItemId)) {
+                // Customer customized to exclude this ingredient (e.g. NO SAUCE) - SKIP deduction!
+                continue;
+              }
 
-          const movResult = await recordStockMovement({
-            tenantId,
-            companyId,
-            stockItemId: line.stock_item_id,
-            godownId,
-            movementType: 'SALES_ISSUE',
-            direction: 'OUT',
-            quantity: line.quantity.toString(),
-            uomId: line.uom_id,
-            idempotencyKey: `MOV-SI-${doc._id}-${line.line_number}`,
-            effectiveDate: pDate,
-            unitRate: issueUnitCostBn.toFixed(2),
-            totalCost: lineCogsBn.toFixed(2),
-            sourceDocumentType: 'SALES_INVOICE',
-            sourceDocumentId: doc.document_number,
-            sourceLineId: String(line.line_number),
-            notes: `Goods issued for sales invoice ${doc.document_number}`,
-            userId,
-            session
-          });
+              const wasteFactor = 1 + (ing.waste_percentage || 0) / 100;
+              const consumeQtyBn = baseQtyBn.times(ing.quantity.toString()).times(wasteFactor).dividedBy(recipeBom.yield_quantity || 1);
 
-          line.stock_movement_id = movResult.movement._id;
-          recordedMovements.push(movResult.movement);
+              let ingBalance = await StockBalance.findOne({
+                tenant_id: tenantId,
+                company_id: companyId,
+                stock_item_id: ing.ingredient_item_id,
+                godown_id: godownId
+              }).session(session);
+
+              const ingUnitCostBn = ingBalance ? new BigNumber(ingBalance.average_unit_cost.toString()) : new BigNumber(0);
+              const ingLineCogsBn = consumeQtyBn.times(ingUnitCostBn);
+              totalBomCogsBn = totalBomCogsBn.plus(ingLineCogsBn);
+
+              const movResult = await recordStockMovement({
+                tenantId,
+                companyId,
+                stockItemId: ing.ingredient_item_id,
+                godownId,
+                movementType: 'RECIPE_CONSUMPTION',
+                direction: 'OUT',
+                quantity: consumeQtyBn.toFixed(4),
+                uomId: ing.uom_id,
+                idempotencyKey: `MOV-SI-BOM-${doc._id}-${line.line_number}-${ingItemId}`,
+                effectiveDate: pDate,
+                unitRate: ingUnitCostBn.toFixed(2),
+                totalCost: ingLineCogsBn.toFixed(2),
+                sourceDocumentType: 'SALES_INVOICE',
+                sourceDocumentId: doc.document_number,
+                sourceLineId: String(line.line_number),
+                notes: `BOM raw material consumed for ${line.item_name} (Invoice ${doc.document_number})`,
+                userId,
+                session
+              });
+
+              recordedMovements.push(movResult.movement);
+            }
+
+            line.total_cogs_amount = mongoose.Types.Decimal128.fromString(totalBomCogsBn.toFixed(2));
+            totalCogsBn = totalCogsBn.plus(totalBomCogsBn);
+          } else if (mfgBom && mfgBom.raw_materials && mfgBom.raw_materials.length > 0) {
+            // ==========================================
+            // A1.2 MANUFACTURING BOM AUTO-CONSUMPTION FOR SALES
+            // Deduct raw material components defined in Manufacturing BOM (e.g. Capsicum, Tamatar for Salad)
+            // ==========================================
+            let totalBomCogsBn = new BigNumber(0);
+            const yieldQty = mfgBom.output_quantity || 1;
+
+            for (const rm of mfgBom.raw_materials) {
+              const rmItemId = String(rm.item_id?._id || rm.item_id);
+              const scrapFactor = 1 + (rm.scrap_percentage || 0) / 100;
+              const consumeQtyBn = baseQtyBn.times(rm.quantity.toString()).times(scrapFactor).dividedBy(yieldQty);
+
+              let rmBalance = await StockBalance.findOne({
+                tenant_id: tenantId,
+                company_id: companyId,
+                stock_item_id: rm.item_id,
+                godown_id: godownId
+              }).session(session);
+
+              const currentRmQty = rmBalance ? new BigNumber(rmBalance.quantity_on_hand.toString()) : new BigNumber(0);
+              if (!config.allow_negative_stock && currentRmQty.isLessThan(consumeQtyBn)) {
+                const rawItemDoc = await StockItem.findById(rm.item_id).session(session);
+                const rawName = rawItemDoc ? rawItemDoc.item_name : 'Raw Material';
+                const err = new Error(
+                  `INSUFFICIENT_STOCK: Raw material "${rawName}" has on-hand balance of ${currentRmQty.toFixed(4)}, but requested consumption is ${consumeQtyBn.toFixed(4)} in godown "${targetGodown.godown_name}".`
+                );
+                err.code = 'INSUFFICIENT_STOCK';
+                throw err;
+              }
+
+              const rmUnitCostBn = rmBalance ? new BigNumber(rmBalance.average_unit_cost.toString()) : new BigNumber(0);
+              const rmLineCogsBn = consumeQtyBn.times(rmUnitCostBn);
+              totalBomCogsBn = totalBomCogsBn.plus(rmLineCogsBn);
+
+              const movResult = await recordStockMovement({
+                tenantId,
+                companyId,
+                stockItemId: rm.item_id,
+                godownId,
+                movementType: 'PRODUCTION_ISSUE',
+                direction: 'OUT',
+                quantity: consumeQtyBn.toFixed(4),
+                uomId: rm.uom_id,
+                idempotencyKey: `MOV-SI-MFG-${doc._id}-${line.line_number}-${rmItemId}`,
+                effectiveDate: pDate,
+                unitRate: rmUnitCostBn.toFixed(2),
+                totalCost: rmLineCogsBn.toFixed(2),
+                sourceDocumentType: 'SALES_INVOICE',
+                sourceDocumentId: doc.document_number,
+                sourceLineId: String(line.line_number),
+                notes: `Manufacturing BOM raw material consumed for ${line.item_name} (Invoice ${doc.document_number})`,
+                userId,
+                session
+              });
+
+              recordedMovements.push(movResult.movement);
+            }
+
+            // Add allocated overhead costs if any
+            if (mfgBom.overhead_costs && mfgBom.overhead_costs.length > 0) {
+              for (const oc of mfgBom.overhead_costs) {
+                const ohCostBn = baseQtyBn.times(Number(oc.cost_amount) || 0).dividedBy(yieldQty);
+                totalBomCogsBn = totalBomCogsBn.plus(ohCostBn);
+              }
+            }
+
+            line.total_cogs_amount = mongoose.Types.Decimal128.fromString(totalBomCogsBn.toFixed(2));
+            totalCogsBn = totalCogsBn.plus(totalBomCogsBn);
+          } else {
+            // ==========================================
+            // A2. STANDARD GOODS ISSUE FOR REGULAR INVENTORY
+            // ==========================================
+            let balance = await StockBalance.findOne({
+              tenant_id: tenantId,
+              company_id: companyId,
+              stock_item_id: line.stock_item_id,
+              godown_id: godownId
+            }).session(session);
+
+            const currentQty = balance ? new BigNumber(balance.quantity_on_hand.toString()) : new BigNumber(0);
+
+            if (!config.allow_negative_stock && currentQty.isLessThan(baseQtyBn)) {
+              const err = new Error(
+                `INSUFFICIENT_STOCK: Stock item "${line.item_name}" has on-hand balance of ${currentQty.toFixed(4)}, but requested issue is ${baseQtyBn.toFixed(4)} in godown "${targetGodown.godown_name}".`
+              );
+              err.code = 'INSUFFICIENT_STOCK';
+              throw err;
+            }
+
+            // Read moving-average cost from balance
+            const issueUnitCostBn = balance ? new BigNumber(balance.average_unit_cost.toString()) : new BigNumber(0);
+            const lineCogsBn = baseQtyBn.times(issueUnitCostBn);
+            totalCogsBn = totalCogsBn.plus(lineCogsBn);
+
+            line.issue_unit_cost = mongoose.Types.Decimal128.fromString(issueUnitCostBn.toFixed(2));
+            line.total_cogs_amount = mongoose.Types.Decimal128.fromString(lineCogsBn.toFixed(2));
+
+            const movResult = await recordStockMovement({
+              tenantId,
+              companyId,
+              stockItemId: line.stock_item_id,
+              godownId,
+              movementType: 'SALES_ISSUE',
+              direction: 'OUT',
+              quantity: line.quantity.toString(),
+              uomId: line.uom_id,
+              idempotencyKey: `MOV-SI-${doc._id}-${line.line_number}`,
+              effectiveDate: pDate,
+              unitRate: issueUnitCostBn.toFixed(2),
+              totalCost: lineCogsBn.toFixed(2),
+              sourceDocumentType: 'SALES_INVOICE',
+              sourceDocumentId: doc.document_number,
+              sourceLineId: String(line.line_number),
+              notes: `Goods issued for sales invoice ${doc.document_number}`,
+              userId,
+              batchNumber: line.batch_number || '',
+              serialNumbers: line.serial_numbers || [],
+              expiryDate: line.expiry_date || null,
+              session
+            });
+
+            line.stock_movement_id = movResult.movement._id;
+            recordedMovements.push(movResult.movement);
+          }
         }
 
         // ==========================================
@@ -186,6 +342,9 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
             sourceLineId: String(line.line_number),
             notes: `Goods received from purchase invoice ${doc.document_number}`,
             userId,
+            batchNumber: line.batch_number || '',
+            serialNumbers: line.serial_numbers || [],
+            expiryDate: line.expiry_date || null,
             session
           });
 
@@ -194,52 +353,151 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         }
 
         // ==========================================
-        // C. SALES RETURN (Customer Return)
+        // C. SALES RETURN / CREDIT NOTE (Customer Return with Dispositions)
         // ==========================================
-        else if (doc.document_type === 'SALES_RETURN') {
-          if (line.restockable) {
-            // Restore inventory at estimated or original issue cost
-            let balance = await StockBalance.findOne({
-              tenant_id: tenantId,
-              company_id: companyId,
-              stock_item_id: line.stock_item_id,
-              godown_id: godownId
-            }).session(session);
+        else if (doc.document_type === 'SALES_RETURN' || doc.document_type === 'CREDIT_NOTE') {
+          // Perishable / Restaurant Food Check: Prepared items with recipes (e.g. Pizzas, Burgers)
+          // must NEVER be restocked back into saleable inventory upon return. They are spoiled food.
+          const itemRecipe = await RecipeBOM.findOne({
+            company_id: companyId,
+            menu_item_id: line.stock_item_id,
+            is_active: true
+          }).session(session);
 
-            const restockCostRateBn = balance ? new BigNumber(balance.average_unit_cost.toString()) : new BigNumber(0);
-            const lineRestockValBn = baseQtyBn.times(restockCostRateBn);
-            totalCogsBn = totalCogsBn.plus(lineRestockValBn); // COGS reversal amount
+          const isFoodSpoilage = Boolean(itemRecipe) ||
+            options?.eventCode?.includes('spoilage') ||
+            options?.eventCode?.includes('waste') ||
+            options?.eventCode?.includes('scrap') ||
+            line.disposition === 'SPOILAGE' ||
+            line.disposition === 'SCRAP';
 
-            const movResult = await recordStockMovement({
-              tenantId,
-              companyId,
-              stockItemId: line.stock_item_id,
-              godownId,
-              movementType: 'PURCHASE_RECEIPT',
-              direction: 'IN',
-              quantity: line.quantity.toString(),
-              uomId: line.uom_id,
-              idempotencyKey: `MOV-SR-${doc._id}-${line.line_number}`,
-              effectiveDate: pDate,
-              unitRate: restockCostRateBn.toFixed(2),
-              totalCost: lineRestockValBn.toFixed(2),
-              sourceDocumentType: 'SALES_RETURN',
-              sourceDocumentId: doc.document_number,
-              sourceLineId: String(line.line_number),
-              notes: `Restocked goods from sales return ${doc.document_number}`,
-              userId,
-              session
-            });
+          if (isFoodSpoilage) {
+            line.restockable = false;
+            line.disposition = 'SPOILAGE';
+            // Do not restock ruined food items into godown inventory
+            continue;
+          }
 
-            line.stock_movement_id = movResult.movement._id;
-            recordedMovements.push(movResult.movement);
+          const isPriceAdjustment = options?.eventCode?.includes('price_adjustment') ||
+            options?.eventCode?.includes('bad_debt') ||
+            line.disposition === 'PRICE_ADJUSTMENT_ONLY';
+
+          if (!isPriceAdjustment) {
+            const disposition = line.disposition || (line.restockable === false ? 'SCRAP' : 'RESTOCK');
+
+            if (disposition === 'RESTOCK' && line.restockable !== false) {
+              // Standard resalable return: return to saleable godown and reverse COGS
+              let balance = await StockBalance.findOne({
+                tenant_id: tenantId,
+                company_id: companyId,
+                stock_item_id: line.stock_item_id,
+                godown_id: godownId
+              }).session(session);
+
+              const restockCostRateBn = balance ? new BigNumber(balance.average_unit_cost.toString()) : new BigNumber(0);
+              const lineRestockValBn = baseQtyBn.times(restockCostRateBn);
+              totalCogsBn = totalCogsBn.plus(lineRestockValBn); // COGS reversal amount
+
+              const movResult = await recordStockMovement({
+                tenantId,
+                companyId,
+                stockItemId: line.stock_item_id,
+                godownId,
+                movementType: 'SALES_RETURN',
+                direction: 'IN',
+                quantity: line.quantity.toString(),
+                uomId: line.uom_id,
+                idempotencyKey: `MOV-SR-${doc._id}-${line.line_number}`,
+                effectiveDate: pDate,
+                unitRate: restockCostRateBn.toFixed(2),
+                totalCost: lineRestockValBn.toFixed(2),
+                sourceDocumentType: doc.document_type,
+                sourceDocumentId: doc.document_number,
+                sourceLineId: String(line.line_number),
+                notes: `Restocked goods from ${doc.document_type} ${doc.document_number}`,
+                userId,
+                batchNumber: line.batch_number || '',
+                serialNumbers: line.serial_numbers || [],
+                expiryDate: line.expiry_date || null,
+                disposition: 'RESTOCK',
+                inspectionStatus: line.inspection_status || 'PASSED',
+                session
+              });
+
+              line.stock_movement_id = movResult.movement._id;
+              recordedMovements.push(movResult.movement);
+            } else if (disposition === 'QUARANTINE') {
+              // Defective / inspection-required return: receive into Quarantine Godown
+              let quarantineGodown = await Godown.findOne({
+                tenant_id: tenantId,
+                company_id: companyId,
+                godown_code: 'QUARANTINE',
+                status: 'ACTIVE'
+              }).session(session);
+
+              if (!quarantineGodown) {
+                quarantineGodown = await Godown.findOneAndUpdate(
+                  { tenant_id: tenantId, company_id: companyId, godown_code: 'QUARANTINE' },
+                  {
+                    godown_name: 'Quarantine & Inspection Godown',
+                    is_default: false,
+                    status: 'ACTIVE'
+                  },
+                  { upsert: true, new: true, session }
+                );
+              }
+
+              let balance = await StockBalance.findOne({
+                tenant_id: tenantId,
+                company_id: companyId,
+                stock_item_id: line.stock_item_id,
+                godown_id: quarantineGodown._id
+              }).session(session);
+
+              const qUnitCostBn = balance ? new BigNumber(balance.average_unit_cost.toString()) : new BigNumber(0);
+              const lineQValBn = baseQtyBn.times(qUnitCostBn);
+
+              const movResult = await recordStockMovement({
+                tenantId,
+                companyId,
+                stockItemId: line.stock_item_id,
+                godownId: quarantineGodown._id,
+                movementType: 'QUARANTINE_IN',
+                direction: 'IN',
+                quantity: line.quantity.toString(),
+                uomId: line.uom_id,
+                idempotencyKey: `MOV-QR-${doc._id}-${line.line_number}`,
+                effectiveDate: pDate,
+                unitRate: qUnitCostBn.toFixed(2),
+                totalCost: lineQValBn.toFixed(2),
+                sourceDocumentType: doc.document_type,
+                sourceDocumentId: doc.document_number,
+                sourceLineId: String(line.line_number),
+                notes: `Defective return routed to quarantine from ${doc.document_type} ${doc.document_number}`,
+                userId,
+                batchNumber: line.batch_number || '',
+                serialNumbers: line.serial_numbers || [],
+                expiryDate: line.expiry_date || null,
+                disposition: 'QUARANTINE',
+                inspectionStatus: line.inspection_status || 'PENDING_INSPECTION',
+                session
+              });
+
+              line.stock_movement_id = movResult.movement._id;
+              recordedMovements.push(movResult.movement);
+            } else if (disposition === 'SPOILAGE' || disposition === 'SCRAP') {
+              // Food waste, fresh pizza return, or damaged goods:
+              // Customer receives credit, but ruined goods are discarded, NOT added back to saleable inventory.
+              // COGS is NOT reversed (no addition to totalCogsBn).
+              line.restockable = false;
+            }
           }
         }
 
         // ==========================================
-        // D. PURCHASE RETURN (Debit Note / Return to Vendor)
+        // D. PURCHASE RETURN / DEBIT NOTE (Return to Vendor)
         // ==========================================
-        else if (doc.document_type === 'PURCHASE_RETURN') {
+        else if (doc.document_type === 'PURCHASE_RETURN' || doc.document_type === 'DEBIT_NOTE') {
           const lineCostBn = new BigNumber(line.taxable_amount.toString());
           const unitRateBn = baseQtyBn.isGreaterThan(0) ? lineCostBn.dividedBy(baseQtyBn) : new BigNumber(0);
 
@@ -256,10 +514,10 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
             effectiveDate: pDate,
             unitRate: unitRateBn.toFixed(2),
             totalCost: lineCostBn.toFixed(2),
-            sourceDocumentType: 'PURCHASE_RETURN',
+            sourceDocumentType: doc.document_type,
             sourceDocumentId: doc.document_number,
             sourceLineId: String(line.line_number),
-            notes: `Goods returned to supplier for debit note ${doc.document_number}`,
+            notes: `Goods returned to supplier for ${doc.document_type} ${doc.document_number}`,
             userId,
             session
           });
@@ -274,12 +532,32 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     const journalLines = [];
     let memoText = `${doc.document_type}: ${doc.document_number}`;
 
-    const grandTotalBn = new BigNumber(doc.grand_total.toString());
-    const taxableBn = new BigNumber(doc.total_taxable_amount.toString());
-    const cgstBn = new BigNumber(doc.total_cgst_amount.toString());
-    const sgstBn = new BigNumber(doc.total_sgst_amount.toString());
-    const igstBn = new BigNumber(doc.total_igst_amount.toString());
-    const roundOffBn = new BigNumber(doc.round_off_amount.toString());
+    const grandTotalBn = new BigNumber((doc.grand_total || 0).toString());
+    const taxableBn = new BigNumber((doc.total_taxable_amount || 0).toString());
+    const totalTaxBn = new BigNumber((doc.total_tax_amount || 0).toString());
+    const cgstBn = new BigNumber((doc.total_cgst_amount || 0).toString());
+    const sgstBn = new BigNumber((doc.total_sgst_amount || 0).toString());
+    const igstBn = new BigNumber((doc.total_igst_amount || 0).toString());
+    const roundOffBn = new BigNumber((doc.round_off_amount || 0).toString());
+    const isUsDoc = doc.tax_regime === 'US_SALES_TAX';
+
+    // US Tax Strict Production & Validation Guard
+    if (isUsDoc) {
+      if (process.env.NODE_ENV === 'production' && doc.is_mock_tax) {
+        const err = new Error(
+          'PRODUCTION_MOCK_DISALLOWED: Document was calculated using synthetic mock tax provider. Mock tax calculations cannot be posted to General Ledger in production. Configure a verified commercial tax provider (Avalara, TaxJar, Vertex).'
+        );
+        err.code = 'PRODUCTION_MOCK_DISALLOWED';
+        throw err;
+      }
+      if (process.env.NODE_ENV === 'production' && doc.tax_calculation_status !== 'CALCULATED' && doc.tax_calculation_status !== 'COMMITTED') {
+        const err = new Error(
+          `TAX_CALCULATION_REQUIRED: Commercial document "${doc.document_number}" requires validated tax calculation before GL posting in US tax jurisdiction.`
+        );
+        err.code = 'TAX_CALCULATION_REQUIRED';
+        throw err;
+      }
+    }
 
     // ==========================================
     // 5A. SALES INVOICE GL POSTING
@@ -303,29 +581,40 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         memo: `Sales revenue for ${doc.document_number}`
       });
 
-      if (cgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_cgst_account_code,
-          debit: '0.00',
-          credit: cgstBn.toFixed(2),
-          memo: `Output CGST on ${doc.document_number}`
-        });
-      }
-      if (sgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_sgst_account_code,
-          debit: '0.00',
-          credit: sgstBn.toFixed(2),
-          memo: `Output SGST on ${doc.document_number}`
-        });
-      }
-      if (igstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_igst_account_code,
-          debit: '0.00',
-          credit: igstBn.toFixed(2),
-          memo: `Output IGST on ${doc.document_number}`
-        });
+      if (isUsDoc) {
+        if (totalTaxBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.sales_tax_payable_account_code || '2110',
+            debit: '0.00',
+            credit: totalTaxBn.toFixed(2),
+            memo: `US Sales Tax Payable on ${doc.document_number}`
+          });
+        }
+      } else {
+        if (cgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_cgst_account_code,
+            debit: '0.00',
+            credit: cgstBn.toFixed(2),
+            memo: `Output CGST on ${doc.document_number}`
+          });
+        }
+        if (sgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_sgst_account_code,
+            debit: '0.00',
+            credit: sgstBn.toFixed(2),
+            memo: `Output SGST on ${doc.document_number}`
+          });
+        }
+        if (igstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_igst_account_code,
+            debit: '0.00',
+            credit: igstBn.toFixed(2),
+            memo: `Output IGST on ${doc.document_number}`
+          });
+        }
       }
 
       // Round-off handling
@@ -356,36 +645,71 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         ? (await LedgerAccount.findById(doc.bank_or_cash_account_id).session(session))?.account_code || config.bank_account_code
         : config.payable_account_code;
 
-      journalLines.push({
-        account_code: config.inventory_asset_account_code,
-        debit: taxableBn.toFixed(2),
-        credit: '0.00',
-        memo: `Inventory received for purchase ${doc.document_number}`
-      });
+      if (isUsDoc) {
+        const taxTreatment = config.purchase_tax_treatment || 'CAPITALIZE_TO_ITEM';
+        if (taxTreatment === 'BLOCKED') {
+          const err = new Error(
+            `BLOCKED_TAX_CONFIGURATION: Purchase tax treatment for company is BLOCKED. Posting cannot proceed without explicit account configuration.`
+          );
+          err.code = 'BLOCKED_TAX_CONFIGURATION';
+          throw err;
+        }
 
-      if (cgstBn.isGreaterThan(0)) {
+        if (taxTreatment === 'EXPENSE_SEPARATE' && totalTaxBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.inventory_asset_account_code,
+            debit: taxableBn.toFixed(2),
+            credit: '0.00',
+            memo: `Inventory received for purchase ${doc.document_number}`
+          });
+          journalLines.push({
+            account_code: config.tax_expense_account_code || '5110',
+            debit: totalTaxBn.toFixed(2),
+            credit: '0.00',
+            memo: `Non-recoverable purchase tax expense on ${doc.document_number}`
+          });
+        } else {
+          // CAPITALIZE_TO_ITEM: Total inventory cost = taxable + tax
+          const totalInvCostBn = taxableBn.plus(totalTaxBn);
+          journalLines.push({
+            account_code: config.inventory_asset_account_code,
+            debit: totalInvCostBn.toFixed(2),
+            credit: '0.00',
+            memo: `Inventory received for purchase (cost capitalized) ${doc.document_number}`
+          });
+        }
+      } else {
         journalLines.push({
-          account_code: config.input_cgst_account_code,
-          debit: cgstBn.toFixed(2),
+          account_code: config.inventory_asset_account_code,
+          debit: taxableBn.toFixed(2),
           credit: '0.00',
-          memo: `Input CGST credit on ${doc.document_number}`
+          memo: `Inventory received for purchase ${doc.document_number}`
         });
-      }
-      if (sgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.input_sgst_account_code,
-          debit: sgstBn.toFixed(2),
-          credit: '0.00',
-          memo: `Input SGST credit on ${doc.document_number}`
-        });
-      }
-      if (igstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.input_igst_account_code,
-          debit: igstBn.toFixed(2),
-          credit: '0.00',
-          memo: `Input IGST credit on ${doc.document_number}`
-        });
+
+        if (cgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_cgst_account_code,
+            debit: cgstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Input CGST credit on ${doc.document_number}`
+          });
+        }
+        if (sgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_sgst_account_code,
+            debit: sgstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Input SGST credit on ${doc.document_number}`
+          });
+        }
+        if (igstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_igst_account_code,
+            debit: igstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Input IGST credit on ${doc.document_number}`
+          });
+        }
       }
 
       // Round-off handling
@@ -419,9 +743,17 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     // 5C. CUSTOMER RECEIPT GL POSTING
     // ==========================================
     else if (doc.document_type === 'RECEIPT') {
-      const cashBankCode = doc.bank_or_cash_account_id
-        ? (await LedgerAccount.findById(doc.bank_or_cash_account_id).session(session))?.account_code || config.cash_account_code
-        : config.cash_account_code;
+      let cashBankCode = config.cash_account_code;
+      if (doc.bank_or_cash_account_id) {
+        if (mongoose.Types.ObjectId.isValid(doc.bank_or_cash_account_id)) {
+          const acc = await LedgerAccount.findById(doc.bank_or_cash_account_id).session(session);
+          if (acc) cashBankCode = acc.account_code;
+        } else {
+          const acc = await LedgerAccount.findOne({ tenant_id: tenantId, company_id: companyId, account_code: String(doc.bank_or_cash_account_id) }).session(session);
+          if (acc) cashBankCode = acc.account_code;
+          else cashBankCode = String(doc.bank_or_cash_account_id);
+        }
+      }
 
       journalLines.push({
         account_code: cashBankCode,
@@ -442,9 +774,17 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     // 5D. SUPPLIER PAYMENT GL POSTING
     // ==========================================
     else if (doc.document_type === 'PAYMENT') {
-      const cashBankCode = doc.bank_or_cash_account_id
-        ? (await LedgerAccount.findById(doc.bank_or_cash_account_id).session(session))?.account_code || config.bank_account_code
-        : config.bank_account_code;
+      let cashBankCode = config.bank_account_code;
+      if (doc.bank_or_cash_account_id) {
+        if (mongoose.Types.ObjectId.isValid(doc.bank_or_cash_account_id)) {
+          const acc = await LedgerAccount.findById(doc.bank_or_cash_account_id).session(session);
+          if (acc) cashBankCode = acc.account_code;
+        } else {
+          const acc = await LedgerAccount.findOne({ tenant_id: tenantId, company_id: companyId, account_code: String(doc.bank_or_cash_account_id) }).session(session);
+          if (acc) cashBankCode = acc.account_code;
+          else cashBankCode = String(doc.bank_or_cash_account_id);
+        }
+      }
 
       journalLines.push({
         account_code: config.payable_account_code,
@@ -472,29 +812,59 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         memo: `Sales return adjustment on ${doc.document_number}`
       });
 
-      if (cgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_cgst_account_code,
-          debit: cgstBn.toFixed(2),
-          credit: '0.00',
-          memo: `Reverse Output CGST on ${doc.document_number}`
-        });
+      if (isUsDoc) {
+        if (totalTaxBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.sales_tax_payable_account_code || '2110',
+            debit: totalTaxBn.toFixed(2),
+            credit: '0.00',
+            memo: `Reverse Sales Tax Payable on return ${doc.document_number}`
+          });
+        }
+      } else {
+        if (cgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_cgst_account_code,
+            debit: cgstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Reverse Output CGST on ${doc.document_number}`
+          });
+        }
+        if (sgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_sgst_account_code,
+            debit: sgstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Reverse Output SGST on ${doc.document_number}`
+          });
+        }
+        if (igstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.output_igst_account_code,
+            debit: igstBn.toFixed(2),
+            credit: '0.00',
+            memo: `Reverse Output IGST on ${doc.document_number}`
+          });
+        }
       }
-      if (sgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_sgst_account_code,
-          debit: sgstBn.toFixed(2),
-          credit: '0.00',
-          memo: `Reverse Output SGST on ${doc.document_number}`
-        });
-      }
-      if (igstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.output_igst_account_code,
-          debit: igstBn.toFixed(2),
-          credit: '0.00',
-          memo: `Reverse Output IGST on ${doc.document_number}`
-        });
+
+      // Round-off handling for sales return
+      if (!roundOffBn.isZero()) {
+        if (roundOffBn.isPositive()) {
+          journalLines.push({
+            account_code: config.round_off_account_code,
+            debit: roundOffBn.toFixed(2),
+            credit: '0.00',
+            memo: `Round-off debit on return ${doc.document_number}`
+          });
+        } else {
+          journalLines.push({
+            account_code: config.round_off_account_code,
+            debit: '0.00',
+            credit: roundOffBn.abs().toFixed(2),
+            memo: `Round-off credit on return ${doc.document_number}`
+          });
+        }
       }
 
       journalLines.push({
@@ -516,36 +886,90 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         memo: `Debit supplier account for return ${doc.document_number}`
       });
 
-      journalLines.push({
-        account_code: config.inventory_asset_account_code,
-        debit: '0.00',
-        credit: taxableBn.toFixed(2),
-        memo: `Relieve inventory asset for purchase return ${doc.document_number}`
-      });
+      if (isUsDoc) {
+        const taxTreatment = config.purchase_tax_treatment || 'CAPITALIZE_TO_ITEM';
+        if (taxTreatment === 'BLOCKED') {
+          const err = new Error(
+            `BLOCKED_TAX_CONFIGURATION: Purchase tax treatment for company is BLOCKED. Posting cannot proceed without explicit account configuration.`
+          );
+          err.code = 'BLOCKED_TAX_CONFIGURATION';
+          throw err;
+        }
 
-      if (cgstBn.isGreaterThan(0)) {
+        if (taxTreatment === 'EXPENSE_SEPARATE' && totalTaxBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.inventory_asset_account_code,
+            debit: '0.00',
+            credit: taxableBn.toFixed(2),
+            memo: `Relieve inventory asset for purchase return ${doc.document_number}`
+          });
+          journalLines.push({
+            account_code: config.tax_expense_account_code || '5110',
+            debit: '0.00',
+            credit: totalTaxBn.toFixed(2),
+            memo: `Reverse purchase tax expense on return ${doc.document_number}`
+          });
+        } else {
+          // CAPITALIZE_TO_ITEM
+          const totalInvCostBn = taxableBn.plus(totalTaxBn);
+          journalLines.push({
+            account_code: config.inventory_asset_account_code,
+            debit: '0.00',
+            credit: totalInvCostBn.toFixed(2),
+            memo: `Relieve inventory asset (capitalized cost) for purchase return ${doc.document_number}`
+          });
+        }
+      } else {
         journalLines.push({
-          account_code: config.input_cgst_account_code,
+          account_code: config.inventory_asset_account_code,
           debit: '0.00',
-          credit: cgstBn.toFixed(2),
-          memo: `Reverse Input CGST on ${doc.document_number}`
+          credit: taxableBn.toFixed(2),
+          memo: `Relieve inventory asset for purchase return ${doc.document_number}`
         });
+
+        if (cgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_cgst_account_code,
+            debit: '0.00',
+            credit: cgstBn.toFixed(2),
+            memo: `Reverse Input CGST on ${doc.document_number}`
+          });
+        }
+        if (sgstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_sgst_account_code,
+            debit: '0.00',
+            credit: sgstBn.toFixed(2),
+            memo: `Reverse Input SGST on ${doc.document_number}`
+          });
+        }
+        if (igstBn.isGreaterThan(0)) {
+          journalLines.push({
+            account_code: config.input_igst_account_code,
+            debit: '0.00',
+            credit: igstBn.toFixed(2),
+            memo: `Reverse Input IGST on ${doc.document_number}`
+          });
+        }
       }
-      if (sgstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.input_sgst_account_code,
-          debit: '0.00',
-          credit: sgstBn.toFixed(2),
-          memo: `Reverse Input SGST on ${doc.document_number}`
-        });
-      }
-      if (igstBn.isGreaterThan(0)) {
-        journalLines.push({
-          account_code: config.input_igst_account_code,
-          debit: '0.00',
-          credit: igstBn.toFixed(2),
-          memo: `Reverse Input IGST on ${doc.document_number}`
-        });
+
+      // Round-off handling for purchase return
+      if (!roundOffBn.isZero()) {
+        if (roundOffBn.isPositive()) {
+          journalLines.push({
+            account_code: config.round_off_account_code,
+            debit: '0.00',
+            credit: roundOffBn.toFixed(2),
+            memo: `Round-off credit on return ${doc.document_number}`
+          });
+        } else {
+          journalLines.push({
+            account_code: config.round_off_account_code,
+            debit: roundOffBn.abs().toFixed(2),
+            credit: '0.00',
+            memo: `Round-off debit on return ${doc.document_number}`
+          });
+        }
       }
     }
 
@@ -579,17 +1003,40 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     }
 
     // Post Primary Financial Journal
-    const postRes = await postJournalEntry({
+    let finalJournalLines = journalLines;
+    if (Array.isArray(customJournalLines) && customJournalLines.length > 0) {
+      let totalDr = new BigNumber(0);
+      let totalCr = new BigNumber(0);
+      const validatedLines = [];
+      for (const cl of customJournalLines) {
+        const drBn = new BigNumber(cl.debit || 0);
+        const crBn = new BigNumber(cl.credit || 0);
+        totalDr = totalDr.plus(drBn);
+        totalCr = totalCr.plus(crBn);
+        validatedLines.push({
+          account_code: String(cl.account_code),
+          debit: drBn.toFixed(2),
+          credit: crBn.toFixed(2),
+          memo: cl.memo || cl.description || memoText
+        });
+      }
+      if (!totalDr.isEqualTo(totalCr)) {
+        throw new Error(`Custom Journal Entry lines are unbalanced. Total Debit (${totalDr.toFixed(2)}) must equal Total Credit (${totalCr.toFixed(2)})`);
+      }
+      finalJournalLines = validatedLines;
+    }
+
+    const postRes = await journalPostingService.postJournalEntry({
       tenantId,
       companyId,
       userId,
       postingDate: pDate,
       sourceModule: 'COMMERCIAL_DOCS',
       referenceId: `${doc.document_type}:${doc.document_number}`,
-      memo: memoText,
+      memo: options?.eventCode ? `[${options.eventCode}] ${memoText}` : memoText,
       currency: doc.currency || 'INR',
       accountingBasis: 'GAAP',
-      lines: journalLines,
+      lines: finalJournalLines,
       session
     });
 
@@ -620,7 +1067,7 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
         }
       ];
 
-      const cogsRes = await postJournalEntry({
+      const cogsRes = await journalPostingService.postJournalEntry({
         tenantId,
         companyId,
         userId,
@@ -670,10 +1117,18 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     }
 
     // 6. Process Bill-Wise Outstanding Allocations
-    if (['RECEIPT', 'PAYMENT'].includes(doc.document_type) && allocations && allocations.length > 0) {
+    let targetAllocations = allocations && allocations.length > 0 ? allocations : [];
+    if (targetAllocations.length === 0 && doc.linked_source_document_id && ['RECEIPT', 'PAYMENT'].includes(doc.document_type)) {
+      targetAllocations = [{
+        invoice_id: doc.linked_source_document_id,
+        amount: grandTotalBn.toNumber()
+      }];
+    }
+
+    if (['RECEIPT', 'PAYMENT'].includes(doc.document_type) && targetAllocations.length > 0) {
       let totalAllocatedBn = new BigNumber(0);
 
-      for (const alloc of allocations) {
+      for (const alloc of targetAllocations) {
         const inv = await CommercialDocument.findOne({
           _id: alloc.invoice_id,
           tenant_id: tenantId,
@@ -735,16 +1190,93 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
       doc.balance_due = mongoose.Types.Decimal128.fromString(paymentBalDue.toFixed(2));
     }
 
-    // 7. Finalize Document Status
+    // 7. Finalize US Tax Snapshot & External Provider Finalization
+    if (isUsDoc) {
+      if (doc.tax_snapshot_id) {
+        try {
+          const snapshot = await mongoose.model('TaxCalculationSnapshot').findById(doc.tax_snapshot_id).session(session);
+          if (snapshot) {
+            snapshot.status = 'COMMITTED';
+            snapshot.document_id = doc._id;
+            snapshot.document_number = doc.document_number;
+            snapshot.row_version = (snapshot.row_version || 1) + 1;
+            await snapshot.save({ session });
+          }
+          doc.tax_calculation_status = 'COMMITTED';
+          doc.tax_reconciliation_status = 'SYNCED';
+        } catch (snapErr) {
+          console.warn('[commercialPostingService] Warning committing tax calculation snapshot:', snapErr.message);
+        }
+      }
+
+      // External provider finalization (safe try-catch so failure does not roll back GL posting)
+      try {
+        const TaxProviderFactory = require('./taxProvider/TaxProviderFactory');
+        const CompanyTaxProfile = mongoose.model('CompanyTaxProfile');
+        const taxProfile = await CompanyTaxProfile.findOne({ tenant_id: tenantId, company_id: companyId }).session(session);
+        const providerName = doc.tax_provider_name || (taxProfile ? taxProfile.provider_name : 'MOCK');
+        const provider = TaxProviderFactory.createProvider(providerName, {
+          environment: (taxProfile && taxProfile.environment) || 'SANDBOX',
+          apiKey: taxProfile?.api_credentials?.api_key,
+          allowMockInProduction: options?.allowMockInProduction || false
+        });
+
+        if (typeof provider.commitTransaction === 'function') {
+          await provider.commitTransaction({
+            provider_transaction_id: doc.tax_provider_transaction_id || `TX-${doc.document_number}`,
+            document_number: doc.document_number,
+            grand_total: grandTotalBn.toFixed(2)
+          });
+          doc.tax_reconciliation_status = 'SYNCED';
+        }
+      } catch (providerErr) {
+        console.warn('[commercialPostingService] External tax provider finalization failed, marking for reconciliation:', providerErr.message);
+        doc.tax_reconciliation_status = 'PENDING_RETRY';
+        doc.tax_calculation_status = 'RECONCILIATION_PENDING';
+        doc.audit_trail.push({
+          action: 'TAX_RECONCILIATION_PENDING',
+          user_id: userId || null,
+          timestamp: new Date(),
+          note: `External tax provider finalization deferred: ${providerErr.message}`
+        });
+      }
+
+      // Phase 5: Record entry in US Tax Liability Subledger
+      try {
+        const usTaxSubledgerService = require('./usTaxSubledgerService');
+        await usTaxSubledgerService.recordDocumentLiabilityEntry({
+          tenantId,
+          companyId,
+          document: doc,
+          snapshot: doc.tax_snapshot_id ? await mongoose.model('TaxCalculationSnapshot').findById(doc.tax_snapshot_id).session(session) : null,
+          journalId: postRes.journal?._id,
+          userId,
+          session
+        });
+      } catch (subledgerErr) {
+        console.warn('[commercialPostingService] Warning recording US tax liability entry:', subledgerErr.message);
+      }
+    }
+
+    // 8. Finalize Document Status
     doc.status = 'POSTED';
     doc.posted_by_user_id = userId || null;
     doc.posted_at = new Date();
     doc.row_version = (doc.row_version || 1) + 1;
+    const eventName = options?.eventCode || (
+      doc.document_type === 'CREDIT_NOTE' || doc.document_type === 'SALES_RETURN' ? 'commercial.credit_note.posted' :
+      doc.document_type === 'SALES_INVOICE' ? 'commercial.sales_invoice.posted' :
+      doc.document_type === 'PURCHASE_INVOICE' ? 'commercial.purchase_invoice.posted' :
+      doc.document_type === 'PAYMENT' ? 'commercial.payment.posted' :
+      doc.document_type === 'RECEIPT' ? 'commercial.receipt.posted' : 'commercial.document.posted'
+    );
+    const ruleName = options?.postingRuleCode || 'RULE-AUTO-POST';
+
     doc.audit_trail.push({
       action: 'POSTED',
       user_id: userId || null,
       timestamp: new Date(),
-      note: `Posted ${doc.document_type} ${doc.document_number} with GL journal ${postRes.journal.journal_number}`
+      note: `Posted ${doc.document_type} ${doc.document_number} with GL journal ${postRes.journal.journal_number} [Event: ${eventName}, Rule: ${ruleName}]`
     });
 
     await doc.save({ session });
@@ -757,7 +1289,7 @@ async function postCommercialDocument({ tenantId, companyId, documentId, userId,
     };
   };
 
-  return withOptionalTransaction(operation);
+  return transactionHelper.withOptionalTransaction(operation);
 }
 
 module.exports = {

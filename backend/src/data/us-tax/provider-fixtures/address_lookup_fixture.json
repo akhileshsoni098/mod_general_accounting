@@ -1,0 +1,62 @@
+{
+  "test_environment": "SANDBOX_MOCK",
+  "disclaimer": "Sanitized mock fixtures for development and testing only. Real provider integration requires explicit commercial credentials.",
+  "valid_addresses": [
+    {
+      "input": {
+        "street": "100 Universal City Plaza",
+        "city": "Universal City",
+        "state": "CA",
+        "zip": "91608",
+        "country": "US"
+      },
+      "normalized": {
+        "street": "100 UNIVERSAL CITY PLZ",
+        "city": "UNIVERSAL CITY",
+        "state": "CA",
+        "zip": "91608-1002",
+        "country": "US",
+        "jurisdiction_code": "US-CA-037",
+        "county": "Los Angeles County",
+        "fips_code": "06037"
+      },
+      "confidence": "EXACT_ROOFTOP",
+      "is_valid": true
+    },
+    {
+      "input": {
+        "street": "233 S Wacker Dr",
+        "city": "Chicago",
+        "state": "IL",
+        "zip": "60606",
+        "country": "US"
+      },
+      "normalized": {
+        "street": "233 S WACKER DR",
+        "city": "CHICAGO",
+        "state": "IL",
+        "zip": "60606-6306",
+        "country": "US",
+        "jurisdiction_code": "US-IL-031",
+        "county": "Cook County",
+        "fips_code": "17031"
+      },
+      "confidence": "EXACT_ROOFTOP",
+      "is_valid": true
+    }
+  ],
+  "invalid_addresses": [
+    {
+      "input": {
+        "street": "99999 Nonexistent Imaginary Way",
+        "city": "Nowhere",
+        "state": "ZZ",
+        "zip": "00000",
+        "country": "US"
+      },
+      "is_valid": false,
+      "error_code": "ADDRESS_NOT_FOUND",
+      "error_message": "Could not verify address delivery point against postal directory"
+    }
+  ]
+}

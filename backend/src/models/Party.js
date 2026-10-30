@@ -68,8 +68,35 @@ const PartySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'INACTIVE'],
+      enum: ['ACTIVE', 'INACTIVE', 'ARCHIVED'],
       default: 'ACTIVE'
+    },
+    price_level: {
+      type: String,
+      trim: true,
+      default: null // e.g. 'WHOLESALE', 'RETAIL', 'DEALER'
+    },
+    credit_period_days: {
+      type: Number,
+      default: 30
+    },
+    msme_registered: {
+      type: Boolean,
+      default: false
+    },
+    msme_category: {
+      type: String,
+      enum: ['NONE', 'MICRO', 'SMALL', 'MEDIUM'],
+      default: 'NONE'
+    },
+    tds_applicable: {
+      type: Boolean,
+      default: false
+    },
+    tds_section: {
+      type: String,
+      default: null,
+      trim: true
     },
     metadata: {
       type: mongoose.Schema.Types.Mixed,

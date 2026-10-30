@@ -36,6 +36,42 @@ const CompanySchema = new mongoose.Schema(
       enum: VALID_PROFILE_IDS,
       default: 'GENERAL_RETAIL'
     },
+    industry_code: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      default: 'GENERAL_TRADING'
+    },
+    industry_subcategory: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    operating_models: {
+      type: [String],
+      default: ['BUY_AND_RESELL']
+    },
+    inventory_policies: {
+      tracking_mode: {
+        type: String,
+        enum: ['STANDARD', 'BATCH_LOT', 'SERIAL', 'PERISHABLE'],
+        default: 'STANDARD'
+      },
+      require_batch: { type: Boolean, default: false },
+      require_serial: { type: Boolean, default: false },
+      require_expiry: { type: Boolean, default: false },
+      enable_quarantine: { type: Boolean, default: false },
+      allow_negative_stock: { type: Boolean, default: false },
+      default_costing_method: {
+        type: String,
+        enum: ['FIFO', 'MOVING_AVERAGE', 'AVERAGE_COST', 'STANDARD_COST'],
+        default: 'MOVING_AVERAGE'
+      }
+    },
+    operational_capabilities: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
     description: {
       type: String,
       default: '',
@@ -72,6 +108,12 @@ const CompanySchema = new mongoose.Schema(
     financial_year_config: {
       start_month: { type: Number, default: 4, min: 1, max: 12 },
       close_day: { type: Number, default: 31, min: 1, max: 31 }
+    },
+    calendar_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AccountingCalendar',
+      default: null,
+      index: true
     },
     books_beginning_from: {
       type: Date,

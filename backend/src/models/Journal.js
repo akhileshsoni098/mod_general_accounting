@@ -50,6 +50,7 @@ const JournalSchema = new mongoose.Schema(
         'COMMERCIAL_DOCS',
         'COMMERCIAL_COGS',
         'OPENING_STOCK',
+        'OPENING_BALANCE',
         'COMMERCIAL',
         'INVENTORY',
         'RETAIL_POS',
@@ -59,14 +60,64 @@ const JournalSchema = new mongoose.Schema(
         'MANUFACTURING',
         'SERVICES',
         'BANKING_CASH',
-        'BANKING_CONTRA'
+        'BANKING_CONTRA',
+        'PAYROLL',
+        'FIXED_ASSETS',
+        'LANDED_COST',
+        'INTEREST_NOTE',
+        'JOB_WORK'
       ],
       default: 'GL_MANUAL'
+    },
+    voucher_type: {
+      type: String,
+      enum: ['STANDARD', 'MEMORANDUM', 'OPTIONAL', 'REVERSING'],
+      default: 'STANDARD'
+    },
+    is_memorandum: {
+      type: Boolean,
+      default: false
+    },
+    is_optional: {
+      type: Boolean,
+      default: false
+    },
+    is_reversing: {
+      type: Boolean,
+      default: false
+    },
+    reversal_date: {
+      type: Date,
+      default: null
+    },
+    converted_from_journal_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Journal',
+      default: null
+    },
+    converted_at: {
+      type: Date,
+      default: null
     },
     reference_id: {
       type: String,
       default: null, // e.g. "POL-TX-8821" or "INV-001"
       index: true
+    },
+    commercial_document_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CommercialDocument',
+      default: null,
+      index: true
+    },
+    reference_type: {
+      type: String,
+      enum: ['NONE', 'REFERENCE_ONLY', 'INVOICE_ADJUSTMENT', 'SETTLEMENT'],
+      default: 'NONE'
+    },
+    reference_document_number: {
+      type: String,
+      default: null
     },
     memo: {
       type: String,
@@ -93,7 +144,7 @@ const JournalSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['DRAFT', 'VALIDATED', 'POSTED', 'REVERSED'],
+      enum: ['DRAFT', 'VALIDATED', 'POSTED', 'REVERSED', 'MEMORANDUM', 'OPTIONAL'],
       default: 'POSTED'
     },
     created_by_user_id: {

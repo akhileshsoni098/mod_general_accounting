@@ -23,23 +23,41 @@ router.get('/ping', requirePermission('GL:VIEW'), (req, res) => {
 router.get('/accounts', requirePermission('GL:VIEW'), glController.getAccounts);
 router.get('/accounts/:id', requirePermission('GL:VIEW'), glController.getAccountDetail);
 router.post('/accounts', requirePermission('GL:ADMIN'), glController.createAccount);
+router.put('/accounts/:id', requirePermission('GL:ADMIN'), glController.updateAccount);
 router.patch('/accounts/:id', requirePermission('GL:ADMIN'), glController.updateAccount);
+router.delete('/accounts/:id', requirePermission('GL:ADMIN'), glController.archiveAccount);
+
+// Opening Balances Management
+router.get('/opening-balances', requirePermission('GL:VIEW'), glController.getOpeningBalances);
+router.put('/opening-balances', requirePermission('GL:ADMIN'), glController.saveOpeningBalancesDraft);
+router.post('/opening-balances', requirePermission('GL:ADMIN'), glController.saveOpeningBalancesDraft);
+router.post('/opening-balances/post', requirePermission('GL:POST'), glController.postOpeningBalances);
 
 // Fiscal Periods
 router.get('/periods', requirePermission('GL:VIEW'), glController.getFiscalPeriods);
 router.post('/periods', requirePermission('GL:ADMIN'), glController.createFiscalPeriod);
 router.patch('/periods/status', requirePermission('GL:ADMIN'), glController.updateFiscalPeriodStatus);
 
+// US Accounting Calendars & Retail Period Engine
+router.get('/calendars', requirePermission('GL:VIEW'), glController.getAccountingCalendars);
+router.post('/calendars', requirePermission('GL:ADMIN'), glController.createAccountingCalendar);
+router.patch('/calendars/:id', requirePermission('GL:ADMIN'), glController.updateAccountingCalendar);
+router.post('/calendars/:id/generate', requirePermission('GL:ADMIN'), glController.generateCalendarPeriods);
+router.get('/calendars/:id/periods', requirePermission('GL:VIEW'), glController.getCalendarPeriods);
+
 // Journal Entries & Posting
 router.get('/journals', requirePermission('GL:VIEW'), glController.getJournals);
 router.get('/journals/:id', requirePermission('GL:VIEW'), glController.getJournalById);
 router.post('/journals/preview', requirePermission('GL:VIEW'), glController.previewJournalTotals);
 router.post('/journals', requirePermission('GL:POST'), glController.postJournal);
+router.post('/journals/:id/convert', requirePermission('GL:POST'), glController.convertVoucher);
 router.post('/journals/:id/reverse', requirePermission('GL:POST'), glController.reverseJournal);
 
 // Trial Balance & Financial Statements
 router.get('/trial-balance', requirePermission('GL:VIEW'), glController.getTrialBalance);
 router.get('/financial-statements', requirePermission('GL:VIEW'), glController.getFinancialStatements);
+router.get('/reports/cash-flow', requirePermission('GL:VIEW'), glController.getCashFlowStatement);
+router.get('/reports/financial-ratios', requirePermission('GL:VIEW'), glController.getFinancialRatios);
 
 // Posting Rules CRUD
 router.get('/posting-rules', requirePermission('GL:VIEW'), glController.getPostingRules);

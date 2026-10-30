@@ -34,6 +34,7 @@ router.get('/uom', requireCompanyPermission('INVENTORY:VIEW'), inventoryControll
 router.get('/uom/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getUnitOfMeasurementById);
 router.post('/uom', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createUnitOfMeasurement);
 router.patch('/uom/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateUnitOfMeasurement);
+router.delete('/uom/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.deleteUnitOfMeasurement);
 router.post('/uom/convert', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.simulateUomConversion);
 
 // ==========================================
@@ -43,6 +44,7 @@ router.get('/godowns', requireCompanyPermission('INVENTORY:VIEW'), inventoryCont
 router.get('/godowns/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getGodownById);
 router.post('/godowns', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createGodown);
 router.patch('/godowns/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateGodown);
+router.delete('/godowns/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.deleteGodown);
 
 // ==========================================
 // 5. Stock Items
@@ -51,6 +53,7 @@ router.get('/items', requireCompanyPermission('INVENTORY:VIEW'), inventoryContro
 router.get('/items/:id', requireCompanyPermission('INVENTORY:VIEW'), inventoryController.getStockItemById);
 router.post('/items', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.createStockItem);
 router.patch('/items/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.updateStockItem);
+router.delete('/items/:id', requireCompanyPermission('INVENTORY:MANAGE_MASTERS'), inventoryController.archiveStockItem);
 
 // ==========================================
 // 6. Opening Stock

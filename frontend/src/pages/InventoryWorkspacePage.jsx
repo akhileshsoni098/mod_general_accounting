@@ -21,7 +21,9 @@ import {
   Eye,
   FileText,
   Calculator,
-  AlertTriangle
+  AlertTriangle,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 
 export default function InventoryWorkspacePage() {
@@ -55,6 +57,7 @@ export default function InventoryWorkspacePage() {
   const [showReconcileModal, setShowReconcileModal] = useState(false);
   const [showReversalModal, setShowReversalModal] = useState(null); // movement object
   const [selectedItemDetail, setSelectedItemDetail] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
 
   // Form states
   const [itemForm, setItemForm] = useState({
@@ -210,40 +213,109 @@ export default function InventoryWorkspacePage() {
     });
   };
 
-  const handleCreateItem = async (e) => {
+  const resetItemForm = () => {
+    setItemForm({
+      item_code: '',
+      sku: '',
+      item_name: '',
+      stock_group_id: '',
+      stock_category_id: '',
+      base_uom_id: '',
+      purchase_uom_id: '',
+      sales_uom_id: '',
+      purchase_price: '0',
+      sales_price: '0',
+      mrp: '0',
+      costing_method: 'AVERAGE_COST',
+      reorder_level: '0',
+      reorder_quantity: '0',
+      is_batch_tracked: false,
+      is_expiry_tracked: false,
+      hsn_sac_code: '',
+      tax_rate: 0,
+      status: 'ACTIVE',
+      uom_conversions: []
+    });
+  };
+
+  const openCreateItem = () => {
+    setEditingItemId(null);
+    resetItemForm();
+    setShowItemModal(true);
+  };
+
+  const openEditItem = (item) => {
+    setEditingItemId(item._id);
+    setItemForm({
+      item_code: item.item_code || '',
+      sku: item.sku || '',
+      item_name: item.item_name || '',
+      stock_group_id: item.stock_group_id?._id || item.stock_group_id || '',
+      stock_category_id: item.stock_category_id?._id || item.stock_category_id || '',
+      base_uom_id: item.base_uom_id?._id || item.base_uom_id || '',
+      purchase_uom_id: item.purchase_uom_id?._id || item.purchase_uom_id || '',
+      sales_uom_id: item.sales_uom_id?._id || item.sales_uom_id || '',
+      purchase_price: String(item.purchase_price || '0'),
+      sales_price: String(item.sales_price || '0'),
+      mrp: String(item.mrp || '0'),
+      costing_method: item.costing_method || 'AVERAGE_COST',
+      reorder_level: String(item.reorder_level || '0'),
+      reorder_quantity: String(item.reorder_quantity || '0'),
+      is_batch_tracked: Boolean(item.is_batch_tracked),
+      is_expiry_tracked: Boolean(item.is_expiry_tracked),
+      hsn_sac_code: item.hsn_sac_code || '',
+      tax_rate: Number(item.tax_rate || 0),
+      status: item.status || 'ACTIVE',
+      uom_conversions: Array.isArray(item.uom_conversions) ? item.uom_conversions.map(c => ({
+        alternate_uom_id: c.alternate_uom_id?._id || c.alternate_uom_id || '',
+        conversion_factor: String(c.conversion_factor || '1')
+      })) : []
+    });
+    setShowItemModal(true);
+  };
+
+  const handleCreateOrUpdateItem = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
     try {
-      await inventoryApi.createItem(itemForm);
-      showSuccess(`Stock item "${itemForm.item_name}" created successfully.`);
+      if (editingItemId) {
+        await inventoryApi.updateItem(editingItemId, itemForm);
+        showSuccess(`Stock item "${itemForm.item_name}" updated successfully.`);
+      } else {
+        await inventoryApi.createItem(itemForm);
+        showSuccess(`Stock item "${itemForm.item_name}" created successfully.`);
+      }
       setShowItemModal(false);
-      setItemForm({
-        item_code: '',
-        sku: '',
-        item_name: '',
-        stock_group_id: '',
-        stock_category_id: '',
-        base_uom_id: '',
-        purchase_uom_id: '',
-        sales_uom_id: '',
-        purchase_price: '0',
-        sales_price: '0',
-        mrp: '0',
-        costing_method: 'AVERAGE_COST',
-        reorder_level: '0',
-        reorder_quantity: '0',
-        is_batch_tracked: false,
-        is_expiry_tracked: false,
-        hsn_sac_code: '',
-        tax_rate: 0,
-        uom_conversions: []
-      });
+      setEditingItemId(null);
+      resetItemForm();
       fetchAllData();
     } catch (err) {
       setErrorMsg(err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleArchiveItem = async (item) => {
+    if (!window.confirm(`Are you sure you want to archive stock item "${item.item_name}" (${item.item_code})?`)) return;
+    try {
+      await inventoryApi.archiveItem(item._id);
+      showSuccess(`Stock item "${item.item_name}" archived successfully.`);
+      fetchAllData();
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to archive item');
+    }
+  };
+
+  const handleToggleItemStatus = async (item) => {
+    try {
+      const nextStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      await inventoryApi.updateItem(item._id, { status: nextStatus });
+      showSuccess(`Status of "${item.item_name}" changed to ${nextStatus}.`);
+      fetchAllData();
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to update item status');
     }
   };
 
@@ -503,7 +575,7 @@ export default function InventoryWorkspacePage() {
             <span>Post Opening Stock</span>
           </button>
           <button
-            onClick={() => setShowItemModal(true)}
+            onClick={openCreateItem}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5" />
@@ -679,7 +751,7 @@ export default function InventoryWorkspacePage() {
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
                 <button
-                  onClick={() => setShowItemModal(true)}
+                  onClick={openCreateItem}
                   className="w-full text-left px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center justify-between"
                 >
                   <span>Create New Stock Item</span>
@@ -792,7 +864,7 @@ export default function InventoryWorkspacePage() {
               </select>
             </div>
             <button
-              onClick={() => setShowItemModal(true)}
+              onClick={openCreateItem}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
             >
               <PlusCircle className="w-3.5 h-3.5" />
@@ -862,22 +934,43 @@ export default function InventoryWorkspacePage() {
                           {item.costing_method}
                         </td>
                         <td className="py-2.5 px-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono ${
-                            item.status === 'ACTIVE'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleItemStatus(item)}
+                            title="Click to toggle Active / Inactive"
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono cursor-pointer transition ${
+                              item.status === 'ACTIVE'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-750'
+                            }`}
+                          >
                             {item.status}
-                          </span>
+                          </button>
                         </td>
                         <td className="py-2.5 px-4 text-right">
-                          <button
-                            onClick={() => setSelectedItemDetail(item)}
-                            className="p-1 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition"
-                            title="Inspect item balances"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => openEditItem(item)}
+                              className="p-1 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-brand-400 transition cursor-pointer"
+                              title="Edit stock item"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedItemDetail(item)}
+                              className="p-1 rounded bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition cursor-pointer"
+                              title="Inspect item balances"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleArchiveItem(item)}
+                              className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition cursor-pointer"
+                              title="Archive stock item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1528,14 +1621,14 @@ export default function InventoryWorkspacePage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h2 className="text-base font-bold text-white flex items-center space-x-2">
                 <Package className="w-5 h-5 text-brand-400" />
-                <span>Create New Stock Item</span>
+                <span>{editingItemId ? `Edit Stock Item (${itemForm.item_code})` : 'Create New Stock Item'}</span>
               </h2>
               <button onClick={() => setShowItemModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateItem} className="space-y-4">
+            <form onSubmit={handleCreateOrUpdateItem} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1">Item Code *</label>
@@ -1630,7 +1723,7 @@ export default function InventoryWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Default Purchase Rate</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Default Purchase Rate (₹)</label>
                   <input
                     type="number"
                     step="any"
@@ -1641,7 +1734,7 @@ export default function InventoryWorkspacePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Default Sales Rate</label>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Default Sales Rate (₹)</label>
                   <input
                     type="number"
                     step="any"
@@ -1649,6 +1742,44 @@ export default function InventoryWorkspacePage() {
                     onChange={e => setItemForm({ ...itemForm, sales_price: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-750 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">HSN / SAC Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 0406 (Cheese), 1101 (Flour)"
+                    value={itemForm.hsn_sac_code}
+                    onChange={e => setItemForm({ ...itemForm, hsn_sac_code: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-750 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Default GST Rate (%)</label>
+                  <select
+                    value={itemForm.tax_rate}
+                    onChange={e => setItemForm({ ...itemForm, tax_rate: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-750 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                  >
+                    <option value="0">0% (Exempt / Nil Rated)</option>
+                    <option value="5">5% (GST 5%)</option>
+                    <option value="12">12% (GST 12%)</option>
+                    <option value="18">18% (GST 18%)</option>
+                    <option value="28">28% (GST 28%)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Item Status</label>
+                  <select
+                    value={itemForm.status}
+                    onChange={e => setItemForm({ ...itemForm, status: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-750 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-brand-500 font-mono"
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
                 </div>
               </div>
 
@@ -1716,7 +1847,7 @@ export default function InventoryWorkspacePage() {
                   disabled={submitting}
                   className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
                 >
-                  {submitting ? 'Creating...' : 'Save Stock Item'}
+                  {editingItemId ? (submitting ? 'Saving Changes...' : 'Update Stock Item') : (submitting ? 'Creating...' : 'Save Stock Item')}
                 </button>
               </div>
             </form>

@@ -15,11 +15,21 @@ const { getOrCreatePostingConfig } = require('./commercialPostingConfigService')
 /**
  * Generates document register with filters (document_type, date range, party, status).
  */
-async function getDocumentRegister(tenantId, companyId, { documentType, startDate, endDate, partyId, status, limit = 100, page = 1 }) {
+async function getDocumentRegister(tenantId, companyId, { documentType, startDate, endDate, partyId, status, search, limit = 100, page = 1 }) {
   const query = { tenant_id: tenantId, company_id: companyId };
   if (documentType) query.document_type = documentType;
   if (status) query.status = status;
   if (partyId) query.party_id = partyId;
+
+  if (search && search.trim()) {
+    const s = search.trim();
+    const regex = new RegExp(s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'i');
+    query.$or = [
+      { document_number: regex },
+      { reference_number: regex },
+      { party_name: regex }
+    ];
+  }
 
   if (startDate || endDate) {
     query.document_date = {};

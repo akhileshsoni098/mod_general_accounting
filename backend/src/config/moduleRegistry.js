@@ -159,6 +159,78 @@ const MODULE_DEFINITIONS = {
     is_core: false,
     dependencies: ['GL'],
     default_enabled: false
+  },
+  FIXED_ASSETS: {
+    key: 'FIXED_ASSETS',
+    name: 'Fixed Assets & Depreciation',
+    description: 'Asset register, capitalization, Straight Line / Written Down Value depreciation schedules, and asset disposal.',
+    category: 'ADVANCED',
+    is_core: false,
+    dependencies: ['GL'],
+    default_enabled: false
+  },
+  PAYROLL: {
+    key: 'PAYROLL',
+    name: 'Payroll & Employee Accounting',
+    description: 'Employee salary structures, EPF, ESI, Professional Tax, TDS deductions, and monthly salary journal posting.',
+    category: 'ADVANCED',
+    is_core: false,
+    dependencies: ['GL'],
+    default_enabled: false
+  },
+  BUDGETS: {
+    key: 'BUDGETS',
+    name: 'Budgeting & Variance Analysis',
+    description: 'Annual and monthly revenue/expense budget targets, and budget vs actual variance reporting.',
+    category: 'ADVANCED',
+    is_core: false,
+    dependencies: ['GL'],
+    default_enabled: false
+  },
+  JOB_WORK: {
+    key: 'JOB_WORK',
+    name: 'Job Work (Inward & Outward)',
+    description: 'Subcontractor material dispatch, receipt tracking, scrap reconciliation, and processing charges.',
+    category: 'OPERATIONS',
+    is_core: false,
+    dependencies: ['INVENTORY'],
+    default_enabled: false
+  },
+  PRICING_LANDED_COST: {
+    key: 'PRICING_LANDED_COST',
+    name: 'Price Levels & Landed Cost',
+    description: 'Multi-tier pricing (Wholesale, Retail, Dealer) and landed freight/customs inventory valuation absorption.',
+    category: 'OPERATIONS',
+    is_core: false,
+    dependencies: ['COMMERCIAL_BILLING'],
+    default_enabled: false
+  },
+  INTEREST_CALCULATION: {
+    key: 'INTEREST_CALCULATION',
+    name: 'Overdue Bill Interest',
+    description: 'Bill-wise overdue interest calculation for debtors and creditors with automated interest debit notes.',
+    category: 'ADVANCED',
+    is_core: false,
+    dependencies: ['COMMERCIAL_BILLING'],
+    default_enabled: false
+  },
+  CHEQUE_PRINTING: {
+    key: 'CHEQUE_PRINTING',
+    name: 'Cheque Printing & Register',
+    description: 'CTS-2010 bank cheque leaf layout printing with Indian English words and duplicate issuance prevention.',
+    category: 'CORE',
+    is_core: false,
+    dependencies: ['BANKING_CASH'],
+    default_enabled: false
+  },
+  STATUTORY_TDS: {
+    key: 'STATUTORY_TDS',
+    name: 'TDS & MSME Compliance',
+    description: 'Statutory TDS deductions (194C, 194J, etc.), Form 26Q return summary, and Section 43B(h) MSME aging.',
+    category: 'ADVANCED',
+    is_core: false,
+    dependencies: ['GL'],
+    default_enabled: false
   }
 };
 

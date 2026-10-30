@@ -1,0 +1,48 @@
+{
+  "test_environment": "SANDBOX_MOCK",
+  "disclaimer": "Sanitized mock calculation output for development and unit testing only. Must not be used in production.",
+  "sample_calculation": {
+    "provider_transaction_id": "MOCK-TX-2024-884920",
+    "provider_name": "MOCK",
+    "correlation_id": "CORR-SI-00129",
+    "calculated_at": "2024-01-15T12:00:00.000Z",
+    "tax_country": "US",
+    "destination_state": "CA",
+    "subtotal_amount": "250.00",
+    "total_tax_amount": "23.75",
+    "grand_total_amount": "273.75",
+    "effective_combined_rate": "0.0950",
+    "line_items": [
+      {
+        "line_number": 1,
+        "item_code": "LAPTOP-STAND-01",
+        "category_code": "GENERAL_TANGIBLE_GOODS",
+        "taxable_amount": "150.00",
+        "tax_amount": "14.25",
+        "rate": "0.0950",
+        "is_exempt": false,
+        "jurisdiction_breakdown": [
+          { "type": "STATE", "rate": "0.0600", "tax_amount": "9.00", "jurisdiction_name": "California State" },
+          { "type": "COUNTY", "rate": "0.0125", "tax_amount": "1.88", "jurisdiction_name": "Los Angeles County" },
+          { "type": "CITY", "rate": "0.0125", "tax_amount": "1.88", "jurisdiction_name": "City of Los Angeles" },
+          { "type": "SPECIAL_TAX_DISTRICT", "rate": "0.0100", "tax_amount": "1.50", "jurisdiction_name": "LA County Transit District" }
+        ]
+      },
+      {
+        "line_number": 2,
+        "item_code": "SAAS-SEAT-MONTHLY",
+        "category_code": "SAAS_SOFTWARE",
+        "taxable_amount": "100.00",
+        "tax_amount": "9.50",
+        "rate": "0.0950",
+        "is_exempt": false,
+        "jurisdiction_breakdown": [
+          { "type": "STATE", "rate": "0.0600", "tax_amount": "6.00", "jurisdiction_name": "California State" },
+          { "type": "COUNTY", "rate": "0.0125", "tax_amount": "1.25", "jurisdiction_name": "Los Angeles County" },
+          { "type": "CITY", "rate": "0.0125", "tax_amount": "1.25", "jurisdiction_name": "City of Los Angeles" },
+          { "type": "SPECIAL_TAX_DISTRICT", "rate": "0.0100", "tax_amount": "1.00", "jurisdiction_name": "LA County Transit District" }
+        ]
+      }
+    ]
+  }
+}

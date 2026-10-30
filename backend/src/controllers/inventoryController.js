@@ -380,12 +380,12 @@ async function createUnitOfMeasurement(req, res) {
     const { tenantId, companyId } = req;
     const { unit_code, unit_name, symbol, unit_type, decimal_places, description } = req.body;
 
-    if (!unit_code || !unit_name || !unit_type) {
-      return res.error('unit_code, unit_name, and unit_type are required', 400);
+    if (!unit_code || !unit_name) {
+      return res.error('unit_code and unit_name are required', 400);
     }
 
     const cleanCode = unit_code.trim().toUpperCase();
-    const cleanType = unit_type.trim().toUpperCase();
+    const cleanType = (unit_type || 'COUNT').trim().toUpperCase();
 
     const validTypes = ['COUNT', 'MASS', 'VOLUME', 'LENGTH', 'PACKAGING', 'CUSTOM'];
     if (!validTypes.includes(cleanType)) {
@@ -1155,6 +1155,85 @@ async function reconcileBalances(req, res) {
   }
 }
 
+async function deleteUnitOfMeasurement(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { id } = req.params;
+
+    const uom = await UnitOfMeasurement.findOne({ _id: id, tenant_id: tenantId, company_id: companyId });
+    if (!uom) {
+      return res.error(`Unit of measurement not found: ${id}`, 404);
+    }
+
+    const itemUsing = await StockItem.findOne({
+      tenant_id: tenantId,
+      company_id: companyId,
+      $or: [
+        { base_uom_id: id },
+        { purchase_uom_id: id },
+        { sales_uom_id: id }
+      ]
+    });
+    if (itemUsing) {
+      return res.error(`Cannot delete unit "${uom.unit_name}" as it is currently assigned to stock item "${itemUsing.item_name}"`, 400);
+    }
+
+    await UnitOfMeasurement.deleteOne({ _id: id, tenant_id: tenantId, company_id: companyId });
+    return res.success({ message: `Unit of measurement "${uom.unit_name}" deleted successfully` });
+  } catch (err) {
+    return res.error('Failed to delete unit of measurement', 500, err.message);
+  }
+}
+
+async function deleteGodown(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { id } = req.params;
+
+    const godown = await Godown.findOne({ _id: id, tenant_id: tenantId, company_id: companyId });
+    if (!godown) {
+      return res.error(`Godown not found: ${id}`, 404);
+    }
+
+    const hasMovements = await StockMovement.exists({
+      tenant_id: tenantId,
+      company_id: companyId,
+      godown_id: id
+    });
+
+    if (hasMovements) {
+      godown.status = 'INACTIVE';
+      await godown.save();
+      return res.success(godown, { message: `Godown "${godown.godown_name}" contains historical movements; safely deactivated.` });
+    }
+
+    await Godown.deleteOne({ _id: id, tenant_id: tenantId, company_id: companyId });
+    return res.success({ message: `Godown "${godown.godown_name}" deleted successfully` });
+  } catch (err) {
+    return res.error('Failed to delete godown', 500, err.message);
+  }
+}
+
+async function archiveStockItem(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { id } = req.params;
+
+    const item = await StockItem.findOne({ _id: id, tenant_id: tenantId, company_id: companyId });
+    if (!item) {
+      return res.error(`Stock item not found: ${id}`, 404);
+    }
+
+    item.status = 'ARCHIVED';
+    item.row_version = (item.row_version || 1) + 1;
+    await item.save();
+
+    return res.success(item, { message: `Stock item "${item.item_name}" archived successfully` });
+  } catch (err) {
+    return res.error('Failed to archive stock item', 500, err.message);
+  }
+}
+
 module.exports = {
   // Groups
   getStockGroups,
@@ -1175,6 +1254,7 @@ module.exports = {
   getUnitOfMeasurementById,
   createUnitOfMeasurement,
   updateUnitOfMeasurement,
+  deleteUnitOfMeasurement,
   simulateUomConversion,
 
   // Godowns
@@ -1182,12 +1262,14 @@ module.exports = {
   getGodownById,
   createGodown,
   updateGodown,
+  deleteGodown,
 
   // Items
   getStockItems,
   getStockItemById,
   createStockItem,
   updateStockItem,
+  archiveStockItem,
 
   // Opening Stock
   postOpeningStock,

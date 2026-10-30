@@ -12,6 +12,7 @@ router.post('/', counterpartyController.createParty);
 router.post('/seed', counterpartyController.seedParties);
 router.get('/:id', counterpartyController.getPartyById);
 router.patch('/:id', counterpartyController.updateParty);
+router.delete('/:id', counterpartyController.archiveParty);
 router.post('/:id/roles', counterpartyController.addPartyRole);
 
 module.exports = router;

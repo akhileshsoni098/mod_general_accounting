@@ -54,6 +54,11 @@ async function recordStockMovement(options) {
     notes = '',
     userId = null,
     reversalOfMovementId = null,
+    batchNumber = '',
+    serialNumbers = [],
+    expiryDate = null,
+    disposition = 'RESTOCK',
+    inspectionStatus = 'NOT_APPLICABLE',
     session = null
   } = options;
 
@@ -105,6 +110,17 @@ async function recordStockMovement(options) {
     throw new Error(`Cannot record movement for inactive or archived item: "${stockItem.item_name}" (${stockItem.status})`);
   }
 
+  // Tracking policy validations
+  if (stockItem.tracking_policy?.is_batch_tracked && !batchNumber) {
+    throw new Error(`Batch number is required for tracked item "${stockItem.item_name}"`);
+  }
+  if (stockItem.tracking_policy?.is_serial_tracked && (!serialNumbers || (Array.isArray(serialNumbers) && serialNumbers.length === 0))) {
+    throw new Error(`Serial number(s) required for tracked item "${stockItem.item_name}"`);
+  }
+  if (stockItem.tracking_policy?.is_expiry_tracked && !expiryDate) {
+    throw new Error(`Expiry date is required for perishable tracked item "${stockItem.item_name}"`);
+  }
+
   // Load and validate Godown
   const godown = await Godown.findOne({
     _id: godownId,
@@ -145,35 +161,7 @@ async function recordStockMovement(options) {
 
   // Execute within transaction
   const operation = async (session) => {
-    // 1. Create append-only movement record
-    const movement = new StockMovement({
-      tenant_id: tenantId,
-      company_id: companyId,
-      stock_item_id: stockItem._id,
-      godown_id: godown._id,
-      movement_type: movementType,
-      direction,
-      quantity: mongoose.Types.Decimal128.fromString(quantity.toString()),
-      base_quantity: mongoose.Types.Decimal128.fromString(signedBaseQtyBn.toString()),
-      uom_id: uom._id,
-      base_uom_id: stockItem.base_uom_id._id,
-      conversion_factor: mongoose.Types.Decimal128.fromString(convResult.factor),
-      unit_rate: mongoose.Types.Decimal128.fromString(rateBn.toFixed(2)),
-      total_cost: mongoose.Types.Decimal128.fromString(costBn.toFixed(2)),
-      source_document_type: sourceDocumentType,
-      source_document_id: sourceDocumentId,
-      source_line_id: sourceLineId,
-      idempotency_key: idempotencyKey,
-      effective_date: new Date(effectiveDate),
-      notes: notes.trim(),
-      created_by_user_id: userId,
-      reversal_of_movement_id: reversalOfMovementId,
-      is_reversed: false
-    });
-
-    await movement.save({ session });
-
-    // 2. Atomically update or initialize StockBalance projection
+    // 1. Atomically check or initialize StockBalance projection
     let balance = await StockBalance.findOne({
       tenant_id: tenantId,
       company_id: companyId,
@@ -198,6 +186,54 @@ async function recordStockMovement(options) {
     const currentVal = new BigNumber(balance.total_inventory_value.toString());
 
     const newQty = currentQty.plus(signedBaseQtyBn);
+
+    // Negative Stock Validation: Stock will never be negative
+    if (direction === 'OUT' && newQty.isNegative()) {
+      const availStr = currentQty.isLessThanOrEqualTo(0) ? '0.00' : currentQty.toFixed(2);
+      const reqStr = baseQtyBn.toFixed(2);
+      const uomCode = stockItem.base_uom_id?.unit_code || 'units';
+      const err = new Error(
+        `Insufficient stock for item "${stockItem.item_name}" to fulfill this order. Required: ${reqStr} ${uomCode}, Available: ${availStr} ${uomCode}. Stock cannot be negative.`
+      );
+      err.code = 'INSUFFICIENT_STOCK';
+      throw err;
+    }
+
+    // 2. Create append-only movement record
+    const movement = new StockMovement({
+      tenant_id: tenantId,
+      company_id: companyId,
+      stock_item_id: stockItem._id,
+      stockItemId: stockItem._id,
+      godown_id: godown._id,
+      movement_type: movementType,
+      direction,
+      quantity: mongoose.Types.Decimal128.fromString(quantity.toString()),
+      base_quantity: mongoose.Types.Decimal128.fromString(signedBaseQtyBn.toString()),
+      uom_id: uom._id,
+      base_uom_id: stockItem.base_uom_id._id,
+      conversion_factor: mongoose.Types.Decimal128.fromString(convResult.factor),
+      unit_rate: mongoose.Types.Decimal128.fromString(rateBn.toFixed(2)),
+      total_cost: mongoose.Types.Decimal128.fromString(costBn.toFixed(2)),
+      source_document_type: sourceDocumentType,
+      source_document_id: sourceDocumentId,
+      sourceDocumentId: sourceDocumentId,
+      source_line_id: sourceLineId,
+      idempotency_key: idempotencyKey,
+      effective_date: new Date(effectiveDate),
+      batch_number: batchNumber || '',
+      serial_numbers: Array.isArray(serialNumbers) ? serialNumbers : (serialNumbers ? [serialNumbers] : []),
+      expiry_date: expiryDate ? new Date(expiryDate) : null,
+      disposition: disposition || 'RESTOCK',
+      inspection_status: inspectionStatus || 'NOT_APPLICABLE',
+      notes: notes.trim(),
+      created_by_user_id: userId,
+      reversal_of_movement_id: reversalOfMovementId,
+      is_reversed: false
+    });
+
+    await movement.save({ session });
+
     let newTotalVal = currentVal;
     let newAvgCost = new BigNumber(balance.average_unit_cost.toString());
 
@@ -258,6 +294,7 @@ async function reverseStockMovement({ tenantId, companyId, movementId, reason = 
   const operation = async (sess) => {
     original.is_reversed = true;
     await original.save({ session: sess });
+    await StockMovement.updateOne({ _id: original._id }, { $set: { is_reversed: true } }, { session: sess });
 
     const revResult = await recordStockMovement({
       tenantId,

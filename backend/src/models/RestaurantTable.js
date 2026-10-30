@@ -39,6 +39,21 @@ const RestaurantTableSchema = new mongoose.Schema(
     current_order_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'RestaurantOrder'
+    },
+    location_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StoreLocation',
+      default: null,
+      index: true
+    },
+    table_qr_token: {
+      type: String,
+      default: null,
+      index: true
+    },
+    is_active: {
+      type: Boolean,
+      default: true
     }
   },
   {

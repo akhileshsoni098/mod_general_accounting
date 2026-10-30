@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_version": "2024.1.0",
+  "published_at": "2024-01-15T00:00:00.000Z",
+  "description": "US Geographic and Tax Jurisdiction Master Seed Dataset",
+  "sources": [
+    {
+      "source_name": "US Census Bureau FIPS 5-2",
+      "description": "Codes for the Identification of the States, the District of Columbia, and the Outlying Areas of the United States",
+      "url": "https://www.census.gov/library/reference/code-lists/ansi.html"
+    },
+    {
+      "source_name": "ANSI INCITS 38:2009",
+      "description": "Information Technology - Codes for the Identification of the States, the District of Columbia, Puerto Rico, and the Insular Areas",
+      "url": "https://standards.incits.org/"
+    },
+    {
+      "source_name": "USGS Geographic Names Information System (GNIS)",
+      "description": "Federal and State Feature Geographic Names Identifiers",
+      "url": "https://www.usgs.gov/u.s.-board-on-geographic-names"
+    }
+  ],
+  "disclaimer": "This seed dataset contains validated geographic reference identifiers and containment structures. It does not contain hardcoded or permanent sales tax rates. External provider API coverage is tracked separately.",
+  "resources": [
+    {
+      "file": "jurisdictions.federal.json",
+      "description": "United States Federal Government Jurisdiction",
+      "record_count": 1
+    },
+    {
+      "file": "jurisdictions.states.json",
+      "description": "50 US States and the District of Columbia",
+      "record_count": 51
+    },
+    {
+      "file": "jurisdictions.territories.json",
+      "description": "Five Major Inhabited US Territories",
+      "record_count": 5
+    },
+    {
+      "file": "jurisdictions.counties.sample.json",
+      "description": "Verified Sample County Jurisdictions Across Multiple States",
+      "record_count": 7
+    },
+    {
+      "file": "tax-categories.json",
+      "description": "Standard US Taxability Categories with Test Provider Code Mappings",
+      "record_count": 8
+    }
+  ]
+}

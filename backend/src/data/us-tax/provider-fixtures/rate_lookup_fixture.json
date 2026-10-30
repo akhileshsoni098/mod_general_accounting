@@ -1,0 +1,47 @@
+{
+  "test_environment": "SANDBOX_MOCK",
+  "disclaimer": "Sanitized mock rates for development and testing only. Must not be used in production.",
+  "rates_by_state": {
+    "CA": {
+      "state_code": "CA",
+      "combined_rate": "0.0950",
+      "breakdown": [
+        { "type": "STATE", "rate": "0.0600", "jurisdiction_name": "California State" },
+        { "type": "COUNTY", "rate": "0.0125", "jurisdiction_name": "Los Angeles County" },
+        { "type": "CITY", "rate": "0.0125", "jurisdiction_name": "City of Los Angeles" },
+        { "type": "SPECIAL_TAX_DISTRICT", "rate": "0.0100", "jurisdiction_name": "LA County Transit District" }
+      ],
+      "freight_taxable": false,
+      "effective_date": "2024-01-01"
+    },
+    "NY": {
+      "state_code": "NY",
+      "combined_rate": "0.08875",
+      "breakdown": [
+        { "type": "STATE", "rate": "0.0400", "jurisdiction_name": "New York State" },
+        { "type": "CITY", "rate": "0.0450", "jurisdiction_name": "New York City" },
+        { "type": "SPECIAL_TAX_DISTRICT", "rate": "0.00375", "jurisdiction_name": "Metropolitan Commuter Transportation District" }
+      ],
+      "freight_taxable": true,
+      "effective_date": "2024-01-01"
+    },
+    "TX": {
+      "state_code": "TX",
+      "combined_rate": "0.0825",
+      "breakdown": [
+        { "type": "STATE", "rate": "0.0625", "jurisdiction_name": "Texas State" },
+        { "type": "CITY", "rate": "0.0100", "jurisdiction_name": "Houston City" },
+        { "type": "SPECIAL_TAX_DISTRICT", "rate": "0.0100", "jurisdiction_name": "Houston MTA" }
+      ],
+      "freight_taxable": true,
+      "effective_date": "2024-01-01"
+    },
+    "OR": {
+      "state_code": "OR",
+      "combined_rate": "0.0000",
+      "breakdown": [],
+      "freight_taxable": false,
+      "effective_date": "2024-01-01"
+    }
+  }
+}

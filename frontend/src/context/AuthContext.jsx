@@ -150,6 +150,19 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function updateCompany(companyId, payload) {
+    try {
+      const res = await authApi.updateCompany(companyId, payload);
+      if (res.success && res.data) {
+        await loadProfile();
+        return res.data;
+      }
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
   function logout() {
     localStorage.removeItem('veridex_token');
     localStorage.removeItem('veridex_tenant_id');
@@ -182,6 +195,7 @@ export function AuthProvider({ children }) {
         switchWorkspace,
         switchCompany,
         createCompany,
+        updateCompany,
         logout,
         reloadProfile: loadProfile
       }}

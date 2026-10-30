@@ -56,7 +56,10 @@ const {
   RestaurantOrder,
   HotelReservation,
   GuestFolio,
-  WorkOrder
+  WorkOrder,
+  Company,
+  AccountingCalendar,
+  FiscalPeriod
 } = require('../models');
 const { hashPassword } = require('../utils/crypto');
 const { generateToken } = require('../middleware/authMiddleware');
@@ -268,6 +271,50 @@ async function getOrganizationSettings(req, res) {
   try {
     const tenant = await Tenant.findById(req.tenantId);
     if (!tenant) return res.error('Tenant not found', 404);
+
+    const companyId = req.headers['x-company-id'] || req.companyId;
+    let companyDoc = null;
+    let calendar = null;
+
+    if (companyId) {
+      companyDoc = await Company.findOne({ _id: companyId, tenant_id: req.tenantId });
+      if (companyDoc) {
+        if (companyDoc.calendar_id) {
+          calendar = await AccountingCalendar.findById(companyDoc.calendar_id);
+        }
+        if (!calendar) {
+          calendar = await AccountingCalendar.findOne({
+            tenant_id: req.tenantId,
+            company_id: companyDoc._id,
+            is_default: true
+          });
+        }
+      }
+    }
+
+    if (!calendar) {
+      calendar = await AccountingCalendar.findOne({
+        tenant_id: req.tenantId,
+        company_id: null,
+        is_default: true
+      });
+    }
+
+    const calendarConfig = calendar ? {
+      id: calendar._id,
+      calendar_code: calendar.calendar_code,
+      calendar_name: calendar.calendar_name,
+      calendar_type: calendar.calendar_type,
+      fiscal_year_start_month: calendar.fiscal_year_start_month,
+      week_start_day: calendar.week_start_day,
+      week_end_day: calendar.week_end_day,
+      year_end_rule: calendar.year_end_rule,
+      anchor_month: calendar.anchor_month,
+      fifty_three_week_policy: calendar.fifty_three_week_policy,
+      is_default: calendar.is_default,
+      description: calendar.description
+    } : null;
+
     return res.success({
       id: tenant._id,
       tenant_code: tenant.tenant_code,
@@ -278,7 +325,19 @@ async function getOrganizationSettings(req, res) {
       timezone: tenant.timezone,
       status: tenant.status,
       settings: tenant.settings || {},
-      metadata: tenant.metadata || {}
+      metadata: tenant.metadata || {},
+      calendar_config: calendarConfig,
+      active_company: companyDoc ? {
+        id: companyDoc._id.toString(),
+        company_code: companyDoc.company_code,
+        company_name: companyDoc.company_name,
+        business_profile: companyDoc.business_profile,
+        industry_code: companyDoc.industry_code || 'GENERAL_TRADING',
+        industry_subcategory: companyDoc.industry_subcategory || '',
+        operating_models: companyDoc.operating_models || ['BUY_AND_RESELL'],
+        inventory_policies: companyDoc.inventory_policies || {},
+        operational_capabilities: companyDoc.operational_capabilities || {}
+      } : null
     });
   } catch (err) {
     return res.error('Failed to get organization settings', 500, err.message);
@@ -293,7 +352,7 @@ async function updateOrganizationSettings(req, res) {
     const tenant = await Tenant.findById(req.tenantId);
     if (!tenant) return res.error('Tenant not found', 404);
 
-    const { name, tenant_type, timezone, base_currency, fiscal_year_start_month, metadata, settings } = req.body;
+    const { name, tenant_type, timezone, base_currency, fiscal_year_start_month, metadata, settings, calendar_config } = req.body;
     if (name) tenant.name = name.trim();
     if (tenant_type) {
       const validTypes = ['ENTERPRISE', 'RETAIL', 'HOSPITALITY', 'MANUFACTURING', 'SERVICES', 'WHOLESALE', 'COMMERCIAL', 'OTHER', 'CARRIER', 'MGA', 'BROKER'];
@@ -321,6 +380,89 @@ async function updateOrganizationSettings(req, res) {
         tenant.settings.allow_legacy_adapter = Boolean(settings.allow_legacy_adapter);
       }
     }
+
+    // Handle company-scoped industry and operational settings if provided
+    const companyId = req.headers['x-company-id'] || req.companyId;
+    let targetCompany = null;
+    if (companyId) {
+      targetCompany = await Company.findOne({ _id: companyId, tenant_id: req.tenantId });
+      if (targetCompany) {
+        if (req.body.industry_code) targetCompany.industry_code = req.body.industry_code.toUpperCase().trim();
+        if (req.body.industry_subcategory !== undefined) targetCompany.industry_subcategory = req.body.industry_subcategory.trim();
+        if (Array.isArray(req.body.operating_models)) targetCompany.operating_models = req.body.operating_models;
+        if (req.body.inventory_policies && typeof req.body.inventory_policies === 'object') {
+          targetCompany.inventory_policies = { ...targetCompany.inventory_policies, ...req.body.inventory_policies };
+        }
+        if (req.body.operational_capabilities && typeof req.body.operational_capabilities === 'object') {
+          targetCompany.operational_capabilities = { ...targetCompany.operational_capabilities, ...req.body.operational_capabilities };
+        }
+        await targetCompany.save();
+      }
+    }
+
+    // Handle calendar_config updates with period & transaction protection
+    let updatedCalendar = null;
+
+    if (calendar_config && typeof calendar_config === 'object' && calendar_config.calendar_type) {
+      const targetCompanyId = targetCompany ? targetCompany._id : null;
+      let existingCal = null;
+      if (targetCompany?.calendar_id) {
+        existingCal = await AccountingCalendar.findById(targetCompany.calendar_id);
+      }
+      if (!existingCal) {
+        existingCal = await AccountingCalendar.findOne({
+          tenant_id: req.tenantId,
+          company_id: targetCompanyId,
+          is_default: true
+        });
+      }
+
+      const isTypeChanging = existingCal && existingCal.calendar_type !== calendar_config.calendar_type;
+      if (isTypeChanging && targetCompanyId) {
+        // Guard against mutating periods if locked/closed periods or posted journals exist
+        const closedPeriod = await FiscalPeriod.findOne({
+          tenant_id: req.tenantId,
+          company_id: targetCompanyId,
+          status: { $in: ['LOCKED', 'HARD_CLOSED'] }
+        });
+        if (closedPeriod) {
+          return res.error(`Cannot change accounting calendar type: Fiscal period "${closedPeriod.period_name}" is locked/closed. Historical periods are immutable.`, 400);
+        }
+
+        const postedJournal = await Journal.findOne({
+          tenant_id: req.tenantId,
+          company_id: targetCompanyId,
+          status: 'POSTED'
+        });
+        if (postedJournal) {
+          return res.error('Cannot change accounting calendar type: Company has posted journal entries. Calendar changes require an explicit transition workflow for future fiscal years.', 400);
+        }
+      }
+
+      const calCode = existingCal?.calendar_code || (targetCompany ? `${targetCompany.company_code}_CALENDAR` : `${tenant.tenant_code}_CALENDAR`);
+      updatedCalendar = await AccountingCalendar.findOneAndUpdate(
+        { tenant_id: req.tenantId, company_id: targetCompanyId, calendar_code: calCode },
+        {
+          calendar_name: calendar_config.calendar_name || (targetCompany ? `${targetCompany.company_name} Accounting Calendar` : `${tenant.name} Accounting Calendar`),
+          calendar_type: calendar_config.calendar_type,
+          fiscal_year_start_month: calendar_config.fiscal_year_start_month || (calendar_config.calendar_type === 'GREGORIAN' ? (calendar_config.fiscal_year_start_month || 1) : 1),
+          week_start_day: calendar_config.week_start_day || (calendar_config.week_end_day === 'SUNDAY' ? 'MONDAY' : 'SUNDAY'),
+          week_end_day: calendar_config.week_end_day || 'SATURDAY',
+          year_end_rule: calendar_config.year_end_rule || (calendar_config.calendar_type === 'GREGORIAN' ? 'CALENDAR_MONTH_END' : 'LAST_WEEKDAY_OF_MONTH'),
+          anchor_month: calendar_config.anchor_month || 1,
+          fifty_three_week_policy: calendar_config.fifty_three_week_policy || 'ADD_TO_LAST_PERIOD',
+          is_default: true,
+          is_active: true
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      if (targetCompany && (!targetCompany.calendar_id || targetCompany.calendar_id.toString() !== updatedCalendar._id.toString())) {
+        targetCompany.calendar_id = updatedCalendar._id;
+        await targetCompany.save();
+      }
+    }
+
     tenant.row_version = (tenant.row_version || 1) + 1;
     await tenant.save();
 
@@ -334,7 +476,20 @@ async function updateOrganizationSettings(req, res) {
       timezone: tenant.timezone,
       status: tenant.status,
       settings: tenant.settings,
-      metadata: tenant.metadata
+      metadata: tenant.metadata,
+      calendar_config: updatedCalendar ? {
+        id: updatedCalendar._id,
+        calendar_code: updatedCalendar.calendar_code,
+        calendar_name: updatedCalendar.calendar_name,
+        calendar_type: updatedCalendar.calendar_type,
+        fiscal_year_start_month: updatedCalendar.fiscal_year_start_month,
+        week_start_day: updatedCalendar.week_start_day,
+        week_end_day: updatedCalendar.week_end_day,
+        year_end_rule: updatedCalendar.year_end_rule,
+        anchor_month: updatedCalendar.anchor_month,
+        fifty_three_week_policy: updatedCalendar.fifty_three_week_policy,
+        is_default: updatedCalendar.is_default
+      } : null
     }, { message: 'Organization settings updated successfully' });
   } catch (err) {
     return res.error('Failed to update organization settings', 500, err.message);

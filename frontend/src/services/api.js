@@ -68,19 +68,30 @@ export const authApi = {
   getCompanyMembers: (id) => apiRequest(`/companies/${id}/members`),
   addCompanyMember: (id, payload) => apiRequest(`/companies/${id}/members`, { method: 'POST', body: payload }),
   getBusinessProfiles: () => apiRequest('/companies/profiles'),
+  getIndustriesTaxonomy: () => apiRequest('/companies/industries/taxonomy'),
+  getIndustryRecommendations: (payload) => apiRequest('/companies/industries/recommendations', { method: 'POST', body: payload }),
   getCompanyModules: (id) => apiRequest(`/companies/${id}/modules`),
   updateCompanyModules: (id, payload) => apiRequest(`/companies/${id}/modules`, { method: 'PATCH', body: payload }),
   getCompanyFranchiseConfig: (id) => apiRequest(`/companies/${id}/franchise-config`),
   updateCompanyFranchiseConfig: (id, payload) => apiRequest(`/companies/${id}/franchise-config`, { method: 'PUT', body: payload }),
 
   // GL Module Endpoints
-  getAccounts: () => apiRequest('/gl/accounts'),
+  getAccounts: (params = '') => apiRequest(typeof params === 'string' ? `/gl/accounts${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/gl/accounts?${new URLSearchParams(params).toString()}`),
   getAccountDetail: (id) => apiRequest(`/gl/accounts/${id}`),
   createAccount: (payload) => apiRequest('/gl/accounts', { method: 'POST', body: payload }),
   updateAccount: (id, payload) => apiRequest(`/gl/accounts/${id}`, { method: 'PATCH', body: payload }),
+  archiveAccount: (id) => apiRequest(`/gl/accounts/${id}`, { method: 'DELETE' }),
+  getOpeningBalances: (params = '') => apiRequest(`/gl/opening-balances${params ? (typeof params === 'string' ? (params.startsWith('?') ? params : `?${params}`) : `?${new URLSearchParams(params).toString()}`) : ''}`),
+  saveOpeningBalancesDraft: (payload) => apiRequest('/gl/opening-balances', { method: 'PUT', body: payload }),
+  postOpeningBalances: (payload) => apiRequest('/gl/opening-balances/post', { method: 'POST', body: payload }),
   getPeriods: () => apiRequest('/gl/periods'),
   createPeriod: (payload) => apiRequest('/gl/periods', { method: 'POST', body: payload }),
   updatePeriodStatus: (period_id, status, close_notes) => apiRequest('/gl/periods/status', { method: 'PATCH', body: { period_id, status, close_notes } }),
+  getAccountingCalendars: () => apiRequest('/gl/calendars'),
+  createAccountingCalendar: (payload) => apiRequest('/gl/calendars', { method: 'POST', body: payload }),
+  updateAccountingCalendar: (id, payload) => apiRequest(`/gl/calendars/${id}`, { method: 'PATCH', body: payload }),
+  generateCalendarPeriods: (id, payload) => apiRequest(`/gl/calendars/${id}/generate`, { method: 'POST', body: payload }),
+  getCalendarPeriods: (id, params = '') => apiRequest(`/gl/calendars/${id}/periods${params}`),
   getJournals: (params = '') => apiRequest(`/gl/journals${params}`),
   getJournalById: (id) => apiRequest(`/gl/journals/${id}`),
   previewJournal: (payload) => apiRequest('/gl/journals/preview', { method: 'POST', body: payload }),
@@ -206,6 +217,7 @@ export const counterpartiesApi = {
   createParty: (payload) => apiRequest('/counterparties', { method: 'POST', body: payload }),
   getPartyDetail: (id) => apiRequest(`/counterparties/${id}`),
   updateParty: (id, payload) => apiRequest(`/counterparties/${id}`, { method: 'PATCH', body: payload }),
+  archiveParty: (id) => apiRequest(`/counterparties/${id}`, { method: 'DELETE' }),
   addPartyRole: (id, payload) => apiRequest(`/counterparties/${id}/roles`, { method: 'POST', body: payload }),
   seedParties: () => apiRequest('/counterparties/seed', { method: 'POST' })
 };
@@ -295,17 +307,20 @@ export const inventoryApi = {
   getUnitById: (id) => apiRequest(`/inventory/uom/${id}`),
   createUnit: (payload) => apiRequest('/inventory/uom', { method: 'POST', body: payload }),
   updateUnit: (id, payload) => apiRequest(`/inventory/uom/${id}`, { method: 'PATCH', body: payload }),
+  deleteUnit: (id) => apiRequest(`/inventory/uom/${id}`, { method: 'DELETE' }),
   simulateConversion: (payload) => apiRequest('/inventory/uom/convert', { method: 'POST', body: payload }),
 
   getGodowns: (params = '') => apiRequest(`/inventory/godowns${params}`),
   getGodownById: (id) => apiRequest(`/inventory/godowns/${id}`),
   createGodown: (payload) => apiRequest('/inventory/godowns', { method: 'POST', body: payload }),
   updateGodown: (id, payload) => apiRequest(`/inventory/godowns/${id}`, { method: 'PATCH', body: payload }),
+  deleteGodown: (id) => apiRequest(`/inventory/godowns/${id}`, { method: 'DELETE' }),
 
   getItems: (params = '') => apiRequest(`/inventory/items${params}`),
   getItemById: (id) => apiRequest(`/inventory/items/${id}`),
   createItem: (payload) => apiRequest('/inventory/items', { method: 'POST', body: payload }),
   updateItem: (id, payload) => apiRequest(`/inventory/items/${id}`, { method: 'PATCH', body: payload }),
+  archiveItem: (id) => apiRequest(`/inventory/items/${id}`, { method: 'DELETE' }),
 
   postOpeningStock: (payload) => apiRequest('/inventory/opening-stock', { method: 'POST', body: payload }),
 
@@ -322,13 +337,17 @@ export const commercialApi = {
   getDocuments: (params = '') => apiRequest(`/commercial/documents${params}`),
   getDocumentById: (id) => apiRequest(`/commercial/documents/${id}`),
   createDraftDocument: (payload) => apiRequest('/commercial/documents', { method: 'POST', body: payload }),
-  postDocument: (id) => apiRequest(`/commercial/documents/${id}/post`, { method: 'POST' }),
+  updateDocument: (id, payload) => apiRequest(`/commercial/documents/${id}`, { method: 'PUT', body: payload }),
+  postDocument: (id, payload = null) => apiRequest(`/commercial/documents/${id}/post`, { method: 'POST', ...(payload ? { body: payload } : {}) }),
+  calculateTax: (id, payload = {}) => apiRequest(`/commercial/documents/${id}/calculate-tax`, { method: 'POST', body: payload }),
   reverseDocument: (id, payload) => apiRequest(`/commercial/documents/${id}/reverse`, { method: 'POST', body: payload }),
+  cancelDocument: (id) => apiRequest(`/commercial/documents/${id}`, { method: 'DELETE' }),
   getSalesRegister: (params = '') => apiRequest(`/commercial/reports/sales-register${params}`),
   getPurchaseRegister: (params = '') => apiRequest(`/commercial/reports/purchase-register${params}`),
   getCustomerAging: (params = '') => apiRequest(`/commercial/reports/customer-aging${params}`),
   getSupplierAging: (params = '') => apiRequest(`/commercial/reports/supplier-aging${params}`),
   getGstSummary: (params = '') => apiRequest(`/commercial/reports/gst-summary${params}`),
+  settleGst: (payload) => apiRequest('/commercial/reports/gst-settlement', { method: 'POST', body: payload }),
   getOpeningStockGlPreview: () => apiRequest('/commercial/opening-stock-gl/preview'),
   postOpeningStockGlCatchup: (payload = {}) => apiRequest('/commercial/opening-stock-gl/catch-up', { method: 'POST', body: payload })
 };
@@ -350,14 +369,53 @@ export const posApi = {
 };
 
 export const restaurantApi = {
-  getTables: () => apiRequest('/restaurant/tables'),
+  // Outlets
+  getLocations: () => apiRequest('/restaurant/locations'),
+  saveLocation: (payload) => apiRequest('/restaurant/locations', { method: 'POST', body: payload }),
+  archiveLocation: (locationId) => apiRequest(`/restaurant/locations/${locationId}`, { method: 'DELETE' }),
+
+  // Config & Operating Policies
+  getConfig: (locationId = '') => apiRequest(`/restaurant/config${locationId ? `?locationId=${locationId}` : ''}`),
+  saveConfig: (payload) => apiRequest('/restaurant/config', { method: 'POST', body: payload }),
+
+  // Modifier Groups & Variants
+  getModifierGroups: () => apiRequest('/restaurant/modifier-groups'),
+  saveModifierGroup: (payload) => apiRequest('/restaurant/modifier-groups', { method: 'POST', body: payload }),
+  archiveModifierGroup: (groupId) => apiRequest(`/restaurant/modifier-groups/${groupId}`, { method: 'DELETE' }),
+
+  getVariants: (baseItemId = '') => apiRequest(`/restaurant/variants${baseItemId ? `?baseItemId=${baseItemId}` : ''}`),
+  saveVariant: (payload) => apiRequest('/restaurant/variants', { method: 'POST', body: payload }),
+  archiveVariant: (variantId) => apiRequest(`/restaurant/variants/${variantId}`, { method: 'DELETE' }),
+
+  // Tables & QR
+  getTables: (locationId = '') => apiRequest(`/restaurant/tables${locationId ? `?locationId=${locationId}` : ''}`),
   createTable: (payload) => apiRequest('/restaurant/tables', { method: 'POST', body: payload }),
+  generateTableQr: (tableId) => apiRequest(`/restaurant/tables/${tableId}/qr`, { method: 'POST' }),
+
+  // Kitchen Display System
+  getKdsOrders: (station = 'ALL', locationId = '') => apiRequest(`/restaurant/kds/orders?station=${station}${locationId ? `&location_id=${locationId}` : ''}`),
+  updateKdsItemStatus: (orderId, itemId, status) => apiRequest(`/restaurant/kds/orders/${orderId}/items/${itemId}/status`, { method: 'PATCH', body: { status } }),
+
+  // Recipes & BOM
+  getRecipes: () => apiRequest('/restaurant/recipes'),
   saveRecipe: (payload) => apiRequest('/restaurant/recipes', { method: 'POST', body: payload }),
   getRecipe: (menuItemId, variant = '') => apiRequest(`/restaurant/recipes/${menuItemId}${variant ? `?variant=${variant}` : ''}`),
-  getOrders: () => apiRequest('/restaurant/orders'),
+  archiveRecipe: (recipeId) => apiRequest(`/restaurant/recipes/${recipeId}`, { method: 'DELETE' }),
+
+  // General POS & Orders
+  getOrders: (params = '') => apiRequest(`/restaurant/orders${params}`),
   createOrder: (payload) => apiRequest('/restaurant/orders', { method: 'POST', body: payload }),
   sendToKitchen: (orderId) => apiRequest(`/restaurant/orders/${orderId}/kot`, { method: 'POST' }),
-  settleOrder: (orderId, payload = {}) => apiRequest(`/restaurant/orders/${orderId}/settle`, { method: 'POST', body: payload })
+  settleOrder: (orderId, payload = {}) => apiRequest(`/restaurant/orders/${orderId}/settle`, { method: 'POST', body: payload }),
+  cancelOrder: (orderId, payload = {}) => apiRequest(`/restaurant/orders/${orderId}/cancel`, { method: 'POST', body: payload }),
+  deleteOrder: (orderId, payload = {}) => apiRequest(`/restaurant/orders/${orderId}`, { method: 'DELETE', body: payload })
+};
+
+export const kioskApi = {
+  getCatalog: (tenantSlug, outletSlug) => apiRequest(`/restaurant/public/kiosk/${tenantSlug}/${outletSlug}`),
+  submitOrder: (tenantSlug, outletSlug, payload) => apiRequest(`/restaurant/public/kiosk/${tenantSlug}/${outletSlug}/order`, { method: 'POST', body: payload }),
+  getTableCatalog: (qrToken) => apiRequest(`/restaurant/public/table/${qrToken}`),
+  submitTableOrder: (qrToken, payload) => apiRequest(`/restaurant/public/table/${qrToken}/order`, { method: 'POST', body: payload })
 };
 
 export const hotelApi = {
@@ -376,8 +434,11 @@ export const hotelApi = {
 };
 
 export const manufacturingApi = {
-  getBOMs: () => apiRequest('/manufacturing/boms'),
+  getBOMs: (params = '') => apiRequest(`/manufacturing/boms${params}`),
+  getBOMById: (id) => apiRequest(`/manufacturing/boms/${id}`),
   saveBOM: (payload) => apiRequest('/manufacturing/boms', { method: 'POST', body: payload }),
+  updateBOM: (id, payload) => apiRequest(`/manufacturing/boms/${id}`, { method: 'PUT', body: payload }),
+  archiveBOM: (id) => apiRequest(`/manufacturing/boms/${id}`, { method: 'DELETE' }),
   getWorkOrders: () => apiRequest('/manufacturing/work-orders'),
   createWorkOrder: (payload) => apiRequest('/manufacturing/work-orders', { method: 'POST', body: payload }),
   issueMaterials: (workOrderId) => apiRequest(`/manufacturing/work-orders/${workOrderId}/issue`, { method: 'POST' }),
@@ -389,6 +450,50 @@ export const dataExchangeApi = {
   importStockItems: (payload) => apiRequest('/data-exchange/import/stock-items', { method: 'POST', body: payload }),
   exportAccounts: () => apiRequest('/data-exchange/export/accounts'),
   exportStockBalances: () => apiRequest('/data-exchange/export/stock-balances')
+};
+
+export const usTaxApi = {
+  getProfile: () => apiRequest('/us-tax/profile'),
+  updateProfile: (payload) => apiRequest('/us-tax/profile', { method: 'PATCH', body: payload }),
+  getJurisdictions: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/jurisdictions${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/jurisdictions?${new URLSearchParams(params).toString()}`),
+  getJurisdictionDetail: (idOrCode) => apiRequest(`/us-tax/jurisdictions/${idOrCode}`),
+  getRegistrations: () => apiRequest('/us-tax/registrations'),
+  createRegistration: (payload) => apiRequest('/us-tax/registrations', { method: 'POST', body: payload }),
+  updateRegistration: (id, payload) => apiRequest(`/us-tax/registrations/${id}`, { method: 'PATCH', body: payload }),
+  getNexusReviews: () => apiRequest('/us-tax/nexus-reviews'),
+  upsertNexusReview: (payload) => apiRequest('/us-tax/nexus-reviews', { method: 'POST', body: payload }),
+  getProviderHealth: () => apiRequest('/us-tax/provider/health'),
+  lookupRates: (params = '') => apiRequest(`/us-tax/provider/rates?${new URLSearchParams(params).toString()}`),
+  previewSeedImport: () => apiRequest('/us-tax/seeds/preview', { method: 'POST' }),
+  executeSeedImport: () => apiRequest('/us-tax/seeds/import', { method: 'POST' }),
+  getSyncLogs: () => apiRequest('/us-tax/seeds/logs'),
+  calculateTax: (payload) => apiRequest('/us-tax/calculate', { method: 'POST', body: payload }),
+  getSnapshots: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/snapshots${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/snapshots?${new URLSearchParams(params).toString()}`),
+  getSnapshot: (transactionId) => apiRequest(`/us-tax/snapshots/${transactionId}`),
+  commitSnapshot: (transactionId) => apiRequest(`/us-tax/snapshots/${transactionId}/commit`, { method: 'POST' }),
+
+  // Phase 5: Periods, Subledger, Returns, Payments & Reconciliation
+  getReturnPeriods: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/periods${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/periods?${new URLSearchParams(params).toString()}`),
+  createReturnPeriod: (payload) => apiRequest('/us-tax/periods', { method: 'POST', body: payload }),
+  getReturnPeriod: (id) => apiRequest(`/us-tax/periods/${id}`),
+  updateReturnPeriodStatus: (id, status) => apiRequest(`/us-tax/periods/${id}/status`, { method: 'PATCH', body: { status } }),
+
+  getSubledgerEntries: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/subledger${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/subledger?${new URLSearchParams(params).toString()}`),
+  getSubledgerSummary: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/subledger/summary${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/subledger/summary?${new URLSearchParams(params).toString()}`),
+
+  prepareDraftReturn: (payload) => apiRequest('/us-tax/returns/prepare', { method: 'POST', body: payload }),
+  getReturns: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/returns${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/returns?${new URLSearchParams(params).toString()}`),
+  getReturnDetail: (id) => apiRequest(`/us-tax/returns/${id}`),
+  updateReturnStatus: (id, payload) => apiRequest(`/us-tax/returns/${id}/status`, { method: 'PATCH', body: payload }),
+
+  recordPayment: (payload) => apiRequest('/us-tax/payments', { method: 'POST', body: payload }),
+  getPayments: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/payments${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/payments?${new URLSearchParams(params).toString()}`),
+  confirmPayment: (id, payload) => apiRequest(`/us-tax/payments/${id}/confirm`, { method: 'PATCH', body: payload }),
+
+  reconcileDocsToSubledger: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/reconcile/documents-to-subledger${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/reconcile/documents-to-subledger?${new URLSearchParams(params).toString()}`),
+  reconcileSubledgerToGl: (params = '') => apiRequest(typeof params === 'string' ? `/us-tax/reconcile/subledger-to-gl${params ? (params.startsWith('?') ? params : `?${params}`) : ''}` : `/us-tax/reconcile/subledger-to-gl?${new URLSearchParams(params).toString()}`),
+  reconcileReturnToPayments: (returnId) => apiRequest(`/us-tax/reconcile/returns/${returnId}`),
+  retryProviderReconciliations: (payload = {}) => apiRequest('/us-tax/reconcile/retry-provider', { method: 'POST', body: payload })
 };
 
 

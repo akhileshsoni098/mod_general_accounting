@@ -684,6 +684,206 @@ async function generateGLExportBatch({
   return exportBatch;
 }
 
+/**
+ * 8. Generate 3-Tier Cash Flow Statement (Operating, Investing, Financing)
+ */
+async function generateCashFlowStatement({ tenantId, companyId = null }) {
+  const query = { tenant_id: tenantId, status: 'ACTIVE' };
+  if (companyId) query.company_id = companyId;
+  const accounts = await LedgerAccount.find(query);
+
+  let netProfit = new BigNumber(0);
+  let depreciation = new BigNumber(0);
+  let arChange = new BigNumber(0);
+  let invChange = new BigNumber(0);
+  let apChange = new BigNumber(0);
+  let capex = new BigNumber(0);
+  let equityContributions = new BigNumber(0);
+  let loanFinancing = new BigNumber(0);
+  let cashAndBank = new BigNumber(0);
+
+  for (const acc of accounts) {
+    const bal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : 0);
+    const code = acc.account_code;
+
+    if (acc.account_type === 'REVENUE') {
+      netProfit = netProfit.plus(bal);
+    } else if (acc.account_type === 'EXPENSE') {
+      netProfit = netProfit.minus(bal);
+      if (code === '5000' || code === '6200' || acc.account_name.toLowerCase().includes('depreciation')) {
+        depreciation = depreciation.plus(bal);
+      }
+    } else if (code.startsWith('110') || acc.subledger_type === 'AR') {
+      arChange = arChange.plus(bal);
+    } else if (code.startsWith('120') || acc.account_name.toLowerCase().includes('stock') || acc.account_name.toLowerCase().includes('inventory')) {
+      invChange = invChange.plus(bal);
+    } else if (code.startsWith('200') || acc.subledger_type === 'AP') {
+      apChange = apChange.plus(bal);
+    } else if (code.startsWith('14') || acc.account_name.toLowerCase().includes('machinery') || acc.account_name.toLowerCase().includes('fixed')) {
+      capex = capex.plus(bal);
+    } else if (code.startsWith('30') || acc.account_name.toLowerCase().includes('capital')) {
+      equityContributions = equityContributions.plus(bal);
+    } else if (code.startsWith('25') || code.startsWith('26') || acc.account_name.toLowerCase().includes('loan')) {
+      loanFinancing = loanFinancing.plus(bal);
+    } else if (code.startsWith('111') || acc.account_name.toLowerCase().includes('cash') || acc.account_name.toLowerCase().includes('bank')) {
+      cashAndBank = cashAndBank.plus(bal);
+    }
+  }
+
+  const operatingCashFlow = netProfit
+    .plus(depreciation)
+    .minus(arChange)
+    .minus(invChange)
+    .plus(apChange);
+
+  const investingCashFlow = capex.negated();
+  const financingCashFlow = equityContributions.plus(loanFinancing);
+  const netCashChange = operatingCashFlow.plus(investingCashFlow).plus(financingCashFlow);
+
+  return {
+    period: 'Current Year to Date',
+    operating_activities: {
+      net_profit: netProfit.toFixed(2),
+      adjustments: [
+        { label: 'Depreciation & Amortization (Non-Cash Expense)', amount: depreciation.toFixed(2) }
+      ],
+      working_capital_changes: [
+        { label: 'Accounts Receivable (Debtors)', amount: arChange.negated().toFixed(2) },
+        { label: 'Inventory & Stock in Hand', amount: invChange.negated().toFixed(2) },
+        { label: 'Accounts Payable (Creditors)', amount: apChange.toFixed(2) }
+      ],
+      net_cash_from_operations: operatingCashFlow.toFixed(2)
+    },
+    investing_activities: {
+      capital_expenditures: capex.negated().toFixed(2),
+      net_cash_from_investing: investingCashFlow.toFixed(2)
+    },
+    financing_activities: {
+      owner_capital_contributions: equityContributions.toFixed(2),
+      loan_borrowings_and_advances: loanFinancing.toFixed(2),
+      net_cash_from_financing: financingCashFlow.toFixed(2)
+    },
+    summary: {
+      net_change_in_cash: netCashChange.toFixed(2),
+      closing_cash_and_bank_equivalents: cashAndBank.toFixed(2)
+    }
+  };
+}
+
+/**
+ * 9. Compute Comprehensive Financial Ratios
+ */
+async function computeFinancialRatios({ tenantId, companyId = null }) {
+  const query = { tenant_id: tenantId, status: 'ACTIVE' };
+  if (companyId) query.company_id = companyId;
+  const accounts = await LedgerAccount.find(query);
+
+  let currentAssets = new BigNumber(0);
+  let inventory = new BigNumber(0);
+  let cashAndBank = new BigNumber(0);
+  let currentLiabilities = new BigNumber(0);
+  let totalDebt = new BigNumber(0);
+  let totalEquity = new BigNumber(0);
+  let totalRevenue = new BigNumber(0);
+  let totalCogs = new BigNumber(0);
+  let totalExpenses = new BigNumber(0);
+  let receivables = new BigNumber(0);
+
+  for (const acc of accounts) {
+    const bal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : 0);
+    const code = acc.account_code;
+
+    if (acc.account_type === 'ASSET') {
+      if (code.startsWith('11') || code.startsWith('12')) {
+        currentAssets = currentAssets.plus(bal);
+      }
+      if (code.startsWith('120') || acc.account_name.toLowerCase().includes('stock')) {
+        inventory = inventory.plus(bal);
+      }
+      if (code.startsWith('111') || acc.account_name.toLowerCase().includes('bank') || acc.account_name.toLowerCase().includes('cash')) {
+        cashAndBank = cashAndBank.plus(bal);
+      }
+      if (code.startsWith('110') || acc.subledger_type === 'AR') {
+        receivables = receivables.plus(bal);
+      }
+    } else if (acc.account_type === 'LIABILITY') {
+      if (code.startsWith('20') || code.startsWith('21')) {
+        currentLiabilities = currentLiabilities.plus(bal);
+      }
+      if (code.startsWith('25') || code.startsWith('26') || acc.account_name.toLowerCase().includes('loan')) {
+        totalDebt = totalDebt.plus(bal);
+      }
+    } else if (acc.account_type === 'EQUITY') {
+      totalEquity = totalEquity.plus(bal);
+    } else if (acc.account_type === 'REVENUE') {
+      totalRevenue = totalRevenue.plus(bal);
+    } else if (acc.account_type === 'EXPENSE') {
+      totalExpenses = totalExpenses.plus(bal);
+      if (code.startsWith('500') || acc.account_name.toLowerCase().includes('cost of goods') || acc.account_name.toLowerCase().includes('purchase')) {
+        totalCogs = totalCogs.plus(bal);
+      }
+    }
+  }
+
+  const grossProfit = totalRevenue.minus(totalCogs);
+  const netProfit = totalRevenue.minus(totalExpenses);
+
+  const currentRatio = currentLiabilities.isGreaterThan(0)
+    ? currentAssets.dividedBy(currentLiabilities).toFixed(2)
+    : 'N/A';
+
+  const quickRatio = currentLiabilities.isGreaterThan(0)
+    ? currentAssets.minus(inventory).dividedBy(currentLiabilities).toFixed(2)
+    : 'N/A';
+
+  const debtToEquity = totalEquity.isGreaterThan(0)
+    ? totalDebt.dividedBy(totalEquity).toFixed(2)
+    : '0.00';
+
+  const grossMarginPercent = totalRevenue.isGreaterThan(0)
+    ? grossProfit.dividedBy(totalRevenue).multipliedBy(100).toFixed(2) + '%'
+    : '0.00%';
+
+  const netMarginPercent = totalRevenue.isGreaterThan(0)
+    ? netProfit.dividedBy(totalRevenue).multipliedBy(100).toFixed(2) + '%'
+    : '0.00%';
+
+  const roePercent = totalEquity.isGreaterThan(0)
+    ? netProfit.dividedBy(totalEquity).multipliedBy(100).toFixed(2) + '%'
+    : '0.00%';
+
+  const debtorDays = totalRevenue.isGreaterThan(0)
+    ? receivables.dividedBy(totalRevenue).multipliedBy(365).toFixed(0) + ' Days'
+    : '0 Days';
+
+  return {
+    liquidity: {
+      current_ratio: currentRatio,
+      quick_ratio: quickRatio,
+      current_assets: currentAssets.toFixed(2),
+      current_liabilities: currentLiabilities.toFixed(2),
+      cash_and_bank: cashAndBank.toFixed(2)
+    },
+    solvency: {
+      debt_to_equity: debtToEquity,
+      total_debt: totalDebt.toFixed(2),
+      total_equity: totalEquity.toFixed(2)
+    },
+    profitability: {
+      gross_profit_margin: grossMarginPercent,
+      net_profit_margin: netMarginPercent,
+      return_on_equity: roePercent,
+      gross_profit: grossProfit.toFixed(2),
+      net_profit: netProfit.toFixed(2),
+      total_revenue: totalRevenue.toFixed(2)
+    },
+    efficiency: {
+      debtor_days: debtorDays,
+      accounts_receivable: receivables.toFixed(2)
+    }
+  };
+}
+
 module.exports = {
   calculateUPREarning,
   executeUPRAmortizationRun,
@@ -692,5 +892,7 @@ module.exports = {
   initializeCloseChecklist,
   executeCloseStep,
   generateFinancialReports,
+  generateCashFlowStatement,
+  computeFinancialRatios,
   generateGLExportBatch
 };

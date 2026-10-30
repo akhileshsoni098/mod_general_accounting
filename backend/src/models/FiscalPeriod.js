@@ -14,10 +14,16 @@ const FiscalPeriodSchema = new mongoose.Schema(
       default: null,
       index: true
     },
+    calendar_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AccountingCalendar',
+      default: null,
+      index: true
+    },
     period_name: {
       type: String,
       required: true,
-      trim: true // e.g. "2026-07"
+      trim: true // e.g. "2026-07" or "2026-P01"
     },
     fiscal_year: {
       type: Number,
@@ -27,7 +33,25 @@ const FiscalPeriodSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      max: 13 // 1..12 + optional adjustment period
+      max: 14 // 1..13 + optional retail leap week period 14
+    },
+    quarter: {
+      type: Number,
+      min: 1,
+      max: 4,
+      default: null // 1..4 for retail/reporting quarters
+    },
+    week_count: {
+      type: Number,
+      default: null // 4, 5, or 6 weeks for retail calendars
+    },
+    is_leap_week_period: {
+      type: Boolean,
+      default: false // True if this period contains the 53rd leap week
+    },
+    is_adjustment_period: {
+      type: Boolean,
+      default: false
     },
     start_date: {
       type: Date,
@@ -73,5 +97,6 @@ const FiscalPeriodSchema = new mongoose.Schema(
 
 FiscalPeriodSchema.index({ tenant_id: 1, company_id: 1, period_name: 1 }, { unique: true });
 FiscalPeriodSchema.index({ tenant_id: 1, company_id: 1, start_date: 1, end_date: 1 });
+FiscalPeriodSchema.index({ tenant_id: 1, company_id: 1, calendar_id: 1, fiscal_year: 1, period_number: 1 });
 
 module.exports = mongoose.model('FiscalPeriod', FiscalPeriodSchema);

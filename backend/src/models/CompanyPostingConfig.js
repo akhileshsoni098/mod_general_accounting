@@ -88,6 +88,27 @@ const CompanyPostingConfigSchema = new mongoose.Schema(
       default: '2103',
       trim: true
     },
+    // US Sales & Use Tax Liabilities
+    sales_tax_payable_account_code: {
+      type: String,
+      default: '2110',
+      trim: true
+    },
+    use_tax_payable_account_code: {
+      type: String,
+      default: '2115',
+      trim: true
+    },
+    tax_expense_account_code: {
+      type: String,
+      default: '5110',
+      trim: true
+    },
+    purchase_tax_treatment: {
+      type: String,
+      enum: ['CAPITALIZE_TO_ITEM', 'EXPENSE_SEPARATE', 'BLOCKED'],
+      default: 'CAPITALIZE_TO_ITEM'
+    },
     // Cash & Bank defaults
     cash_account_code: {
       type: String,

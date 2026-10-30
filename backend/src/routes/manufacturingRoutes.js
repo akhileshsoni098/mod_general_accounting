@@ -12,6 +12,9 @@ router.use(requireCompanyModule('MANUFACTURING'));
 
 router.get('/boms', (req, res) => manufacturingController.getBOMs(req, res));
 router.post('/boms', (req, res) => manufacturingController.saveBOM(req, res));
+router.get('/boms/:bomId', (req, res) => manufacturingController.getBOMById(req, res));
+router.put('/boms/:bomId', (req, res) => manufacturingController.updateBOM(req, res));
+router.delete('/boms/:bomId', (req, res) => manufacturingController.archiveBOM(req, res));
 router.get('/work-orders', (req, res) => manufacturingController.getWorkOrders(req, res));
 router.post('/work-orders', (req, res) => manufacturingController.createWorkOrder(req, res));
 router.post('/work-orders/:workOrderId/issue', (req, res) => manufacturingController.issueMaterials(req, res));

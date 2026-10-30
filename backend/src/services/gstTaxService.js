@@ -111,9 +111,11 @@ function determineSupplyType({ companyStateCode, partyStateCode, placeOfSupply }
  * @param {number|string} [lineInput.discount_amount=0]
  * @param {number|string} [lineInput.tax_rate=0]
  * @param {'INTRA_STATE' | 'INTER_STATE'} [lineInput.supply_type='INTRA_STATE']
+ * @param {boolean} [lineInput.is_tax_inclusive=false]
  * @returns {Object} Calculated line fields with Decimal string values
  */
 function calculateLineTax(lineInput) {
+  const isTaxInclusive = Boolean(lineInput.is_tax_inclusive);
   const qty = new BigNumber(lineInput.quantity ? lineInput.quantity.toString() : '1');
   const rate = new BigNumber(lineInput.unit_rate ? lineInput.unit_rate.toString() : '0');
   const gross = qty.times(rate);
@@ -130,9 +132,25 @@ function calculateLineTax(lineInput) {
     discAmt = gross;
   }
 
-  const taxable = gross.minus(discAmt);
   const totalTaxRate = new BigNumber(lineInput.tax_rate !== undefined && lineInput.tax_rate !== null ? lineInput.tax_rate.toString() : '0');
   const supplyType = lineInput.supply_type || 'INTRA_STATE';
+
+  let taxable;
+  let totalTax;
+
+  if (isTaxInclusive && totalTaxRate.isGreaterThan(0)) {
+    // Net inclusive amount after discount
+    const netInclusive = gross.minus(discAmt);
+    // Taxable = netInclusive / (1 + taxRate/100)
+    const factor = new BigNumber(1).plus(totalTaxRate.dividedBy(100));
+    taxable = netInclusive.dividedBy(factor).dp(2, BigNumber.ROUND_HALF_UP);
+    totalTax = netInclusive.minus(taxable);
+  } else {
+    taxable = gross.minus(discAmt);
+    totalTax = totalTaxRate.isGreaterThan(0) && taxable.isGreaterThan(0)
+      ? taxable.times(totalTaxRate).dividedBy(100).dp(2, BigNumber.ROUND_HALF_UP)
+      : new BigNumber(0);
+  }
 
   let cgstRate = new BigNumber(0);
   let cgstAmt = new BigNumber(0);
@@ -146,15 +164,15 @@ function calculateLineTax(lineInput) {
       cgstRate = totalTaxRate.dividedBy(2);
       sgstRate = totalTaxRate.dividedBy(2);
       cgstAmt = taxable.times(cgstRate).dividedBy(100).dp(2, BigNumber.ROUND_HALF_UP);
-      sgstAmt = taxable.times(sgstRate).dividedBy(100).dp(2, BigNumber.ROUND_HALF_UP);
+      sgstAmt = isTaxInclusive ? totalTax.minus(cgstAmt) : taxable.times(sgstRate).dividedBy(100).dp(2, BigNumber.ROUND_HALF_UP);
     } else {
       igstRate = totalTaxRate;
-      igstAmt = taxable.times(igstRate).dividedBy(100).dp(2, BigNumber.ROUND_HALF_UP);
+      igstAmt = totalTax;
     }
   }
 
-  const totalTax = cgstAmt.plus(sgstAmt).plus(igstAmt);
-  const totalAmt = taxable.plus(totalTax);
+  const computedTotalTax = cgstAmt.plus(sgstAmt).plus(igstAmt);
+  const totalAmt = taxable.plus(computedTotalTax);
 
   return {
     quantity: qty.toFixed(4),
@@ -170,8 +188,9 @@ function calculateLineTax(lineInput) {
     sgst_amount: sgstAmt.toFixed(2),
     igst_rate: igstRate.toFixed(2),
     igst_amount: igstAmt.toFixed(2),
-    total_tax: totalTax.toFixed(2),
-    total_amount: totalAmt.toFixed(2)
+    total_tax: computedTotalTax.toFixed(2),
+    total_amount: totalAmt.toFixed(2),
+    is_tax_inclusive: isTaxInclusive
   };
 }
 
@@ -257,6 +276,178 @@ async function seedDefaultTaxRates(tenantId, companyId, options = {}) {
   }
 }
 
+/**
+ * Settles Indian GST Output Liability against Input Tax Credit (ITC)
+ * and posts the Double-Entry Settlement & Payment Journal to General Ledger.
+ */
+async function settleGstReturn({
+  tenantId,
+  companyId,
+  userId,
+  bankAccountCode = '1002',
+  startDate,
+  endDate,
+  periodLabel,
+  notes
+}) {
+  const { getTaxSummaryReport } = require('./commercialReportService');
+  const { getOrCreatePostingConfig } = require('./commercialPostingConfigService');
+  const { postJournalEntry } = require('./journalPostingService');
+  const { Company } = require('../models');
+
+  const company = await Company.findById(companyId);
+  const config = await getOrCreatePostingConfig(tenantId, companyId);
+  const report = await getTaxSummaryReport(tenantId, companyId, { startDate, endDate });
+
+  const outCgst = new BigNumber(report.outward_supplies?.total_cgst || 0);
+  const outSgst = new BigNumber(report.outward_supplies?.total_sgst || 0);
+  const outIgst = new BigNumber(report.outward_supplies?.total_igst || 0);
+  const totalOut = outCgst.plus(outSgst).plus(outIgst);
+
+  const inCgst = new BigNumber(report.inward_supplies?.total_cgst || 0);
+  const inSgst = new BigNumber(report.inward_supplies?.total_sgst || 0);
+  const inIgst = new BigNumber(report.inward_supplies?.total_igst || 0);
+  const totalIn = inCgst.plus(inSgst).plus(inIgst);
+
+  // Set-off calculation (CGST with CGST, SGST with SGST, IGST with IGST)
+  const utilCgst = BigNumber.min(outCgst, inCgst);
+  const utilSgst = BigNumber.min(outSgst, inSgst);
+  const utilIgst = BigNumber.min(outIgst, inIgst);
+
+  const netCgstPayable = BigNumber.max(0, outCgst.minus(inCgst));
+  const netSgstPayable = BigNumber.max(0, outSgst.minus(inSgst));
+  const netIgstPayable = BigNumber.max(0, outIgst.minus(inIgst));
+  const netCashPayable = netCgstPayable.plus(netSgstPayable).plus(netIgstPayable);
+
+  const remainingItmCgst = BigNumber.max(0, inCgst.minus(outCgst));
+  const remainingItmSgst = BigNumber.max(0, inSgst.minus(outSgst));
+  const remainingItmIgst = BigNumber.max(0, inIgst.minus(outIgst));
+  const totalRemainingItc = remainingItmCgst.plus(remainingItmSgst).plus(remainingItmIgst);
+
+  // Build Double-Entry Journal Lines
+  const lines = [];
+  if (outCgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.output_cgst_account_code || '2101',
+      direction: 'DEBIT',
+      debit: outCgst.toFixed(2),
+      credit: '0.00',
+      memo: `Clear Output CGST Liability for ${periodLabel || 'GST Period'}`
+    });
+  }
+  if (outSgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.output_sgst_account_code || '2102',
+      direction: 'DEBIT',
+      debit: outSgst.toFixed(2),
+      credit: '0.00',
+      memo: `Clear Output SGST Liability for ${periodLabel || 'GST Period'}`
+    });
+  }
+  if (outIgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.output_igst_account_code || '2103',
+      direction: 'DEBIT',
+      debit: outIgst.toFixed(2),
+      credit: '0.00',
+      memo: `Clear Output IGST Liability for ${periodLabel || 'GST Period'}`
+    });
+  }
+
+  if (utilCgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.input_cgst_account_code || '1301',
+      direction: 'CREDIT',
+      debit: '0.00',
+      credit: utilCgst.toFixed(2),
+      memo: `Utilize Input CGST Credit (ITC) for ${periodLabel || 'GST Period'}`
+    });
+  }
+  if (utilSgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.input_sgst_account_code || '1302',
+      direction: 'CREDIT',
+      debit: '0.00',
+      credit: utilSgst.toFixed(2),
+      memo: `Utilize Input SGST Credit (ITC) for ${periodLabel || 'GST Period'}`
+    });
+  }
+  if (utilIgst.isGreaterThan(0)) {
+    lines.push({
+      account_code: config.input_igst_account_code || '1303',
+      direction: 'CREDIT',
+      debit: '0.00',
+      credit: utilIgst.toFixed(2),
+      memo: `Utilize Input IGST Credit (ITC) for ${periodLabel || 'GST Period'}`
+    });
+  }
+
+  if (netCashPayable.isGreaterThan(0)) {
+    lines.push({
+      account_code: bankAccountCode || config.bank_account_code || '1002',
+      direction: 'CREDIT',
+      debit: '0.00',
+      credit: netCashPayable.toFixed(2),
+      memo: `GST Challan Tax Payment from Bank for ${periodLabel || 'GST Period'}`
+    });
+  }
+
+  let journalResult = null;
+  if (lines.length >= 2) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    journalResult = await postJournalEntry({
+      tenantId,
+      companyId,
+      userId,
+      postingDate: todayStr,
+      sourceModule: 'TAX_GST',
+      referenceId: `GST-SETTLE-${companyId}-${Date.now()}`,
+      memo: `GST Tax Settlement & ITC Set-off: ${periodLabel || todayStr} (${notes || 'Statutory Offset'})`,
+      currency: company?.base_currency || 'INR',
+      accountingBasis: 'GAAP',
+      lines
+    });
+  }
+
+  return {
+    period: periodLabel || 'Current Period',
+    output_tax: {
+      cgst: outCgst.toFixed(2),
+      sgst: outSgst.toFixed(2),
+      igst: outIgst.toFixed(2),
+      total: totalOut.toFixed(2)
+    },
+    input_tax_credit: {
+      cgst: inCgst.toFixed(2),
+      sgst: inSgst.toFixed(2),
+      igst: inIgst.toFixed(2),
+      total: totalIn.toFixed(2)
+    },
+    utilized_itc: {
+      cgst: utilCgst.toFixed(2),
+      sgst: utilSgst.toFixed(2),
+      igst: utilIgst.toFixed(2),
+      total: utilCgst.plus(utilSgst).plus(utilIgst).toFixed(2)
+    },
+    net_tax_payable: {
+      cgst: netCgstPayable.toFixed(2),
+      sgst: netSgstPayable.toFixed(2),
+      igst: netIgstPayable.toFixed(2),
+      total: netCashPayable.toFixed(2)
+    },
+    remaining_itc_balance: {
+      cgst: remainingItmCgst.toFixed(2),
+      sgst: remainingItmSgst.toFixed(2),
+      igst: remainingItmIgst.toFixed(2),
+      total: totalRemainingItc.toFixed(2)
+    },
+    journal: journalResult?.journal || null,
+    message: netCashPayable.isGreaterThan(0)
+      ? `GST Output Liability set off against ITC. Net payment of ₹${netCashPayable.toFixed(2)} posted to GL.`
+      : `GST Output Liability fully covered by ITC. No cash payment needed. Unutilized ITC of ₹${totalRemainingItc.toFixed(2)} carried forward.`
+  };
+}
+
 module.exports = {
   GST_STATE_CODES,
   validateGstin,
@@ -264,5 +455,6 @@ module.exports = {
   determineSupplyType,
   calculateLineTax,
   calculateDocumentTotals,
-  seedDefaultTaxRates
+  seedDefaultTaxRates,
+  settleGstReturn
 };

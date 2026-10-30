@@ -52,6 +52,27 @@ async function initializeCompanyInventoryDefaults(tenantId, companyId, options =
     );
   }
 
+  // 1b. Provision Quarantine Godown if enabled or requested
+  let quarantineGodown = null;
+  if (options.enableQuarantine) {
+    quarantineGodown = await Godown.findOneAndUpdate(
+      { tenant_id: tenantId, company_id: companyId, godown_code: 'QUARANTINE' },
+      {
+        godown_name: 'Quarantine & Inspection Godown',
+        is_default: false,
+        status: 'ACTIVE',
+        address: {
+          street: 'QA Quarantine Section',
+          city: '',
+          state: '',
+          country: '',
+          postal_code: ''
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true, session }
+    );
+  }
+
   // 2. Provision Standard UOMs
   const seededUoms = [];
   for (const u of STANDARD_UOMS) {

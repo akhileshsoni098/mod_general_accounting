@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
-const { Company, CompanyMembership, UserRole, Role, Tenant } = require('../models');
+const { Company, CompanyMembership, UserRole, Role, Tenant, AccountingCalendar } = require('../models');
 const { isValidProfile, getProfile } = require('../config/businessProfiles');
 const { getDefaultModulesForProfile, resolveModuleDependencies } = require('../config/moduleRegistry');
 const { seedCompanyChartOfAccounts } = require('../utils/seedCoa');
 const { seedCompanyFiscalPeriods } = require('../utils/seedFiscalPeriods');
+const accountingCalendarService = require('./accountingCalendarService');
 const { initializeCompanyInventoryDefaults } = require('./inventoryInitService');
+const { computeIndustryRecommendations, mapLegacyProfile } = require('./industryConfigurationService');
 const { withOptionalTransaction } = require('../utils/transactionHelper');
 
 /**
@@ -18,6 +20,11 @@ async function initializeCompany({
   companyName,
   legalName = '',
   businessProfile = 'GENERAL_RETAIL',
+  industryCode = null,
+  industrySubcategory = '',
+  operatingModels = null,
+  inventoryPolicies = null,
+  operationalCapabilities = null,
   enabledModules = null,
   modulesConfig = {},
   description = '',
@@ -28,7 +35,8 @@ async function initializeCompany({
   financialYearStartMonth = 4,
   booksBeginningFrom = new Date(),
   taxJurisdiction = 'GST_INDIA',
-  taxDetails = {}
+  taxDetails = {},
+  calendarConfig = null
 }) {
   if (!tenantId) {
     throw new Error('tenantId is required');
@@ -45,6 +53,23 @@ async function initializeCompany({
   }
 
   const profileMeta = getProfile(normalizedProfile);
+  const legacyMapping = mapLegacyProfile(normalizedProfile);
+  const resolvedIndustryCode = industryCode ? industryCode.toUpperCase().trim() : legacyMapping.industry_code;
+  const resolvedOperatingModels = Array.isArray(operatingModels) && operatingModels.length > 0
+    ? operatingModels.map(m => String(m).toUpperCase().trim())
+    : legacyMapping.operating_models;
+
+  const recommendations = computeIndustryRecommendations({
+    industryCode: resolvedIndustryCode,
+    operatingModels: resolvedOperatingModels,
+    countryCode,
+    customOverrides: {
+      inventory_policy: inventoryPolicies
+    }
+  });
+
+  const finalInventoryPolicies = inventoryPolicies || recommendations.inventory_policy;
+  const finalOperationalCapabilities = operationalCapabilities || recommendations.operational_capabilities;
 
   // Validate tenant exists and is active
   const tenant = await Tenant.findById(tenantId);
@@ -74,7 +99,7 @@ async function initializeCompany({
 
   const resolvedModules = Array.isArray(enabledModules)
     ? resolveModuleDependencies(enabledModules)
-    : getDefaultModulesForProfile(normalizedProfile);
+    : recommendations.recommended_modules;
 
   const operation = async (session) => {
     // 1. Create or revive Company document
@@ -83,6 +108,11 @@ async function initializeCompany({
       existingCompany.company_name = companyName.trim();
       existingCompany.legal_name = legalName ? legalName.trim() : companyName.trim();
       existingCompany.business_profile = normalizedProfile;
+      existingCompany.industry_code = resolvedIndustryCode;
+      existingCompany.industry_subcategory = industrySubcategory || '';
+      existingCompany.operating_models = resolvedOperatingModels;
+      existingCompany.inventory_policies = finalInventoryPolicies;
+      existingCompany.operational_capabilities = finalOperationalCapabilities;
       if (Array.isArray(enabledModules)) {
         existingCompany.enabled_modules = resolvedModules;
       } else if (!existingCompany.enabled_modules || existingCompany.enabled_modules.length === 0) {
@@ -111,6 +141,11 @@ async function initializeCompany({
           company_name: companyName.trim(),
           legal_name: legalName ? legalName.trim() : companyName.trim(),
           business_profile: normalizedProfile,
+          industry_code: resolvedIndustryCode,
+          industry_subcategory: industrySubcategory || '',
+          operating_models: resolvedOperatingModels,
+          inventory_policies: finalInventoryPolicies,
+          operational_capabilities: finalOperationalCapabilities,
           enabled_modules: resolvedModules,
           modules_config: modulesConfig || {},
           description: description.trim(),
@@ -155,15 +190,51 @@ async function initializeCompany({
       session
     });
 
-    // 4. Seed Initial Fiscal Periods for Company
+    // 4. Seed Accounting Calendar & Initial Fiscal Periods for Company
     const currentYear = new Date().getFullYear();
-    await seedCompanyFiscalPeriods(tenantId, company._id, currentYear, fyStartMonth, {
-      session
+    const cfg = calendarConfig || {
+      calendar_type: 'GREGORIAN',
+      fiscal_year_start_month: fyStartMonth,
+      year_end_rule: 'CALENDAR_MONTH_END'
+    };
+
+    const calType = cfg.calendar_type || 'GREGORIAN';
+    const calStartMonth = cfg.fiscal_year_start_month || fyStartMonth || 1;
+    const calCode = `${company.company_code}_CALENDAR`;
+
+    const calDoc = await AccountingCalendar.findOneAndUpdate(
+      { tenant_id: tenantId, company_id: company._id, calendar_code: calCode },
+      {
+        calendar_name: `${company.company_name} Accounting Calendar`,
+        calendar_type: calType,
+        fiscal_year_start_month: calStartMonth,
+        week_start_day: cfg.week_start_day || (cfg.week_end_day === 'SUNDAY' ? 'MONDAY' : 'SUNDAY'),
+        week_end_day: cfg.week_end_day || 'SATURDAY',
+        year_end_rule: cfg.year_end_rule || (calType === 'GREGORIAN' ? 'CALENDAR_MONTH_END' : 'LAST_WEEKDAY_OF_MONTH'),
+        anchor_month: cfg.anchor_month || 1,
+        fifty_three_week_policy: cfg.fifty_three_week_policy || 'ADD_TO_LAST_PERIOD',
+        is_default: true,
+        is_active: true,
+        description: `Configured during company initialization for ${company.company_name}`
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true, session }
+    );
+
+    company.calendar_id = calDoc._id;
+    await company.save({ session });
+
+    await accountingCalendarService.generateAndSavePeriods(calDoc._id, currentYear, {
+      session,
+      tenantId,
+      companyId: company._id
     });
 
-    // 5. Seed Initial Inventory Masters (Default Godown, Standard UOMs, Primary Group)
+    // 5. Seed Initial Inventory Masters (Default Godown, Standard UOMs, Primary Group, Quarantine)
     try {
-      await initializeCompanyInventoryDefaults(tenantId, company._id, { session });
+      await initializeCompanyInventoryDefaults(tenantId, company._id, {
+        enableQuarantine: recommendations.requires_quarantine_godown || Boolean(finalInventoryPolicies.enable_quarantine),
+        session
+      });
     } catch (invInitErr) {
       console.warn('[Inventory Init Warning]', invInitErr.message);
     }
@@ -242,6 +313,25 @@ async function initializeCompany({
       }
     } catch (indInitErr) {
       console.warn('[Industry Presets Init Warning]', indInitErr.message);
+    }
+
+    // 8. Seed Initial US Company Tax Profile (When country is US or US_SALES_TAX)
+    if (company.country_code === 'US' || company.tax_jurisdiction === 'US_SALES_TAX') {
+      try {
+        const { CompanyTaxProfile } = require('../models');
+        await CompanyTaxProfile.findOneAndUpdate(
+          { tenant_id: tenantId, company_id: company._id },
+          {
+            tax_country: 'US',
+            tax_classification: 'C_CORP',
+            tax_year_end_month: company.financial_year_start_month === 1 ? 12 : ((company.financial_year_start_month + 10) % 12 + 1),
+            profile_status: 'ACTIVE'
+          },
+          { upsert: true, setDefaultsOnInsert: true, session }
+        );
+      } catch (taxProfErr) {
+        console.warn('[US Tax Profile Init Warning]', taxProfErr.message);
+      }
     }
 
     return {

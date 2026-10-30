@@ -22,6 +22,7 @@ import InventoryWorkspacePage from './pages/InventoryWorkspacePage';
 import CommercialWorkspacePage from './pages/CommercialWorkspacePage';
 import RetailPosPage from './pages/RetailPosPage';
 import RestaurantWorkspacePage from './pages/RestaurantWorkspacePage';
+import KioskOrderingPage from './pages/KioskOrderingPage';
 import HotelWorkspacePage from './pages/HotelWorkspacePage';
 import ManufacturingWorkspacePage from './pages/ManufacturingWorkspacePage';
 import PlatformAdminPage from './pages/PlatformAdminPage';
@@ -143,6 +144,12 @@ export default function App() {
         <p className="text-xs font-mono">Initializing TallyVeridex Cloud ERP Session...</p>
       </div>
     );
+  }
+
+  // Handle public customer-facing kiosk and table QR routes without authentication
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith('/kiosk/') || currentPath.startsWith('/order/table/')) {
+    return <KioskOrderingPage />;
   }
 
   // Not authenticated

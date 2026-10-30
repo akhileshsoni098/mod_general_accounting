@@ -5,9 +5,9 @@ const {
   StockMovement,
   BillAllocation
 } = require('../models');
-const { withOptionalTransaction } = require('../utils/transactionHelper');
-const { reverseJournalEntry } = require('./journalPostingService');
-const { reverseStockMovement } = require('./stockMovementService');
+const transactionHelper = require('../utils/transactionHelper');
+const journalPostingService = require('./journalPostingService');
+const stockMovementService = require('./stockMovementService');
 
 /**
  * Reverses a posted commercial document, its financial journals,
@@ -35,7 +35,7 @@ async function reverseCommercialDocument({ tenantId, companyId, documentId, user
     // 1. Reverse Primary Journal
     let revJournal = null;
     if (doc.journal_id) {
-      const revRes = await reverseJournalEntry({
+      const revRes = await journalPostingService.reverseJournalEntry({
         tenantId,
         companyId,
         userId,
@@ -50,7 +50,7 @@ async function reverseCommercialDocument({ tenantId, companyId, documentId, user
     // 2. Reverse COGS Journal (if exists)
     let revCogsJournal = null;
     if (doc.cogs_journal_id) {
-      const revCogsRes = await reverseJournalEntry({
+      const revCogsRes = await journalPostingService.reverseJournalEntry({
         tenantId,
         companyId,
         userId,
@@ -108,7 +108,58 @@ async function reverseCommercialDocument({ tenantId, companyId, documentId, user
       }
     }
 
-    // 5. Update document status
+    // 5. Handle US Tax Snapshot Cancellation
+    if (doc.tax_snapshot_id) {
+      try {
+        const TaxCalculationSnapshot = mongoose.model('TaxCalculationSnapshot');
+        const snapshot = await TaxCalculationSnapshot.findById(doc.tax_snapshot_id).session(session);
+        if (snapshot) {
+          snapshot.status = 'CANCELLED';
+          snapshot.row_version = (snapshot.row_version || 1) + 1;
+          await snapshot.save({ session });
+        }
+      } catch (snapErr) {
+        console.warn('[commercialReversalService] Warning updating tax snapshot on reversal:', snapErr.message);
+      }
+
+      try {
+        const TaxProviderFactory = require('./taxProvider/TaxProviderFactory');
+        const CompanyTaxProfile = mongoose.model('CompanyTaxProfile');
+        const taxProfile = await CompanyTaxProfile.findOne({ tenant_id: tenantId, company_id: companyId }).session(session);
+        const providerName = doc.tax_provider_name || (taxProfile ? taxProfile.provider_name : 'MOCK');
+        const provider = TaxProviderFactory.createProvider(providerName, {
+          environment: (taxProfile && taxProfile.environment) || 'SANDBOX',
+          apiKey: taxProfile?.api_credentials?.api_key
+        });
+        if (typeof provider.voidTransaction === 'function') {
+          await provider.voidTransaction({
+            provider_transaction_id: doc.tax_provider_transaction_id || `TX-${doc.document_number}`,
+            document_number: doc.document_number,
+            reason: reason || 'Commercial Document Reversal'
+          });
+        }
+      } catch (providerErr) {
+        console.warn('[commercialReversalService] Warning voiding tax provider transaction on reversal:', providerErr.message);
+      }
+
+      // Phase 5: Reverse US Tax Liability Subledger Entry
+      try {
+        const usTaxSubledgerService = require('./usTaxSubledgerService');
+        await usTaxSubledgerService.reverseDocumentLiabilityEntry({
+          tenantId,
+          companyId,
+          document: doc,
+          reversalJournalId: revJournal?._id,
+          userId,
+          reason,
+          session
+        });
+      } catch (subledgerErr) {
+        console.warn('[commercialReversalService] Warning recording tax liability reversal entry:', subledgerErr.message);
+      }
+    }
+
+    // 6. Update document status
     doc.status = 'REVERSED';
     doc.reversal_reason = reason || 'Reversed by user';
     doc.row_version = (doc.row_version || 1) + 1;
@@ -128,7 +179,7 @@ async function reverseCommercialDocument({ tenantId, companyId, documentId, user
     };
   };
 
-  return withOptionalTransaction(operation);
+  return transactionHelper.withOptionalTransaction(operation);
 }
 
 module.exports = {

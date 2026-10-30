@@ -51,6 +51,29 @@ const LedgerAccountSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    is_group: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    group_type: {
+      type: String,
+      enum: ['PRIMARY_GROUP', 'SUBGROUP', 'LEDGER'],
+      default: 'LEDGER'
+    },
+    opening_balance: {
+      type: mongoose.Schema.Types.Decimal128,
+      default: () => mongoose.Types.Decimal128.fromString('0.00')
+    },
+    opening_balance_type: {
+      type: String,
+      enum: ['DEBIT', 'CREDIT'],
+      default: 'DEBIT'
+    },
+    opening_balance_date: {
+      type: Date,
+      default: null
+    },
     is_fiduciary: {
       type: Boolean,
       default: false

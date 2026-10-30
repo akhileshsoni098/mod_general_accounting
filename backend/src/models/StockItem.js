@@ -130,6 +130,37 @@ const StockItemSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    item_type: {
+      type: String,
+      enum: ['RAW_MATERIAL', 'WORK_IN_PROGRESS', 'FINISHED_GOOD', 'MERCHANDISE', 'CONSUMABLE', 'SERVICE'],
+      default: 'MERCHANDISE',
+      index: true
+    },
+    industry_classification: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    tracking_policy: {
+      is_batch_tracked: { type: Boolean, default: false },
+      is_serial_tracked: { type: Boolean, default: false },
+      is_expiry_tracked: { type: Boolean, default: false },
+      shelf_life_days: { type: Number, default: 0 },
+      warranty_months: { type: Number, default: 0 }
+    },
+    bom_eligible: {
+      type: Boolean,
+      default: true
+    },
+    inspection_required: {
+      type: Boolean,
+      default: false
+    },
+    quarantine_godown_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Godown',
+      default: null
+    },
     status: {
       type: String,
       enum: ['ACTIVE', 'INACTIVE', 'ARCHIVED'],

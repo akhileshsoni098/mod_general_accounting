@@ -4,10 +4,23 @@ const { StockItem } = require('../models');
 class ManufacturingController {
   async getBOMs(req, res) {
     try {
-      const boms = await manufacturingService.getBOMs(req.companyId);
+      const { include_archived, search } = req.query;
+      const boms = await manufacturingService.getBOMs(req.companyId, {
+        includeArchived: include_archived === 'true',
+        search: search || ''
+      });
       return res.success(boms);
     } catch (err) {
       return res.error(err.message, 400);
+    }
+  }
+
+  async getBOMById(req, res) {
+    try {
+      const bom = await manufacturingService.getBOMById(req.companyId, req.params.bomId);
+      return res.success(bom);
+    } catch (err) {
+      return res.error(err.message, 404);
     }
   }
 
@@ -42,7 +55,8 @@ class ManufacturingController {
           materials.push({
             item_id: itemId,
             quantity: Number(c.quantity) || 1,
-            uom_id: uomId
+            uom_id: uomId,
+            scrap_percentage: Number(c.scrap_percentage) || 0
           });
         }
       }
@@ -59,6 +73,24 @@ class ManufacturingController {
         overheadCosts: overhead_costs || []
       });
       return res.success(bom, 201);
+    } catch (err) {
+      return res.error(err.message, 400);
+    }
+  }
+
+  async updateBOM(req, res) {
+    try {
+      const updated = await manufacturingService.updateBOM(req.companyId, req.params.bomId, req.body);
+      return res.success(updated);
+    } catch (err) {
+      return res.error(err.message, 400);
+    }
+  }
+
+  async archiveBOM(req, res) {
+    try {
+      const archived = await manufacturingService.archiveBOM(req.companyId, req.params.bomId);
+      return res.success({ message: 'BOM archived successfully', bom: archived });
     } catch (err) {
       return res.error(err.message, 400);
     }

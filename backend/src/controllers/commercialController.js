@@ -57,7 +57,7 @@ async function createDocument(req, res) {
 async function getDocuments(req, res) {
   try {
     const { tenantId, companyId } = req;
-    const { document_type, status, party_id, start_date, end_date, limit = 50, page = 1 } = req.query;
+    const { document_type, status, party_id, start_date, end_date, search, limit = 50, page = 1 } = req.query;
 
     const result = await getDocumentRegister(tenantId, companyId, {
       documentType: document_type,
@@ -65,6 +65,7 @@ async function getDocuments(req, res) {
       partyId: party_id,
       startDate: start_date,
       endDate: end_date,
+      search,
       limit: Number(limit),
       page: Number(page)
     });
@@ -132,14 +133,16 @@ async function postDocument(req, res) {
   try {
     const { tenantId, companyId, user } = req;
     const { id } = req.params;
-    const { allocations } = req.body;
+    const { allocations, customJournalLines, eventCode, postingRuleCode } = req.body;
 
     const result = await postCommercialDocument({
       tenantId,
       companyId,
       documentId: id,
       userId: user?._id || req.body.userId,
-      allocations: allocations || []
+      allocations: allocations || [],
+      customJournalLines: customJournalLines || null,
+      options: { eventCode, postingRuleCode }
     });
 
     return res.success(result, 200);
@@ -290,7 +293,7 @@ async function postOpeningStockGl(req, res) {
 async function getRegisterReport(req, res) {
   try {
     const { tenantId, companyId } = req;
-    const { document_type, start_date, end_date, party_id, status, limit, page } = req.query;
+    const { document_type, start_date, end_date, party_id, status, search, limit, page } = req.query;
 
     const report = await getDocumentRegister(tenantId, companyId, {
       documentType: document_type,
@@ -298,6 +301,7 @@ async function getRegisterReport(req, res) {
       endDate: end_date,
       partyId: party_id,
       status,
+      search,
       limit: limit ? Number(limit) : 100,
       page: page ? Number(page) : 1
     });
@@ -340,6 +344,30 @@ async function getTaxSummaryReportHandler(req, res) {
   }
 }
 
+async function settleGstReturnHandler(req, res) {
+  try {
+    const { tenantId, companyId, user } = req;
+    const { settleGstReturn } = require('../services/gstTaxService');
+    const { bank_account_code, start_date, end_date, period_label, notes } = req.body;
+
+    const result = await settleGstReturn({
+      tenantId,
+      companyId,
+      userId: user?._id,
+      bankAccountCode: bank_account_code,
+      startDate: start_date,
+      endDate: end_date,
+      periodLabel: period_label,
+      notes
+    });
+
+    return res.success(result);
+  } catch (err) {
+    console.error('[GST SETTLEMENT ERROR]', err);
+    return res.error('Failed to settle GST return', 500, err.message);
+  }
+}
+
 async function getInventoryToGlReport(req, res) {
   try {
     const { tenantId, companyId } = req;
@@ -351,6 +379,171 @@ async function getInventoryToGlReport(req, res) {
   }
 }
 
+// ==========================================
+// 6. PRICING, LANDED COST, INTEREST, STATUTORY & DELIVERY
+// ==========================================
+
+async function resolvePriceHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { price_level, stock_item_id, quantity } = req.query;
+    const { resolveItemPrice } = require('../services/pricingAndLandedCostService');
+    const result = await resolveItemPrice({
+      tenantId,
+      companyId,
+      priceLevelName: price_level,
+      stockItemId: stock_item_id,
+      quantity: Number(quantity) || 1
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function allocateLandedCostHandler(req, res) {
+  try {
+    const { tenantId, companyId, user } = req;
+    const { allocateLandedCost } = require('../services/pricingAndLandedCostService');
+    const result = await allocateLandedCost({
+      tenantId,
+      companyId,
+      userId: user?._id || req.body.userId,
+      purchaseDocumentId: req.body.purchase_document_id,
+      expenseLedgerAccountId: req.body.expense_ledger_account_id,
+      inventoryLedgerAccountId: req.body.inventory_ledger_account_id,
+      totalAdditionalCost: req.body.total_additional_cost,
+      allocationBasis: req.body.allocation_basis || 'VALUE',
+      chargeType: req.body.charge_type || 'FREIGHT',
+      referenceId: req.body.reference_id || req.body.idempotency_key || null,
+      allowDuplicate: Boolean(req.body.allow_duplicate),
+      notes: req.body.notes || ''
+    });
+    return res.success(result, 201);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function calculateInterestHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { calculateOverdueInterest } = require('../services/interestCalculationService');
+    const result = await calculateOverdueInterest({
+      tenantId,
+      companyId,
+      partyId: req.query.party_id || null,
+      documentType: req.query.document_type || 'SALES_INVOICE',
+      asOfDate: req.query.as_of_date || new Date()
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function postInterestDebitNoteHandler(req, res) {
+  try {
+    const { tenantId, companyId, user } = req;
+    const { postInterestDebitNote } = require('../services/interestCalculationService');
+    const result = await postInterestDebitNote({
+      tenantId,
+      companyId,
+      userId: user?._id || req.body.userId,
+      invoiceId: req.body.invoice_id,
+      interestAmount: req.body.interest_amount,
+      asOfDate: req.body.as_of_date || new Date(),
+      notes: req.body.notes || ''
+    });
+    return res.success(result, 201);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function sendDocumentHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { sendDocument } = require('../services/documentDeliveryService');
+    const result = await sendDocument({
+      tenantId,
+      companyId,
+      documentId: req.params.id,
+      channel: req.body.channel || 'EMAIL',
+      recipientOverride: req.body.recipient || null
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function getMsmeReportHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { generateMsmeAgingReport } = require('../services/tdsAndStatutoryService');
+    const result = await generateMsmeAgingReport({
+      tenantId,
+      companyId,
+      asOfDate: req.query.as_of_date || new Date()
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 500);
+  }
+}
+
+async function getForm26QHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { generateForm26QSummary } = require('../services/tdsAndStatutoryService');
+    const result = await generateForm26QSummary({
+      tenantId,
+      companyId,
+      financialYear: req.query.financial_year || '2026-2027',
+      quarter: req.query.quarter || 'Q3'
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 500);
+  }
+}
+
+async function getMockEInvoiceHandler(req, res) {
+  try {
+    const { tenantId, companyId } = req;
+    const { generateMockEInvoice } = require('../services/tdsAndStatutoryService');
+    const result = await generateMockEInvoice({
+      tenantId,
+      companyId,
+      invoiceId: req.params.id
+    });
+    return res.success(result);
+  } catch (err) {
+    return res.error(err.message, 400);
+  }
+}
+
+async function calculateTaxHandler(req, res) {
+  try {
+    const { tenantId, companyId, user } = req;
+    const { id } = req.params;
+    const { calculateUsTaxForCommercialDocument } = require('../services/commercialDocumentService');
+
+    const result = await calculateUsTaxForCommercialDocument(tenantId, companyId, id, {
+      userId: user?._id,
+      destination_address: req.body.destination_address,
+      origin_address: req.body.origin_address,
+      allowMockInProduction: req.body.allowMockInProduction
+    });
+
+    return res.success(result);
+  } catch (err) {
+    const status = err.statusCode || (err.code === 'PRODUCTION_MOCK_DISALLOWED' ? 503 : 400);
+    return res.error(err.message, status, { code: err.code });
+  }
+}
+
 module.exports = {
   createDocument,
   getDocuments,
@@ -359,6 +552,7 @@ module.exports = {
   postDocument,
   reverseDocument,
   cancelDocument,
+  calculateTaxHandler,
   getPostingConfig,
   updatePostingConfigHandler,
   getTaxRates,
@@ -368,5 +562,14 @@ module.exports = {
   getRegisterReport,
   getOutstandingReportHandler,
   getTaxSummaryReportHandler,
-  getInventoryToGlReport
+  settleGstReturnHandler,
+  getInventoryToGlReport,
+  resolvePriceHandler,
+  allocateLandedCostHandler,
+  calculateInterestHandler,
+  postInterestDebitNoteHandler,
+  sendDocumentHandler,
+  getMsmeReportHandler,
+  getForm26QHandler,
+  getMockEInvoiceHandler
 };

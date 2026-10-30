@@ -33,6 +33,14 @@ const configBundleRoutes = require('./routes/configBundleRoutes');
 const eventPipelineRoutes = require('./routes/eventPipelineRoutes');
 const dimensionRoutes = require('./routes/dimensionRoutes');
 const commissionsRoutes = require('./routes/commissionsRoutes');
+
+const payrollRoutes = require('./routes/payrollRoutes');
+const fixedAssetRoutes = require('./routes/fixedAssetRoutes');
+const jobWorkRoutes = require('./routes/jobWorkRoutes');
+const chequeRoutes = require('./routes/chequeRoutes');
+const budgetRoutes = require('./routes/budgetRoutes');
+const statutoryRoutes = require('./routes/statutoryRoutes');
+const usTaxRoutes = require('./routes/usTaxRoutes');
 const { createCorsOptions } = require('./config/corsConfig');
 
 const app = express();
@@ -111,6 +119,14 @@ app.use('/api/v1/config-bundle', configBundleRoutes);
 app.use('/api/v1/event-pipeline', eventPipelineRoutes);
 app.use('/api/v1/dimensions', dimensionRoutes);
 app.use('/api/v1/commissions', commissionsRoutes);
+
+app.use('/api/v1/payroll', payrollRoutes);
+app.use('/api/v1/fixed-assets', fixedAssetRoutes);
+app.use('/api/v1/job-work', jobWorkRoutes);
+app.use('/api/v1/cheques', chequeRoutes);
+app.use('/api/v1/budgets', budgetRoutes);
+app.use('/api/v1/statutory', statutoryRoutes);
+app.use('/api/v1/us-tax', usTaxRoutes);
 
 // 404 Handler
 app.use((req, res) => {

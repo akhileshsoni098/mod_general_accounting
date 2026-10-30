@@ -1,5 +1,6 @@
-const { Company, CompanyMembership, UserRole, Role, User, RolePermission, Permission, Party, LedgerAccount } = require('../models');
+const { Company, CompanyMembership, UserRole, Role, User, RolePermission, Permission, Party, LedgerAccount, AccountingCalendar, FiscalPeriod, Journal } = require('../models');
 const { initializeCompany } = require('../services/companyInitService');
+const accountingCalendarService = require('../services/accountingCalendarService');
 const { getAllProfiles, isValidProfile, getProfile } = require('../config/businessProfiles');
 const {
   CORE_MODULE_KEYS,
@@ -11,6 +12,7 @@ const {
   INDUSTRY_TEMPLATES,
   MODULE_CATEGORIES
 } = require('../config/moduleRegistry');
+const { getTaxonomyCatalog, computeIndustryRecommendations } = require('../services/industryConfigurationService');
 
 /**
  * List companies accessible to the authenticated user within the active tenant.
@@ -72,6 +74,11 @@ async function listCompanies(req, res) {
       legal_name: c.legal_name,
       business_profile: c.business_profile,
       business_profile_label: getProfile(c.business_profile)?.label || c.business_profile,
+      industry_code: c.industry_code || 'GENERAL_TRADING',
+      industry_subcategory: c.industry_subcategory || '',
+      operating_models: c.operating_models || ['BUY_AND_RESELL'],
+      inventory_policies: c.inventory_policies || {},
+      operational_capabilities: c.operational_capabilities || {},
       base_currency: c.base_currency,
       country_code: c.country_code,
       status: c.status,
@@ -98,6 +105,11 @@ async function createCompany(req, res) {
       company_name,
       legal_name,
       business_profile = 'GENERAL_RETAIL',
+      industry_code,
+      industry_subcategory,
+      operating_models,
+      inventory_policies,
+      operational_capabilities,
       description,
       country_code,
       base_currency,
@@ -108,7 +120,8 @@ async function createCompany(req, res) {
       tax_jurisdiction,
       tax_details,
       enabled_modules,
-      modules_config
+      modules_config,
+      calendar_config
     } = req.body;
 
     if (!company_code || !company_name) {
@@ -117,6 +130,13 @@ async function createCompany(req, res) {
 
     if (!isValidProfile(business_profile)) {
       return res.error(`Invalid business_profile: "${business_profile}"`, 400);
+    }
+
+    if (calendar_config && calendar_config.calendar_type) {
+      const validCalTypes = ['GREGORIAN', 'RETAIL_445', 'RETAIL_454', 'RETAIL_544', 'RETAIL_13_PERIOD'];
+      if (!validCalTypes.includes(calendar_config.calendar_type)) {
+        return res.error(`Invalid calendar_type: "${calendar_config.calendar_type}". Must be one of: ${validCalTypes.join(', ')}`, 400);
+      }
     }
 
     // Check duplicate company code in tenant
@@ -136,6 +156,11 @@ async function createCompany(req, res) {
       companyName: company_name,
       legalName: legal_name,
       businessProfile: business_profile,
+      industryCode: industry_code,
+      industrySubcategory: industry_subcategory,
+      operatingModels: operating_models,
+      inventoryPolicies: inventory_policies,
+      operationalCapabilities: operational_capabilities,
       enabledModules: enabled_modules,
       modulesConfig: modules_config,
       description,
@@ -146,7 +171,8 @@ async function createCompany(req, res) {
       financialYearStartMonth: financial_year_start_month,
       booksBeginningFrom: books_beginning_from,
       taxJurisdiction: tax_jurisdiction,
-      taxDetails: tax_details
+      taxDetails: tax_details,
+      calendarConfig: calendar_config
     });
 
     return res.success({
@@ -156,9 +182,15 @@ async function createCompany(req, res) {
         company_name: initResult.company.company_name,
         legal_name: initResult.company.legal_name,
         business_profile: initResult.company.business_profile,
+        industry_code: initResult.company.industry_code,
+        industry_subcategory: initResult.company.industry_subcategory,
+        operating_models: initResult.company.operating_models,
+        inventory_policies: initResult.company.inventory_policies,
+        operational_capabilities: initResult.company.operational_capabilities,
         base_currency: initResult.company.base_currency,
         country_code: initResult.company.country_code,
         status: initResult.company.status,
+        calendar_id: initResult.company.calendar_id,
         financial_year_start_month: initResult.company.financial_year_start_month,
         books_beginning_from: initResult.company.books_beginning_from,
         enabled_modules: initResult.company.enabled_modules || [],
@@ -206,6 +238,19 @@ async function getCompanyDetails(req, res) {
       }
     }
 
+    // Load active accounting calendar for company
+    let calendar = null;
+    if (company.calendar_id) {
+      calendar = await AccountingCalendar.findById(company.calendar_id);
+    }
+    if (!calendar) {
+      calendar = await AccountingCalendar.findOne({
+        tenant_id: tenantId,
+        company_id: company._id,
+        is_default: true
+      });
+    }
+
     return res.success({
       id: company._id.toString(),
       company_code: company.company_code,
@@ -213,6 +258,11 @@ async function getCompanyDetails(req, res) {
       legal_name: company.legal_name,
       business_profile: company.business_profile,
       business_profile_details: getProfile(company.business_profile),
+      industry_code: company.industry_code || 'GENERAL_TRADING',
+      industry_subcategory: company.industry_subcategory || '',
+      operating_models: company.operating_models || ['BUY_AND_RESELL'],
+      inventory_policies: company.inventory_policies || {},
+      operational_capabilities: company.operational_capabilities || {},
       description: company.description,
       country_code: company.country_code,
       base_currency: company.base_currency,
@@ -224,6 +274,20 @@ async function getCompanyDetails(req, res) {
       tax_jurisdiction: company.tax_jurisdiction,
       tax_details: company.tax_details,
       status: company.status,
+      calendar_id: company.calendar_id || (calendar ? calendar._id : null),
+      calendar_config: calendar ? {
+        id: calendar._id,
+        calendar_code: calendar.calendar_code,
+        calendar_name: calendar.calendar_name,
+        calendar_type: calendar.calendar_type,
+        fiscal_year_start_month: calendar.fiscal_year_start_month,
+        week_start_day: calendar.week_start_day,
+        week_end_day: calendar.week_end_day,
+        year_end_rule: calendar.year_end_rule,
+        anchor_month: calendar.anchor_month,
+        fifty_three_week_policy: calendar.fifty_three_week_policy,
+        is_default: calendar.is_default
+      } : null,
       enabled_modules: company.enabled_modules || [],
       modules_catalog: getModuleCatalog(company.enabled_modules),
       modules_config: company.modules_config || {},
@@ -245,10 +309,16 @@ async function updateCompany(req, res) {
       company_name,
       legal_name,
       description,
+      industry_code,
+      industry_subcategory,
+      operating_models,
+      inventory_policies,
+      operational_capabilities,
       timezone,
       locale,
       tax_jurisdiction,
-      tax_details
+      tax_details,
+      calendar_config
     } = req.body;
 
     const company = await Company.findOne({
@@ -263,10 +333,75 @@ async function updateCompany(req, res) {
     if (company_name) company.company_name = company_name.trim();
     if (legal_name !== undefined) company.legal_name = legal_name.trim();
     if (description !== undefined) company.description = description.trim();
+    if (industry_code) company.industry_code = industry_code.toUpperCase().trim();
+    if (industry_subcategory !== undefined) company.industry_subcategory = industry_subcategory.trim();
+    if (Array.isArray(operating_models)) company.operating_models = operating_models;
+    if (inventory_policies && typeof inventory_policies === 'object') {
+      company.inventory_policies = { ...company.inventory_policies, ...inventory_policies };
+    }
+    if (operational_capabilities && typeof operational_capabilities === 'object') {
+      company.operational_capabilities = { ...company.operational_capabilities, ...operational_capabilities };
+    }
     if (timezone) company.timezone = timezone.trim();
     if (locale) company.locale = locale.trim();
     if (tax_jurisdiction) company.tax_jurisdiction = tax_jurisdiction.trim();
     if (tax_details) company.tax_details = { ...company.tax_details, ...tax_details };
+
+    // Handle calendar_config update safely with period and transaction protection
+    if (calendar_config && typeof calendar_config === 'object' && calendar_config.calendar_type) {
+      let existingCal = null;
+      if (company.calendar_id) {
+        existingCal = await AccountingCalendar.findById(company.calendar_id);
+      }
+      if (!existingCal) {
+        existingCal = await AccountingCalendar.findOne({
+          tenant_id: tenantId,
+          company_id: company._id,
+          is_default: true
+        });
+      }
+
+      const isTypeChanging = existingCal && existingCal.calendar_type !== calendar_config.calendar_type;
+      if (isTypeChanging) {
+        // Guard against mutating periods if locked/closed periods or posted journals exist
+        const closedPeriod = await FiscalPeriod.findOne({
+          tenant_id: tenantId,
+          company_id: company._id,
+          status: { $in: ['LOCKED', 'HARD_CLOSED'] }
+        });
+        if (closedPeriod) {
+          return res.error(`Cannot change accounting calendar type: Fiscal period "${closedPeriod.period_name}" is locked/closed. Historical periods are immutable.`, 400);
+        }
+
+        const postedJournal = await Journal.findOne({
+          tenant_id: tenantId,
+          company_id: company._id,
+          status: 'POSTED'
+        });
+        if (postedJournal) {
+          return res.error('Cannot change accounting calendar type: Company has posted journal entries. Calendar changes require an explicit transition workflow for future fiscal years.', 400);
+        }
+      }
+
+      const calCode = existingCal?.calendar_code || `${company.company_code}_CALENDAR`;
+      const calDoc = await AccountingCalendar.findOneAndUpdate(
+        { tenant_id: tenantId, company_id: company._id, calendar_code: calCode },
+        {
+          calendar_name: `${company.company_name} Accounting Calendar`,
+          calendar_type: calendar_config.calendar_type,
+          fiscal_year_start_month: calendar_config.fiscal_year_start_month || (calendar_config.calendar_type === 'GREGORIAN' ? (calendar_config.fiscal_year_start_month || 1) : 1),
+          week_start_day: calendar_config.week_start_day || (calendar_config.week_end_day === 'SUNDAY' ? 'MONDAY' : 'SUNDAY'),
+          week_end_day: calendar_config.week_end_day || 'SATURDAY',
+          year_end_rule: calendar_config.year_end_rule || (calendar_config.calendar_type === 'GREGORIAN' ? 'CALENDAR_MONTH_END' : 'LAST_WEEKDAY_OF_MONTH'),
+          anchor_month: calendar_config.anchor_month || 1,
+          fifty_three_week_policy: calendar_config.fifty_three_week_policy || 'ADD_TO_LAST_PERIOD',
+          is_default: true,
+          is_active: true
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      company.calendar_id = calDoc._id;
+    }
 
     company.row_version = (company.row_version || 1) + 1;
     await company.save();
@@ -277,7 +412,13 @@ async function updateCompany(req, res) {
       company_name: company.company_name,
       legal_name: company.legal_name,
       business_profile: company.business_profile,
-      status: company.status
+      industry_code: company.industry_code,
+      industry_subcategory: company.industry_subcategory,
+      operating_models: company.operating_models,
+      inventory_policies: company.inventory_policies,
+      operational_capabilities: company.operational_capabilities,
+      status: company.status,
+      calendar_id: company.calendar_id
     }, { message: 'Company settings updated successfully' });
   } catch (err) {
     return res.error('Failed to update company settings', 500, err.message);
@@ -800,6 +941,43 @@ async function updateCompanyFranchiseConfig(req, res) {
   }
 }
 
+/**
+ * Returns full taxonomy catalog (industries, subcategories, operating models).
+ */
+async function getIndustriesTaxonomy(req, res) {
+  try {
+    const catalog = getTaxonomyCatalog();
+    return res.success(catalog);
+  } catch (err) {
+    return res.error('Failed to get industries taxonomy', 500, err.message);
+  }
+}
+
+/**
+ * Calculates recommended operational modules and inventory policies for given industry & operating models.
+ */
+async function getIndustryRecommendations(req, res) {
+  try {
+    const {
+      industry_code = 'GENERAL_TRADING',
+      operating_models = [],
+      country_code = 'IN',
+      custom_overrides = {}
+    } = req.body || {};
+
+    const recommendations = computeIndustryRecommendations({
+      industryCode: industry_code,
+      operatingModels: operating_models,
+      countryCode: country_code,
+      customOverrides: custom_overrides
+    });
+
+    return res.success(recommendations);
+  } catch (err) {
+    return res.error('Failed to calculate industry recommendations', 500, err.message);
+  }
+}
+
 module.exports = {
   listCompanies,
   createCompany,
@@ -812,5 +990,8 @@ module.exports = {
   getCompanyModules,
   updateCompanyModules,
   getCompanyFranchiseConfig,
-  updateCompanyFranchiseConfig
+  updateCompanyFranchiseConfig,
+  getIndustriesTaxonomy,
+  getIndustryRecommendations
 };
+

@@ -20,18 +20,30 @@ async function postJournalEntry({
   postingDate,
   sourceModule = 'GL_MANUAL',
   referenceId = null,
+  commercialDocumentId = null,
+  referenceType = 'NONE',
+  referenceDocumentNumber = null,
   memo,
   currency = 'USD',
   accountingBasis = 'GAAP',
   lines, // [{ account_code, debit, credit, dimensions, memo }]
+  voucherType = 'STANDARD',
+  isMemorandum = false,
+  isOptional = false,
   session = null
 }) {
   if (!lines || lines.length < 2) {
     throw new Error('Double-entry journal must contain at least 2 lines');
   }
 
+  const isMemo = voucherType === 'MEMORANDUM' || isMemorandum === true;
+  const isOpt = voucherType === 'OPTIONAL' || isOptional === true;
+  const isNonPosting = isMemo || isOpt;
+  const resolvedStatus = isMemo ? 'MEMORANDUM' : (isOpt ? 'OPTIONAL' : 'POSTED');
+  const resolvedVoucherType = isMemo ? 'MEMORANDUM' : (isOpt ? 'OPTIONAL' : voucherType);
+
   // 1. Prevent duplicate posting of the same source transaction within company
-  if (referenceId && sourceModule !== 'GL_MANUAL') {
+  if (referenceId && sourceModule !== 'GL_MANUAL' && !isNonPosting) {
     const dupQuery = {
       tenant_id: tenantId,
       source_module: sourceModule,
@@ -172,7 +184,8 @@ async function postJournalEntry({
   let countQ = Journal.countDocuments(countQuery);
   if (session) countQ = countQ.session(session);
   const count = await countQ;
-  const journalNumber = `JE-${pDate.getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+  const prefix = isMemo ? 'MEMO' : (isOpt ? 'OPT' : 'JE');
+  const journalNumber = `${prefix}-${pDate.getFullYear()}-${String(count + 1).padStart(5, '0')}`;
 
   // 6. Create Journal Header
   const journal = new Journal({
@@ -182,19 +195,25 @@ async function postJournalEntry({
     posting_date: pDate,
     fiscal_period_id: fiscalPeriod._id,
     source_module: sourceModule,
+    voucher_type: resolvedVoucherType,
+    is_memorandum: isMemo,
+    is_optional: isOpt,
     reference_id: referenceId,
+    commercial_document_id: commercialDocumentId || null,
+    reference_type: referenceType || 'NONE',
+    reference_document_number: referenceDocumentNumber || null,
     memo: memo || 'Journal Entry',
     currency,
     accounting_basis: accountingBasis,
     total_debit: mongoose.Types.Decimal128.fromString(totalDebit.toFixed(2)),
     total_credit: mongoose.Types.Decimal128.fromString(totalCredit.toFixed(2)),
-    status: 'POSTED',
-    posted_by_user_id: userId || null,
-    posted_at: new Date()
+    status: resolvedStatus,
+    posted_by_user_id: isNonPosting ? null : (userId || null),
+    posted_at: isNonPosting ? null : new Date()
   });
   await journal.save(session ? { session } : undefined);
 
-  // 7. Create Journal Lines & Update Account Balances atomically
+  // 7. Create Journal Lines & Update Account Balances (only if posting)
   const createdLines = [];
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
@@ -217,20 +236,20 @@ async function postJournalEntry({
     await entryLine.save(session ? { session } : undefined);
     createdLines.push(entryLine);
 
-    // Calculate balance effect based on account normal balance
-    // ASSET / EXPENSE (Normal DEBIT): + Debit, - Credit
-    // LIABILITY / EQUITY / REVENUE (Normal CREDIT): + Credit, - Debit
-    const currentBal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : 0);
-    let newBal;
-    if (acc.normal_balance === 'DEBIT') {
-      newBal = currentBal.plus(dr).minus(cr);
-    } else {
-      newBal = currentBal.plus(cr).minus(dr);
-    }
+    // If non-posting (Memorandum or Optional), do NOT alter account current_balance
+    if (!isNonPosting) {
+      const currentBal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : 0);
+      let newBal;
+      if (acc.normal_balance === 'DEBIT') {
+        newBal = currentBal.plus(dr).minus(cr);
+      } else {
+        newBal = currentBal.plus(cr).minus(dr);
+      }
 
-    acc.current_balance = mongoose.Types.Decimal128.fromString(newBal.toFixed(2));
-    acc.row_version = (acc.row_version || 1) + 1;
-    await acc.save(session ? { session } : undefined);
+      acc.current_balance = mongoose.Types.Decimal128.fromString(newBal.toFixed(2));
+      acc.row_version = (acc.row_version || 1) + 1;
+      await acc.save(session ? { session } : undefined);
+    }
   }
 
   return {
@@ -342,8 +361,15 @@ async function computeTrialBalance(tenantId, periodId = null, companyId = null) 
   if (resolvedCompanyId) accountQuery.company_id = resolvedCompanyId;
   const accounts = await LedgerAccount.find(accountQuery).sort({ account_code: 1 });
 
-  // Aggregate journal entry postings scoped to company
-  const entryQuery = { tenant_id: resolvedTenantId };
+  // Aggregate journal entry postings scoped to company and strictly POSTED status
+  const journalFilter = { tenant_id: resolvedTenantId, status: 'POSTED' };
+  if (resolvedCompanyId) journalFilter.company_id = resolvedCompanyId;
+  const postedJournalIds = await Journal.find(journalFilter).distinct('_id');
+
+  const entryQuery = {
+    tenant_id: resolvedTenantId,
+    journal_id: { $in: postedJournalIds }
+  };
   if (resolvedCompanyId) entryQuery.company_id = resolvedCompanyId;
   const allEntries = await JournalEntry.find(entryQuery);
   const activityMap = {};
@@ -426,9 +452,94 @@ async function computeTrialBalance(tenantId, periodId = null, companyId = null) 
   };
 }
 
+/**
+ * Converts a non-posting Memorandum or Optional voucher into a live POSTED journal.
+ * Atomically updates LedgerAccount current_balances and fiscal periods.
+ */
+async function convertVoucherToPosted({ tenantId, companyId = null, userId, journalId, session = null }) {
+  const query = { _id: journalId, tenant_id: tenantId };
+  if (companyId) query.company_id = companyId;
+
+  let findQ = Journal.findOne(query);
+  if (session) findQ = findQ.session(session);
+  const journal = await findQ;
+  if (!journal) {
+    throw new Error('Voucher not found');
+  }
+  if (journal.status !== 'MEMORANDUM' && journal.status !== 'OPTIONAL') {
+    throw new Error(`Only MEMORANDUM or OPTIONAL vouchers can be converted to POSTED. Current status: "${journal.status}"`);
+  }
+
+  // Check Fiscal Period Lock
+  const pDate = new Date(journal.posting_date || Date.now());
+  const periodQuery = {
+    tenant_id: tenantId,
+    start_date: { $lte: pDate },
+    end_date: { $gte: pDate }
+  };
+  if (companyId) periodQuery.company_id = companyId;
+
+  let pQ = FiscalPeriod.findOne(periodQuery);
+  if (session) pQ = pQ.session(session);
+  const fiscalPeriod = await pQ;
+
+  if (!fiscalPeriod || fiscalPeriod.status === 'LOCKED' || fiscalPeriod.status === 'HARD_CLOSED') {
+    throw new Error(`Fiscal period is not open for posting conversion on date: ${pDate.toISOString().slice(0, 10)}`);
+  }
+
+  // Load entry lines
+  let entryQ = JournalEntry.find({ journal_id: journal._id, tenant_id: tenantId });
+  if (session) entryQ = entryQ.session(session);
+  const lines = await entryQ;
+
+  if (!lines || lines.length === 0) {
+    throw new Error('Cannot convert voucher without line items');
+  }
+
+  // Update account balances atomically
+  for (const line of lines) {
+    let accQ = LedgerAccount.findById(line.ledger_account_id);
+    if (session) accQ = accQ.session(session);
+    const acc = await accQ;
+    if (!acc) {
+      throw new Error(`Account code "${line.account_code}" not found during conversion`);
+    }
+    if (acc.status !== 'ACTIVE') {
+      throw new Error(`Account "${acc.account_code}" is inactive and cannot accept postings`);
+    }
+
+    const dr = new BigNumber(line.debit ? line.debit.toString() : 0);
+    const cr = new BigNumber(line.credit ? line.credit.toString() : 0);
+    const currentBal = new BigNumber(acc.current_balance ? acc.current_balance.toString() : 0);
+    let newBal;
+    if (acc.normal_balance === 'DEBIT') {
+      newBal = currentBal.plus(dr).minus(cr);
+    } else {
+      newBal = currentBal.plus(cr).minus(dr);
+    }
+
+    acc.current_balance = mongoose.Types.Decimal128.fromString(newBal.toFixed(2));
+    acc.row_version = (acc.row_version || 1) + 1;
+    await acc.save(session ? { session } : undefined);
+  }
+
+  // Update journal status to POSTED
+  journal.status = 'POSTED';
+  journal.converted_at = new Date();
+  journal.posted_by_user_id = userId || null;
+  journal.posted_at = new Date();
+  await journal.save(session ? { session } : undefined);
+
+  return {
+    journal,
+    lines
+  };
+}
+
 module.exports = {
   postJournalEntry,
   reverseJournalEntry,
+  convertVoucherToPosted,
   previewJournal,
   computeTrialBalance
 };

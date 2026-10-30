@@ -1,0 +1,3899 @@
+// =============================================================================
+// COMPLETE RELATIONAL SQL DATABASE SCHEMA (DBML FORMAT)
+// Enterprise SaaS ERP Database Architecture
+// Design: Normalized Relational Tables, Foreign Key Constraints, Flow-Wise Hierarchy
+// =============================================================================
+
+Project EnterpriseErpSql {
+  database_type: 'PostgreSQL / MySQL / Standard SQL'
+  Note: '''
+    # Pure Relational Enterprise ERP Database Schema
+    Organized strictly flow-wise into 14 distinct functional layers from platform
+    multi-tenancy, chart of accounts, trade invoicing, point of sale, manufacturing,
+    hospitality PMS, payroll, accounts receivable, treasury reconciliation, to double-entry GL.
+  '''
+}
+
+// =============================================================================
+// FLOW: 1. PLATFORM & MULTI-TENANCY FOUNDATION
+// Description: Core platform administration, multi-tenant boundaries, subscriptions, users, roles, and security sessions.
+// =============================================================================
+
+// Table: Tenant
+Table tenant_masters {
+    id uuid [pk]
+    tenant_code varchar(32) [not null, unique]
+    name varchar(128) [not null]
+    status varchar(64) [default: 'ACTIVE']
+    tenant_type varchar(64) [not null, default: 'ENTERPRISE']
+    base_currency varchar(3) [default: 'INR']
+    fiscal_year_start_month integer [default: 1]
+    timezone varchar(255) [default: 'America/New_York']
+    "settings.allow_legacy_adapter" boolean [default: false]
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_code) [unique]
+    }
+}
+
+
+// Table: SubscriptionPlan
+Table subscription_plans {
+    id uuid [pk]
+    plan_code varchar(64) [not null, unique]
+    plan_name varchar(255) [not null]
+    description text [default: '']
+    max_companies decimal(18,4) [not null, default: 1]
+    max_users decimal(18,4) [not null, default: 2]
+    max_documents_per_month integer [not null, default: 100]
+    price_per_month integer [not null, default: 0]
+    currency varchar(64) [default: 'INR']
+    allowed_modules varchar(255)[]
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (plan_code) [unique]
+    }
+}
+
+
+// Table: TenantSubscription
+Table tenant_subscriptions {
+    id uuid [pk]
+    tenant_id uuid [not null, unique, ref: > tenant_masters.id]
+
+    plan_id uuid [not null, ref: > subscription_plans.id]
+    status varchar(64) [default: 'TRIAL']
+    trial_ends_at timestamp
+    current_period_start timestamp
+    current_period_end timestamp
+    grace_period_until timestamp
+    billing_cycle varchar(255) [default: 'MONTHLY']
+    payment_provider varchar(255) [default: 'MANUAL']
+    payment_customer_id uuid [default: '']
+    payment_subscription_id uuid [default: '']
+    cancelled_at timestamp
+    cancellation_reason text [default: '']
+    metadata json
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id) [unique]
+        (status)
+    }
+}
+
+
+// Table: PlatformAuditLog
+Table platform_audit_logs {
+    id uuid [pk]
+    actor_user_id uuid [not null, ref: > app_users.id]
+    actor_email varchar(255) [not null]
+    action varchar(255) [not null]
+    target_tenant_id uuid [ref: > tenant_masters.id]
+    target_company_id uuid [ref: > companies.id]
+    details json
+    ip_address text [default: '']
+    user_agent varchar(255) [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (action)
+        (target_tenant_id)
+    }
+}
+
+
+// Table: User
+Table app_users {
+    id uuid [pk]
+    email varchar(255) [not null, unique]
+    password_hash varchar(255) [not null]
+    first_name varchar(255) [not null]
+    last_name varchar(255) [not null]
+    status varchar(64) [default: 'ACTIVE']
+    is_platform_admin boolean [default: false]
+    default_tenant_id uuid [ref: > tenant_masters.id]
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (email) [unique]
+    }
+}
+
+
+// Table: UserSession
+Table sec_user_sessions {
+    id uuid [pk]
+    tenant_id uuid [ref: > tenant_masters.id]
+
+    user_id uuid [not null, ref: > app_users.id]
+    refresh_token_hash varchar(255) [not null]
+    family_id uuid [not null]
+    is_revoked boolean [default: false]
+    revoked_at timestamp
+    revoked_reason text
+    ip_address text
+    user_agent varchar(255)
+    expires_at timestamp [not null]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (user_id)
+        (tenant_id)
+        (refresh_token_hash)
+        (family_id)
+        (is_revoked)
+        (expires_at)
+    }
+}
+
+
+// Table: PasswordResetToken
+Table sec_password_reset_tokens {
+    id uuid [pk]
+    user_id uuid [not null, ref: > app_users.id]
+    token_hash varchar(255) [not null, unique]
+    is_used boolean [default: false]
+    used_at timestamp
+    expires_at timestamp [not null]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (user_id)
+        (token_hash) [unique]
+        (is_used)
+        (expires_at)
+    }
+}
+
+
+// Table: Role
+Table sec_roles {
+    id uuid [pk]
+    tenant_id uuid [ref: > tenant_masters.id]
+
+    code varchar(64) [not null]
+    name varchar(255) [not null]
+    description text [default: '']
+    is_system_role boolean [default: false]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (tenant_id, code) [unique]
+    }
+}
+
+
+// Table: Permission
+Table sec_permissions {
+    id uuid [pk]
+    code varchar(64) [not null, unique]
+    module varchar(255) [not null]
+    description text [not null]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (code) [unique]
+    }
+}
+
+
+// Table: RolePermission
+Table sec_role_permissions {
+    id uuid [pk]
+    role_id uuid [not null, ref: > sec_roles.id]
+    permission_id uuid [not null, ref: > sec_permissions.id]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (role_id)
+        (permission_id)
+        (role_id, permission_id) [unique]
+    }
+}
+
+
+// Table: UserRole
+Table sec_user_roles {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    user_id uuid [not null, ref: > app_users.id]
+    role_id uuid [not null, ref: > sec_roles.id]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (user_id)
+        (role_id)
+        (company_id)
+        (tenant_id, company_id, user_id, role_id) [unique]
+    }
+}
+
+
+// Table: TenantMembership
+Table tenant_memberships {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    user_id uuid [not null, ref: > app_users.id]
+    status varchar(64) [default: 'ACTIVE']
+    joined_at timestamp
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (user_id)
+        (tenant_id, user_id) [unique]
+    }
+}
+
+
+// Table: TenantModuleEntitlement
+Table tenant_module_entitlements {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    module_code varchar(64) [not null]
+    is_enabled boolean [default: true]
+    config json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (tenant_id, module_code) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 2. COMPANY, ORGANIZATION UNITS & GLOBAL CONFIG
+// Description: Companies/legal entities, employee master, physical outlets, and centralized accounting/tax configuration.
+// =============================================================================
+
+// Table: Company
+Table companies {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    company_code varchar(32) [not null]
+    company_name varchar(128) [not null]
+    legal_name varchar(256) [default: '']
+    business_profile varchar(255) [not null, default: 'GENERAL_RETAIL']
+    description varchar(500) [default: '']
+    country_code varchar(3) [default: 'IN']
+    base_currency varchar(3) [default: 'INR']
+    timezone varchar(255) [default: 'Asia/Kolkata']
+    locale varchar(255) [default: 'en-IN']
+    financial_year_start_month integer [default: 4]
+    "financial_year_config.start_month" integer [default: 4]
+    "financial_year_config.close_day" integer [default: 31]
+    books_beginning_from timestamp
+    tax_jurisdiction varchar(255) [default: 'GST_INDIA']
+    "tax_details.gstin" varchar(255) [default: '']
+    "tax_details.pan" varchar(255) [default: '']
+    "tax_details.state_code" varchar(64) [default: '']
+    "tax_details.is_composition" boolean [default: false]
+    status varchar(64) [default: 'ACTIVE']
+    is_legacy_default boolean [default: false]
+    created_by uuid [ref: > app_users.id]
+    enabled_modules varchar(255)[]
+    "modules_config.franchise.is_franchise" boolean [default: false]
+    "modules_config.franchise.main_hub_party_id" uuid [ref: > counterparty_parties.id]
+    "modules_config.franchise.franchise_share_pct" decimal(18,4) [default: 70]
+    "modules_config.franchise.hub_share_pct" decimal(18,4) [default: 30]
+    "modules_config.franchise.income_account_code" varchar(64) [default: '4200']
+    "modules_config.franchise.payable_account_code" varchar(64) [default: '2020']
+    "modules_config.franchise.settlement_account_code" varchar(64) [default: '1010']
+    "modules_config.inventory.multi_godown" boolean [default: false]
+    "modules_config.inventory.batch_tracking" boolean [default: false]
+    "modules_config.inventory.enable_barcodes" boolean [default: false]
+    "modules_config.pos.default_counter" varchar(255) [default: 'COUNTER-1']
+    "modules_config.pos.auto_print" boolean [default: true]
+    "modules_config.restaurant.enable_kot" boolean [default: true]
+    "modules_config.restaurant.enable_tables" boolean [default: true]
+    "modules_config.hotel.night_audit_time" varchar(255) [default: '00:00']
+    "modules_config.hotel.enable_rooms" boolean [default: true]
+    "modules_config.manufacturing.enable_bom" boolean [default: true]
+    "modules_config.manufacturing.track_scrap" boolean [default: true]
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (is_legacy_default)
+        (tenant_id, company_code) [unique]
+        (tenant_id, status)
+        (tenant_id, business_profile)
+    }
+}
+
+
+// Table: CompanyMembership
+Table company_memberships {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    user_id uuid [not null, ref: > app_users.id]
+    status varchar(64) [default: 'ACTIVE']
+    is_default boolean [default: false]
+    joined_at timestamp
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (user_id)
+        (tenant_id, company_id, user_id) [unique]
+        (user_id, status)
+        (company_id, status)
+    }
+}
+
+
+// Table: StoreLocation
+Table store_locations {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    location_code varchar(64) [not null]
+    name varchar(255) [not null]
+    slug varchar(255) [not null]
+    "address.street" text [default: '']
+    "address.city" text [default: 'Pune']
+    "address.state" text [default: 'Maharashtra']
+    "address.postal_code" varchar(64) [default: '411001']
+    "address.country" text [default: 'India']
+    phone varchar(255) [default: '']
+    email varchar(255) [default: '']
+    enabled_channels varchar(255)[]
+    "kiosk_settings.is_enabled" boolean [default: true]
+    "kiosk_settings.welcome_title" varchar(255) [default: 'Welcome to Fresh Handcrafted Pizzas']
+    "kiosk_settings.welcome_subtitle" varchar(255) [default: 'Customize your crust, toppings & scan QR to pay']
+    "kiosk_settings.idle_timeout_seconds" integer [default: 90]
+    "kiosk_settings.primary_color" varchar(255) [default: '#059669']
+    default_godown_id uuid [ref: > godowns.id]
+    default_pos_cash_account_id uuid [ref: > ledger_accounts.id]
+    default_tax_rate_id uuid [ref: > tax_rate_configs.id]
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (is_active)
+        (tenant_id, company_id, location_code) [unique]
+        (tenant_id, slug) [unique]
+    }
+}
+
+
+// Table: StoreKitchenStation
+Table store_kitchen_stations {
+    id uuid [pk]
+    location_id uuid [not null, ref: > store_locations.id]
+    code varchar(32) [not null]
+    name varchar(128) [not null]
+    is_active boolean [default: true]
+
+    Indexes {
+        (location_id, code) [unique]
+    }
+}
+
+
+// Table: CompanyPostingConfig
+Table company_posting_configs {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    receivable_account_code varchar(64) [default: '1101']
+    payable_account_code varchar(64) [default: '2001']
+    sales_revenue_account_code varchar(64) [default: '4001']
+    service_revenue_account_code varchar(64) [default: '4003']
+    purchase_cost_account_code varchar(64) [default: '5001']
+    inventory_asset_account_code varchar(64) [default: '1201']
+    cogs_account_code varchar(64) [default: '5004']
+    input_cgst_account_code varchar(64) [default: '1301']
+    input_sgst_account_code varchar(64) [default: '1302']
+    input_igst_account_code varchar(64) [default: '1303']
+    output_cgst_account_code varchar(64) [default: '2101']
+    output_sgst_account_code varchar(64) [default: '2102']
+    output_igst_account_code varchar(64) [default: '2103']
+    cash_account_code varchar(64) [default: '1001']
+    bank_account_code varchar(64) [default: '1002']
+    opening_stock_offset_account_code varchar(64) [default: '3990']
+    sales_discount_account_code varchar(64) [default: '4900']
+    round_off_account_code varchar(64) [default: '5900']
+    allow_negative_stock boolean [default: false]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id) [unique]
+    }
+}
+
+
+// Table: TaxRateConfig
+Table tax_rate_configs {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    tax_code varchar(64) [not null]
+    tax_name varchar(255) [not null]
+    rate_percent decimal(18,4) [not null]
+    cgst_rate decimal(18,4) [not null]
+    sgst_rate decimal(18,4) [not null]
+    igst_rate decimal(18,4) [not null]
+    applicable_to varchar(255) [default: 'BOTH']
+    effective_from timestamp
+    effective_to timestamp
+    is_active boolean [default: true]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, tax_code) [unique]
+        (tenant_id, company_id, is_active)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 3. PARTIES & COUNTERPARTY MASTER DATA
+// Description: Commercial trading partners, customer, vendor, supplier, carrier, and broker subledgers.
+// =============================================================================
+
+// Table: Party
+Table counterparty_parties {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    party_code varchar(64) [not null]
+    legal_name varchar(256) [not null]
+    trade_name varchar(256) [default: '']
+    party_type varchar(64) [not null, default: 'ORGANIZATION']
+    tax_id uuid [default: '']
+    email varchar(128) [default: '']
+    phone varchar(32) [default: '']
+    "address.street1" text [default: '']
+    "address.street2" text [default: '']
+    "address.city" text [default: '']
+    "address.state" text [default: '']
+    "address.postal_code" varchar(64) [default: '']
+    "address.country" text [default: 'USA']
+    status varchar(64) [default: 'ACTIVE']
+    price_level varchar(255)
+    credit_period_days integer [default: 30]
+    msme_registered boolean [default: false]
+    msme_category varchar(255) [default: 'NONE']
+    tds_applicable boolean [default: false]
+    tds_section varchar(255)
+    metadata json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, party_code) [unique]
+        (tenant_id, company_id, legal_name)
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: PartyRole
+Table counterparty_party_roles {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    party_id uuid [not null, ref: > counterparty_parties.id]
+    role_type varchar(64) [not null]
+    status varchar(64) [default: 'ACTIVE']
+    effective_from timestamp
+    effective_to timestamp
+    role_details json
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (party_id)
+        (tenant_id, party_id, role_type) [unique]
+        (tenant_id, role_type, status)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 4. INVENTORY, UNITS OF MEASURE & PRODUCT CATALOG
+// Description: Item taxonomy, units of measurement, godowns/warehouses, item master, pricing, and variants.
+// =============================================================================
+
+// Table: StockGroup
+Table stock_groups {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    group_code varchar(64) [not null]
+    group_name varchar(255) [not null]
+    description text [default: '']
+    parent_group_id uuid [ref: > stock_groups.id]
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (parent_group_id)
+        (tenant_id, company_id, group_code) [unique]
+        (tenant_id, company_id, status)
+        (tenant_id, company_id, parent_group_id)
+    }
+}
+
+
+// Table: StockCategory
+Table stock_categories {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    category_code varchar(64) [not null]
+    category_name varchar(255) [not null]
+    description text [default: '']
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, category_code) [unique]
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: UnitOfMeasurement
+Table units_of_measurement {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    unit_code varchar(64) [not null]
+    unit_name varchar(64) [not null]
+    unit_type varchar(64) [not null, default: 'COUNT']
+    decimal_places decimal(18,4) [not null, default: 0]
+    is_system_standard boolean [default: false]
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, unit_code) [unique]
+        (tenant_id, company_id, status)
+        (tenant_id, company_id, unit_type)
+    }
+}
+
+
+// Table: Godown
+Table godowns {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    godown_code varchar(64) [not null]
+    godown_name varchar(255) [not null]
+    "address.street" text [default: '']
+    "address.city" text [default: '']
+    "address.state" text [default: '']
+    "address.country" text [default: '']
+    "address.postal_code" varchar(64) [default: '']
+    is_default boolean [default: false]
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, godown_code) [unique]
+        (tenant_id, company_id, status)
+        (tenant_id, company_id, is_default)
+    }
+}
+
+
+// Table: StockItem
+Table stock_items {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    item_code varchar(64) [not null]
+    sku varchar(255) [not null]
+    item_name varchar(255) [not null]
+    description text [default: '']
+    stock_group_id uuid [ref: > stock_groups.id]
+    stock_category_id uuid [ref: > stock_categories.id]
+    base_uom_id uuid [not null, ref: > units_of_measurement.id]
+    purchase_uom_id uuid [ref: > units_of_measurement.id]
+    sales_uom_id uuid [ref: > units_of_measurement.id]
+    purchase_price decimal(18,4)
+    sales_price decimal(18,4)
+    standard_cost decimal(18,4) [default: 0]
+    standard_selling_price decimal(18,4) [default: 0]
+    currency varchar(64) [default: 'USD']
+    reorder_level decimal(18,4) [default: 0]
+    costing_method varchar(255) [default: 'MOVING_AVERAGE']
+    tax_rate decimal(18,4) [default: 0]
+    hsn_sac_code varchar(64) [default: '']
+    is_stock_tracked boolean [default: true]
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (stock_group_id)
+        (stock_category_id)
+        (base_uom_id)
+        (tenant_id, company_id, item_code) [unique]
+        (tenant_id, company_id, sku) [unique]
+        (tenant_id, company_id, barcodes)
+        (tenant_id, company_id, stock_group_id)
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: StockItemUomConversion
+Table stock_item_uom_conversions {
+    id uuid [pk]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    alternate_uom_id uuid [not null, ref: > units_of_measurement.id]
+    conversion_factor decimal(18,4) [not null]
+
+    Indexes {
+        (stock_item_id, alternate_uom_id) [unique]
+    }
+}
+
+
+// Table: StockItemBarcode
+Table stock_item_barcodes {
+    id uuid [pk]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    barcode varchar(64) [not null]
+
+    Indexes {
+        (barcode) [unique]
+        (stock_item_id)
+    }
+}
+
+
+// Table: ProductVariant
+Table restaurant_product_variants {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    base_item_id uuid [not null, ref: > stock_items.id]
+    menu_item_id uuid [ref: > stock_items.id]
+    variant_name varchar(255) [not null]
+    variant_code varchar(64)
+    sku varchar(255)
+    price_adjustment decimal(18,4) [default: 0]
+    price decimal(18,4) [default: 0]
+    recipe_bom_id uuid [ref: > recipe_boms.id]
+    is_default boolean [default: false]
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (base_item_id)
+        (menu_item_id)
+        (tenant_id, company_id, base_item_id, variant_name)
+        (tenant_id, company_id, menu_item_id, variant_code)
+    }
+}
+
+
+// Table: PriceList
+Table price_lists {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    price_level_name varchar(255) [not null]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    currency varchar(64) [default: 'INR']
+    min_quantity decimal(18,4) [default: 1]
+    rate decimal(18,4) [not null]
+    discount_percent integer [default: 0]
+    effective_from timestamp
+    effective_to timestamp
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (stock_item_id)
+        (tenant_id, company_id, price_level_name, stock_item_id, min_quantity) [unique]
+    }
+}
+
+
+// Table: StockBalance
+Table stock_balances {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    godown_id uuid [not null, ref: > godowns.id]
+    base_uom_id uuid [not null, ref: > units_of_measurement.id]
+    quantity_on_hand decimal(18,4) [not null]
+    average_unit_cost decimal(18,4)
+    total_inventory_value decimal(18,4)
+    last_movement_id uuid [ref: > stock_movements.id]
+    last_movement_date timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (stock_item_id)
+        (godown_id)
+        (tenant_id, company_id, stock_item_id, godown_id) [unique]
+        (tenant_id, company_id, quantity_on_hand)
+    }
+}
+
+
+// Table: StockMovement
+Table stock_movements {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    stockItemId uuid [ref: > stock_items.id]
+    godown_id uuid [not null, ref: > godowns.id]
+    movement_type varchar(64) [not null]
+    direction varchar(255) [not null]
+    quantity decimal(18,4) [not null]
+    base_quantity decimal(18,4) [not null]
+    uom_id uuid [not null, ref: > units_of_measurement.id]
+    base_uom_id uuid [not null, ref: > units_of_measurement.id]
+    conversion_factor decimal(18,4)
+    unit_rate decimal(18,4)
+    total_cost decimal(18,4)
+    source_document_type varchar(64) [default: 'OPENING_STOCK']
+    source_document_id uuid
+    sourceDocumentId varchar(255)
+    source_line_id uuid
+    idempotency_key varchar(255) [not null]
+    effective_date timestamp [not null]
+    notes text [default: '']
+    created_by_user_id uuid [ref: > app_users.id]
+    reversal_of_movement_id uuid [ref: > stock_movements.id]
+    is_reversed boolean [default: false]
+    gl_status varchar(64) [default: 'PENDING']
+    gl_journal_id uuid [ref: > journals.id]
+    gl_posted_at timestamp
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (stock_item_id)
+        (stockItemId)
+        (godown_id)
+        (movement_type)
+        (source_document_id)
+        (sourceDocumentId)
+        (effective_date)
+        (reversal_of_movement_id)
+        (gl_status)
+        (gl_journal_id)
+        (tenant_id, company_id, idempotency_key) [unique]
+        (tenant_id, company_id, stock_item_id, godown_id, effective_date)
+        (tenant_id, company_id, stockItemId, godown_id, effective_date)
+        (tenant_id, company_id, movement_type)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 5. GENERAL LEDGER CHART OF ACCOUNTS FOUNDATIONS
+// Description: Chart of Accounts, account hierarchies, fiscal calendar periods, currencies, and dimensions.
+// =============================================================================
+
+// Table: LedgerAccount
+Table ledger_accounts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    account_code varchar(64) [not null]
+    account_name varchar(255) [not null]
+    description text [default: '']
+    account_type varchar(64) [not null]
+    normal_balance varchar(255) [not null]
+    parent_account_id uuid [ref: > ledger_accounts.id]
+    is_posting_allowed boolean [default: true]
+    is_group boolean [default: false]
+    group_type varchar(64) [default: 'LEDGER']
+    opening_balance decimal(18,4)
+    opening_balance_type varchar(64) [default: 'DEBIT']
+    opening_balance_date timestamp
+    is_fiduciary boolean [default: false]
+    is_control_account boolean [default: false]
+    subledger_type varchar(64) [default: 'NONE']
+    current_balance decimal(18,4)
+    currency varchar(64) [default: 'USD']
+    accounting_basis varchar(255) [default: 'GAAP']
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (parent_account_id)
+        (is_group)
+        (tenant_id, company_id, account_code) [unique]
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: FiscalPeriod
+Table fiscal_periods {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    period_name varchar(255) [not null]
+    fiscal_year decimal(18,4) [not null]
+    period_number integer [not null]
+    start_date timestamp [not null]
+    end_date timestamp [not null]
+    status varchar(64) [default: 'OPEN']
+    accounting_basis varchar(255) [default: 'GAAP']
+    locked_by_user_id uuid [ref: > app_users.id]
+    locked_at timestamp
+    close_notes text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, period_name) [unique]
+        (tenant_id, company_id, start_date, end_date)
+    }
+}
+
+
+// Table: ExchangeRate
+Table exchange_rates {
+    id uuid [pk]
+    tenant_id uuid [ref: > tenant_masters.id]
+
+    from_currency varchar(3) [not null]
+    to_currency varchar(3) [not null]
+    effective_date timestamp [not null]
+    rate decimal(18,4) [not null]
+    source varchar(255) [default: 'MANUAL']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (effective_date)
+        (tenant_id, from_currency, to_currency, effective_date)
+    }
+}
+
+
+// Table: DimensionDefinition
+Table dimension_definitions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    dimension_code varchar(64) [not null]
+    display_name varchar(255) [not null]
+    dimension_type varchar(64) [default: 'CUSTOM']
+    target_role varchar(255)
+    is_required boolean [default: false]
+    is_system boolean [default: false]
+    status varchar(64) [default: 'ACTIVE']
+    description text [default: '']
+    allowed_values varchar(255)[]
+    default_value varchar(255)
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, dimension_code) [unique]
+    }
+}
+
+
+// Table: OpeningBalanceSetup
+Table opening_balance_setups {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    financial_year decimal(18,4) [not null]
+    as_of_date timestamp [not null]
+    total_debit decimal(18,4)
+    total_credit decimal(18,4)
+    difference decimal(18,4)
+    ledger_count integer [default: 0]
+    allow_suspense boolean [default: false]
+    suspense_account_id uuid [ref: > ledger_accounts.id]
+    suspense_amount decimal(18,4)
+    status varchar(64) [default: 'DRAFT']
+    posted_journal_id uuid [ref: > journals.id]
+    posted_at timestamp
+    posted_by_user_id uuid [ref: > app_users.id]
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (financial_year)
+        (status)
+        (posted_journal_id)
+        (tenant_id, company_id, financial_year) [unique]
+    }
+}
+
+
+// Table: OpeningBalanceLine
+Table opening_balance_lines {
+    id uuid [pk]
+    setup_id uuid [not null, ref: > opening_balance_setups.id]
+    ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    account_code varchar(64) [not null]
+    account_name varchar(255) [not null]
+    account_type varchar(32) [not null]
+    normal_balance varchar(16) [not null]
+    debit decimal(18,4) [default: 0.00]
+    credit decimal(18,4) [default: 0.00]
+
+    Indexes {
+        (setup_id, ledger_account_id) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 6. COMMERCIAL TRADE, INVOICING & SETTLEMENT
+// Description: Commercial sales/purchase documents, line items, audit logs, bill allocation settlement, and landed costs.
+// =============================================================================
+
+// Table: CommercialDocument
+Table commercial_documents {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    document_type varchar(64) [not null]
+    document_number varchar(255) [not null]
+    reference_number varchar(255) [default: '']
+    document_date timestamp [not null]
+    posting_date timestamp
+    due_date timestamp
+    party_id uuid [ref: > counterparty_parties.id]
+    party_name varchar(255) [default: '']
+    billing_name varchar(255) [default: '']
+    party_gstin varchar(255) [default: '']
+    party_state_code varchar(64) [default: '']
+    place_of_supply varchar(255) [default: '']
+    supply_type varchar(64) [default: 'INTRA_STATE']
+    is_tax_inclusive boolean [default: false]
+    bank_or_cash_account_id uuid [ref: > ledger_accounts.id]
+    to_bank_or_cash_account_id uuid [ref: > ledger_accounts.id]
+    status varchar(64) [default: 'DRAFT']
+    subtotal_amount decimal(18,4)
+    total_discount_amount decimal(18,4)
+    total_taxable_amount decimal(18,4)
+    total_cgst_amount decimal(18,4)
+    total_sgst_amount decimal(18,4)
+    total_igst_amount decimal(18,4)
+    total_tax_amount decimal(18,4)
+    round_off_amount decimal(18,4)
+    grand_total decimal(18,4) [not null]
+    currency varchar(64) [default: 'INR']
+    amount_paid decimal(18,4)
+    balance_due decimal(18,4)
+    linked_source_document_id uuid [ref: > commercial_documents.id]
+    journal_id uuid [ref: > journals.id]
+    cogs_journal_id uuid [ref: > journals.id]
+    reversal_document_id uuid [ref: > commercial_documents.id]
+    reversal_reason text [default: '']
+    idempotency_key varchar(255) [not null]
+    notes text [default: '']
+    terms varchar(255) [default: '']
+    created_by_user_id uuid [ref: > app_users.id]
+    posted_by_user_id uuid [ref: > app_users.id]
+    posted_at timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (document_type)
+        (document_date)
+        (party_id)
+        (status)
+        (linked_source_document_id)
+        (journal_id)
+        (tenant_id, company_id, document_number) [unique]
+        (tenant_id, company_id, idempotency_key) [unique]
+        (tenant_id, company_id, document_type, document_date)
+        (tenant_id, company_id, party_id, status)
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: CommercialDocumentLine
+Table commercial_document_lines {
+    id uuid [pk]
+    document_id uuid [not null, ref: > commercial_documents.id]
+    line_number integer [not null]
+    line_type varchar(32) [not null, default: 'ITEM']
+    stock_item_id uuid [ref: > stock_items.id]
+    item_code varchar(64)
+    item_name varchar(255)
+    description text
+    hsn_sac_code varchar(32)
+    godown_id uuid [ref: > godowns.id]
+    uom_id uuid [ref: > units_of_measurement.id]
+    quantity decimal(18,4) [not null, default: 1.0000]
+    conversion_factor decimal(18,4) [default: 1.0000]
+    base_quantity decimal(18,4) [default: 1.0000]
+    unit_rate decimal(18,4) [not null]
+    gross_amount decimal(18,4) [not null, default: 0.00]
+    discount_percent decimal(5,2) [default: 0.00]
+    discount_amount decimal(18,4) [default: 0.00]
+    taxable_amount decimal(18,4) [not null, default: 0.00]
+    tax_rate decimal(5,2) [default: 0.00]
+    cgst_rate decimal(5,2) [default: 0.00]
+    cgst_amount decimal(18,4) [default: 0.00]
+    sgst_rate decimal(5,2) [default: 0.00]
+    sgst_amount decimal(18,4) [default: 0.00]
+    igst_rate decimal(5,2) [default: 0.00]
+    igst_amount decimal(18,4) [default: 0.00]
+    total_tax decimal(18,4) [not null, default: 0.00]
+    total_amount decimal(18,4) [not null, default: 0.00]
+    stock_movement_id uuid [ref: > stock_movements.id]
+    issue_unit_cost decimal(18,4) [default: 0.00]
+    total_cogs_amount decimal(18,4) [default: 0.00]
+    restockable boolean [default: true]
+    is_tax_inclusive boolean [default: false]
+
+    Indexes {
+        (document_id, line_number) [unique]
+        (stock_item_id)
+        (godown_id)
+    }
+}
+
+
+// Table: CommercialDocumentAuditLog
+Table commercial_document_audit_logs {
+    id uuid [pk]
+    document_id uuid [not null, ref: > commercial_documents.id]
+    action varchar(64) [not null]
+    user_id uuid [ref: > app_users.id]
+    timestamp timestamp [not null]
+    note text
+
+    Indexes {
+        (document_id, timestamp)
+    }
+}
+
+
+// Table: BillAllocation
+Table bill_allocations {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    payment_document_id uuid [not null, ref: > commercial_documents.id]
+    invoice_document_id uuid [not null, ref: > commercial_documents.id]
+    allocated_amount decimal(18,4) [not null]
+    allocation_date timestamp
+    status varchar(64) [default: 'ACTIVE']
+    reversal_reason text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (payment_document_id)
+        (invoice_document_id)
+        (allocation_date)
+        (status)
+        (tenant_id, company_id, payment_document_id, invoice_document_id)
+        (tenant_id, company_id, invoice_document_id, status)
+    }
+}
+
+
+// Table: LandedCostAllocation
+Table landed_cost_allocations {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    voucher_number varchar(255) [not null]
+    allocation_date timestamp
+    purchase_document_id uuid [not null, ref: > commercial_documents.id]
+    reference_id uuid
+    charge_type varchar(64) [default: 'FREIGHT']
+    allocation_basis varchar(255) [default: 'VALUE']
+    total_additional_cost decimal(18,4) [not null]
+    expense_ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    inventory_ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'POSTED']
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (allocation_date)
+        (purchase_document_id)
+        (reference_id)
+        (tenant_id, company_id, voucher_number) [unique]
+    }
+}
+
+
+// Table: LandedCostAllocationLine
+Table landed_cost_allocation_lines {
+    id uuid [pk]
+    allocation_id uuid [not null, ref: > landed_cost_allocations.id]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    item_code varchar(64) [not null]
+    item_name varchar(255) [not null]
+    quantity decimal(18,4) [not null]
+    original_rate decimal(18,4) [not null]
+    original_value decimal(18,4) [not null]
+    allocated_cost decimal(18,4) [not null]
+    additional_unit_cost decimal(18,4) [not null]
+    new_unit_cost decimal(18,4) [not null]
+
+    Indexes {
+        (allocation_id, stock_item_id)
+    }
+}
+
+
+// Table: InterestRule
+Table interest_rules {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    rule_name varchar(255) [not null]
+    party_id uuid [ref: > counterparty_parties.id]
+    rate_percent_per_annum decimal(18,4) [not null, default: 18]
+    grace_period_days integer [default: 0]
+    calculation_basis varchar(255) [default: '365_DAYS']
+    interest_type varchar(64) [default: 'SIMPLE']
+    receivable_ledger_id uuid [ref: > ledger_accounts.id]
+    interest_income_ledger_id uuid [ref: > ledger_accounts.id]
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (party_id)
+        (tenant_id, company_id, rule_name) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 7. RESTAURANT OPERATIONS, POS, KIOSK & RECIPES
+// Description: Restaurant dining tables, POS shifts, modifier options, recipe bills of material, and customer dining orders.
+// =============================================================================
+
+// Table: RestaurantConfig
+Table restaurant_configs {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    location_id uuid [ref: > store_locations.id]
+    operating_mode varchar(255) [default: 'QSR_KIOSK']
+    "customer_info_policy.name" varchar(255) [default: 'OPTIONAL']
+    "customer_info_policy.phone" varchar(255) [default: 'REQUIRED']
+    "customer_info_policy.email" varchar(255) [default: 'OPTIONAL']
+    "customer_info_policy.address" text [default: 'HIDDEN']
+    "customer_info_policy.allow_anonymous_walkin" boolean [default: true]
+    "modifier_rules.allow_ingredient_removal" boolean [default: true]
+    "modifier_rules.removals_reduce_price" boolean [default: false]
+    "modifier_rules.allow_chargeable_add_ons" boolean [default: true]
+    "modifier_rules.enforce_stock_availability" boolean [default: true]
+    "payment_policy.settlement_timing" varchar(255) [default: 'PRE_PAID']
+    "payment_policy.supported_methods" varchar(255)[]
+    "payment_policy.upi_vpa" varchar(255) [default: 'pizzapalace@icici']
+    "payment_policy.merchant_display_name" varchar(255) [default: 'Pizza Palace Enterprises Ltd']
+    "payment_policy.auto_print_receipt_on_pay" boolean [default: true]
+    "order_dispatch_policy.auto_send_to_kitchen_on_pay" boolean [default: true]
+    "order_dispatch_policy.require_cashier_acceptance" boolean [default: false]
+    "order_dispatch_policy.sound_alerts" boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (location_id)
+        (tenant_id, company_id, location_id) [unique]
+    }
+}
+
+
+// Table: RestaurantTable
+Table restaurant_tables {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    table_number varchar(255) [not null]
+    section varchar(255) [default: 'MAIN_HALL']
+    capacity decimal(18,4) [default: 4]
+    status varchar(64) [default: 'VACANT']
+    current_order_id uuid [ref: > restaurant_orders.id]
+    location_id uuid [ref: > store_locations.id]
+    table_qr_token varchar(255)
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (status)
+        (location_id)
+        (table_qr_token)
+        (tenant_id, company_id, table_number) [unique]
+    }
+}
+
+
+// Table: PosShift
+Table pos_shifts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    user_id uuid [not null, ref: > app_users.id]
+    shift_number varchar(255) [not null]
+    opened_at timestamp
+    closed_at timestamp
+    status varchar(64) [default: 'OPEN']
+    opening_float decimal(18,4) [default: 0]
+    closing_cash_actual decimal(18,4) [default: 0]
+    closing_cash_expected decimal(18,4) [default: 0]
+    cash_variance decimal(18,4) [default: 0]
+    total_cash_sales decimal(18,4) [default: 0]
+    total_card_sales decimal(18,4) [default: 0]
+    total_upi_sales decimal(18,4) [default: 0]
+    total_refunds decimal(18,4) [default: 0]
+    transaction_count integer [default: 0]
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (status)
+        (tenant_id, company_id, status)
+    }
+}
+
+
+// Table: ModifierGroup
+Table restaurant_modifier_groups {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    name varchar(255) [not null]
+    display_title varchar(255) [default: 'Choose Options']
+    min_selections decimal(18,4) [default: 0]
+    max_selections decimal(18,4) [default: 10]
+    is_required boolean [default: false]
+    allow_multiple_quantities boolean [default: false]
+    applicable_item_ids uuid[]
+    applicable_category_ids uuid[]
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (is_active)
+        (tenant_id, company_id, name) [unique]
+    }
+}
+
+
+// Table: ModifierOption
+Table restaurant_modifier_options {
+    id uuid [pk]
+    modifier_group_id uuid [not null, ref: > restaurant_modifier_groups.id]
+    name varchar(128) [not null]
+    code varchar(64)
+    price_adjustment decimal(18,4) [not null, default: 0.00]
+    is_default boolean [default: false]
+    ingredient_item_id uuid [ref: > stock_items.id]
+    quantity_to_consume decimal(18,4) [default: 0.00]
+    uom_id uuid [ref: > units_of_measurement.id]
+    is_active boolean [default: true]
+
+    Indexes {
+        (modifier_group_id, name) [unique]
+    }
+}
+
+
+// Table: RecipeBOM
+Table recipe_boms {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    menu_item_id uuid [not null, ref: > stock_items.id]
+    variant_name varchar(255) [default: 'STANDARD']
+    yield_quantity decimal(18,4) [not null, default: 1]
+    yield_uom_id uuid [ref: > units_of_measurement.id]
+    is_active boolean [default: true]
+    version integer [default: 1]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (menu_item_id)
+        (tenant_id, company_id, menu_item_id, variant_name) [unique]
+    }
+}
+
+
+// Table: RecipeBOMIngredient
+Table recipe_bom_ingredients {
+    id uuid [pk]
+    recipe_bom_id uuid [not null, ref: > recipe_boms.id]
+    ingredient_item_id uuid [not null, ref: > stock_items.id]
+    quantity decimal(18,4) [not null]
+    uom_id uuid [not null, ref: > units_of_measurement.id]
+    waste_percentage decimal(5,2) [default: 0.00]
+
+    Indexes {
+        (recipe_bom_id, ingredient_item_id) [unique]
+    }
+}
+
+
+// Table: RestaurantOrder
+Table restaurant_orders {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    order_number varchar(255) [not null]
+    order_type varchar(64) [default: 'DINE_IN']
+    order_channel varchar(255) [default: 'POS']
+    location_id uuid [ref: > store_locations.id]
+    table_id uuid [ref: > restaurant_tables.id]
+    customer_name varchar(255) [default: 'Walk-in Guest']
+    customer_phone varchar(255) [default: '']
+    customer_email varchar(255) [default: '']
+    customer_address text [default: '']
+    pickup_token varchar(255) [default: '']
+    "payment_details.method" varchar(255) [default: 'UPI_DYNAMIC_QR']
+    "payment_details.status" varchar(64) [default: 'PENDING']
+    "payment_details.provider_reference" varchar(255) [default: '']
+    "payment_details.idempotency_key" varchar(255) [default: '']
+    "payment_details.paid_at" timestamp
+    "payment_details.amount_paid" decimal(18,4) [default: 0]
+    "payment_details.tendered_amount" decimal(18,4) [default: 0]
+    "payment_details.change_amount" decimal(18,4) [default: 0]
+    status varchar(64) [default: 'DRAFT']
+    subtotal decimal(18,4) [default: 0]
+    tax_total decimal(18,4) [default: 0]
+    discount_total integer [default: 0]
+    grand_total decimal(18,4) [default: 0]
+    commercial_document_id uuid [ref: > commercial_documents.id]
+    ingredients_consumed boolean [default: false]
+    created_by uuid [ref: > app_users.id]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (order_type)
+        (order_channel)
+        (location_id)
+        (status)
+        (tenant_id, company_id, order_number) [unique]
+    }
+}
+
+
+// Table: RestaurantOrderItem
+Table restaurant_order_items {
+    id uuid [pk]
+    order_id uuid [not null, ref: > restaurant_orders.id]
+    item_id uuid [not null, ref: > stock_items.id]
+    item_name varchar(255) [not null]
+    variant_name varchar(64) [default: 'STANDARD']
+    quantity decimal(18,4) [not null]
+    unit_price decimal(18,4) [not null]
+    tax_rate_id uuid [ref: > tax_rate_configs.id]
+    tax_amount decimal(18,4) [default: 0.00]
+    line_total decimal(18,4) [not null]
+    kot_number varchar(64)
+    kot_status varchar(32) [default: 'PENDING']
+    kitchen_station varchar(64) [default: 'OVEN']
+
+    Indexes {
+        (order_id)
+        (item_id)
+    }
+}
+
+
+// Table: RestaurantOrderItemModifier
+Table restaurant_order_item_modifiers {
+    id uuid [pk]
+    order_item_id uuid [not null, ref: > restaurant_order_items.id]
+    modifier_group_id uuid [ref: > restaurant_modifier_groups.id]
+    option_id uuid
+    name varchar(255) [not null]
+    price_adjustment decimal(18,4) [default: 0.00]
+    quantity decimal(18,4) [default: 1.00]
+    ingredient_item_id uuid [ref: > stock_items.id]
+    quantity_to_consume decimal(18,4) [default: 0.00]
+
+    Indexes {
+        (order_item_id)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 8. MANUFACTURING ASSEMBLY & JOB WORK SUBCONTRACTING
+// Description: Industrial manufacturing bills of materials, production work orders, and outside contractor job-work processing.
+// =============================================================================
+
+// Table: ManufacturingBOM
+Table manufacturing_boms {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    bom_number varchar(255) [not null]
+    bom_name varchar(255) [not null]
+    finished_item_id uuid [not null, ref: > stock_items.id]
+    output_quantity decimal(18,4) [not null, default: 1]
+    output_uom_id uuid [ref: > units_of_measurement.id]
+    is_active boolean [default: true]
+    version integer [default: 1]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (finished_item_id)
+        (tenant_id, company_id, bom_number) [unique]
+    }
+}
+
+
+// Table: ManufacturingBOMMaterial
+Table manufacturing_bom_materials {
+    id uuid [pk]
+    bom_id uuid [not null, ref: > manufacturing_boms.id]
+    item_id uuid [not null, ref: > stock_items.id]
+    quantity decimal(18,4) [not null]
+    uom_id uuid [not null, ref: > units_of_measurement.id]
+    scrap_percentage decimal(5,2) [default: 0.00]
+
+    Indexes {
+        (bom_id, item_id) [unique]
+    }
+}
+
+
+// Table: ManufacturingBOMOverhead
+Table manufacturing_bom_overheads {
+    id uuid [pk]
+    bom_id uuid [not null, ref: > manufacturing_boms.id]
+    cost_name varchar(128) [not null]
+    cost_amount decimal(18,4) [not null]
+
+    Indexes {
+        (bom_id)
+    }
+}
+
+
+// Table: WorkOrder
+Table work_orders {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    order_number varchar(255) [not null]
+    bom_id uuid [not null, ref: > manufacturing_boms.id]
+    finished_item_id uuid [not null, ref: > stock_items.id]
+    planned_quantity decimal(18,4) [not null]
+    completed_quantity decimal(18,4) [default: 0]
+    scrap_quantity decimal(18,4) [default: 0]
+    raw_materials_godown_id uuid [not null, ref: > godowns.id]
+    finished_goods_godown_id uuid [not null, ref: > godowns.id]
+    status varchar(64) [default: 'DRAFT']
+    raw_materials_issued boolean [default: false]
+    finished_goods_received boolean [default: false]
+    total_cost decimal(18,4) [default: 0]
+    unit_cost decimal(18,4) [default: 0]
+    journal_id uuid [ref: > journals.id]
+    created_by uuid [ref: > app_users.id]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (status)
+        (tenant_id, company_id, order_number) [unique]
+    }
+}
+
+
+// Table: JobWorkOrder
+Table job_work_orders {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    order_number varchar(255) [not null]
+    order_type varchar(64) [default: 'OUTWARD']
+    party_id uuid [not null, ref: > counterparty_parties.id]
+    issue_date timestamp
+    expected_completion_date timestamp
+    total_quantity_received decimal(18,4) [default: 0]
+    status varchar(64) [default: 'ISSUED']
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (party_id)
+        (tenant_id, company_id, order_number) [unique]
+    }
+}
+
+
+// Table: JobWorkMaterialIssued
+Table job_work_materials_issued {
+    id uuid [pk]
+    job_work_order_id uuid [not null, ref: > job_work_orders.id]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    item_name varchar(255) [not null]
+    quantity decimal(18,4) [not null]
+    uom varchar(32) [default: 'PCS']
+    source_godown_id uuid [ref: > godowns.id]
+
+    Indexes {
+        (job_work_order_id, stock_item_id)
+    }
+}
+
+
+// Table: JobWorkGoodsExpected
+Table job_work_goods_expected {
+    id uuid [pk]
+    job_work_order_id uuid [not null, ref: > job_work_orders.id]
+    stock_item_id uuid [not null, ref: > stock_items.id]
+    item_name varchar(255) [not null]
+    quantity_expected decimal(18,4) [not null]
+    scrap_expected decimal(18,4) [default: 0.00]
+    target_godown_id uuid [ref: > godowns.id]
+
+    Indexes {
+        (job_work_order_id, stock_item_id)
+    }
+}
+
+
+// Table: JobWorkReceipt
+Table job_work_receipts {
+    id uuid [pk]
+    job_work_order_id uuid [not null, ref: > job_work_orders.id]
+    receipt_date timestamp [not null]
+    delivery_challan_number varchar(64)
+    quantity_received decimal(18,4) [not null]
+    scrap_quantity_received decimal(18,4) [default: 0.00]
+    processing_charges decimal(18,4) [default: 0.00]
+    journal_id uuid [ref: > journals.id]
+
+    Indexes {
+        (job_work_order_id, receipt_date)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 9. HOTEL & HOSPITALITY PROPERTY MANAGEMENT
+// Description: Hotel room types, physical room inventory, guest reservations, and room folio charges.
+// =============================================================================
+
+// Table: HotelRoomType
+Table hotel_room_types {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    type_code varchar(64) [not null]
+    type_name varchar(64) [not null]
+    base_rate decimal(18,4) [not null]
+    max_occupancy decimal(18,4) [default: 2]
+    amenities varchar(255)[]
+    is_active boolean [default: true]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, type_code) [unique]
+    }
+}
+
+
+// Table: HotelRoom
+Table hotel_rooms {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    room_number varchar(255) [not null]
+    room_type_id uuid [not null, ref: > hotel_room_types.id]
+    floor varchar(255) [default: '1']
+    status varchar(64) [default: 'CLEAN']
+    current_reservation_id uuid [ref: > hotel_reservations.id]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (status)
+        (tenant_id, company_id, room_number) [unique]
+    }
+}
+
+
+// Table: HotelReservation
+Table hotel_reservations {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    reservation_number varchar(255) [not null]
+    guest_name varchar(255) [not null]
+    guest_email varchar(255) [default: '']
+    guest_phone varchar(255) [default: '']
+    guest_id_proof varchar(255) [default: '']
+    room_type_id uuid [not null, ref: > hotel_room_types.id]
+    room_id uuid [ref: > hotel_rooms.id]
+    check_in_date timestamp [not null]
+    check_out_date timestamp [not null]
+    nights decimal(18,4) [not null]
+    rate_per_night decimal(18,4) [not null]
+    status varchar(64) [default: 'CONFIRMED']
+    deposit_amount decimal(18,4) [default: 0]
+    created_by uuid [ref: > app_users.id]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (status)
+        (tenant_id, company_id, reservation_number) [unique]
+    }
+}
+
+
+// Table: GuestFolio
+Table guest_folios {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    reservation_id uuid [not null, ref: > hotel_reservations.id]
+    folio_number varchar(255) [not null]
+    guest_name varchar(255) [not null]
+    status varchar(64) [default: 'OPEN']
+    total_charges decimal(18,4) [default: 0]
+    total_payments decimal(18,4) [default: 0]
+    balance_due decimal(18,4) [default: 0]
+    commercial_document_id uuid [ref: > commercial_documents.id]
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (reservation_id)
+        (status)
+        (tenant_id, company_id, folio_number) [unique]
+    }
+}
+
+
+// Table: GuestFolioChargeLine
+Table guest_folio_charge_lines {
+    id uuid [pk]
+    folio_id uuid [not null, ref: > guest_folios.id]
+    charge_type varchar(32) [not null]
+    description text [not null]
+    amount decimal(18,4) [not null]
+    date timestamp [not null]
+    posted_by_night_audit boolean [default: false]
+    night_audit_date varchar(10)
+
+    Indexes {
+        (folio_id, date)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 10. HUMAN RESOURCES, PAYROLL & FIXED ASSETS
+// Description: Staff directory, salary pay structures, monthly payroll runs, fixed asset registers, and statutory tax compliance.
+// =============================================================================
+
+// Table: Employee
+Table employees {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    employee_code varchar(64) [not null]
+    full_name varchar(255) [not null]
+    email varchar(255) [default: '']
+    department varchar(255) [default: 'GENERAL']
+    designation varchar(255) [default: 'STAFF']
+    pan_number varchar(255) [default: '']
+    bank_account_number varchar(255) [default: '']
+    bank_ifsc varchar(255) [default: '']
+    date_of_joining timestamp
+    salary_structure_id uuid [ref: > salary_structures.id]
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, employee_code) [unique]
+    }
+}
+
+
+// Table: SalaryStructure
+Table salary_structures {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    structure_name varchar(255) [not null]
+    basic_pay decimal(18,4) [not null]
+    hra decimal(18,4)
+    conveyance decimal(18,4)
+    special_allowance decimal(18,4)
+    epf_employee_percent decimal(18,4) [default: 12]
+    esi_employee_percent decimal(18,4) [default: 0.75]
+    professional_tax_monthly integer [default: 200]
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, structure_name) [unique]
+    }
+}
+
+
+// Table: PayrollRun
+Table payroll_runs {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    month_year varchar(255) [not null]
+    run_date timestamp
+    total_gross_pay decimal(18,4) [not null]
+    total_epf decimal(18,4) [not null]
+    total_esi decimal(18,4) [not null]
+    total_pt decimal(18,4) [not null]
+    total_tds decimal(18,4)
+    total_net_pay decimal(18,4) [not null]
+    journal_id uuid [ref: > journals.id]
+    disbursement_journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'POSTED']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, month_year) [unique]
+    }
+}
+
+
+// Table: PayrollEmployeeLine
+Table payroll_employee_lines {
+    id uuid [pk]
+    payroll_run_id uuid [not null, ref: > payroll_runs.id]
+    employee_id uuid [not null, ref: > employees.id]
+    employee_code varchar(64) [not null]
+    employee_name varchar(255) [not null]
+    basic decimal(18,4) [not null]
+    hra decimal(18,4) [default: 0.00]
+    conveyance decimal(18,4) [default: 0.00]
+    special_allowance decimal(18,4) [default: 0.00]
+    gross_pay decimal(18,4) [not null]
+    epf decimal(18,4) [default: 0.00]
+    esi decimal(18,4) [default: 0.00]
+    pt decimal(18,4) [default: 0.00]
+    tds decimal(18,4) [default: 0.00]
+    total_deductions decimal(18,4) [not null]
+    net_pay decimal(18,4) [not null]
+
+    Indexes {
+        (payroll_run_id, employee_id) [unique]
+    }
+}
+
+
+// Table: FixedAsset
+Table fixed_assets {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    asset_code varchar(64) [not null]
+    asset_name varchar(255) [not null]
+    category varchar(255) [default: 'EQUIPMENT']
+    asset_account_code varchar(64) [not null, default: '1410']
+    accumulated_depreciation_account_code varchar(64) [not null, default: '1490']
+    depreciation_expense_account_code varchar(64) [not null, default: '5000']
+    acquisition_date timestamp [not null]
+    acquisition_cost decimal(18,4) [not null]
+    salvage_value decimal(18,4)
+    useful_life_months integer [not null]
+    depreciation_method varchar(255) [default: 'SLM']
+    annual_rate_percent decimal(18,4) [default: 0]
+    current_book_value decimal(18,4) [not null]
+    disposal_details json
+    status varchar(64) [default: 'ACTIVE']
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, asset_code) [unique]
+    }
+}
+
+
+// Table: FixedAssetDepreciationHistory
+Table fixed_asset_depreciation_history {
+    id uuid [pk]
+    fixed_asset_id uuid [not null, ref: > fixed_assets.id]
+    period_name varchar(32) [not null]
+    posting_date timestamp [not null]
+    depreciation_amount decimal(18,4) [not null]
+    book_value_after decimal(18,4) [not null]
+    journal_id uuid [ref: > journals.id]
+
+    Indexes {
+        (fixed_asset_id, period_name) [unique]
+    }
+}
+
+
+// Table: TdsSection
+Table tds_sections {
+    id uuid [pk]
+    section_code varchar(64) [not null, unique]
+    section_name varchar(255) [not null]
+    rate_individual_huf_percent decimal(18,4) [not null]
+    rate_company_percent decimal(18,4) [not null]
+    threshold_limit decimal(18,4) [default: 30000]
+    tds_payable_account_code varchar(64) [default: '2105']
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (section_code) [unique]
+    }
+}
+
+
+// Table: TdsDeduction
+Table tds_deductions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    deductee_party_id uuid [not null, ref: > counterparty_parties.id]
+    pan_number varchar(255) [not null]
+    section_code varchar(64) [not null]
+    bill_document_id uuid [ref: > commercial_documents.id]
+    gross_amount decimal(18,4) [not null]
+    tds_rate_percent decimal(18,4) [not null]
+    tds_amount decimal(18,4) [not null]
+    net_payable_amount decimal(18,4) [not null]
+    deduction_date timestamp
+    quarter varchar(255) [not null]
+    financial_year varchar(255) [not null]
+    challan_number varchar(255)
+    challan_bsr_code varchar(64)
+    challan_date timestamp
+    journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'DEDUCTED']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (deductee_party_id)
+        (bill_document_id)
+        (deduction_date)
+        (tenant_id, company_id, financial_year, quarter)
+    }
+}
+
+
+// Table: ChequeLayout
+Table cheque_layouts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    bank_account_id uuid [ref: > ledger_accounts.id]
+    bank_name varchar(255) [not null]
+    layout_name varchar(255) [not null]
+    cheque_width_mm decimal(18,4) [default: 203]
+    cheque_height_mm decimal(18,4) [default: 93]
+    "date_coordinates.x_mm" decimal(18,4) [default: 153]
+    "date_coordinates.y_mm" decimal(18,4) [default: 12]
+    "date_coordinates.letter_spacing_mm" decimal(18,4) [default: 4.8]
+    "date_coordinates.format" varchar(255) [default: 'DDMMYYYY']
+    "payee_coordinates.x_mm" decimal(18,4) [default: 22]
+    "payee_coordinates.y_mm" decimal(18,4) [default: 28]
+    "payee_coordinates.max_width_mm" decimal(18,4) [default: 135]
+    "amount_words_coordinates.line1_x_mm" decimal(18,4) [default: 28]
+    "amount_words_coordinates.line1_y_mm" decimal(18,4) [default: 38]
+    "amount_words_coordinates.line2_x_mm" decimal(18,4) [default: 15]
+    "amount_words_coordinates.line2_y_mm" decimal(18,4) [default: 46]
+    "amount_words_coordinates.max_chars_line1" decimal(18,4) [default: 45]
+    "amount_figures_coordinates.x_mm" decimal(18,4) [default: 152]
+    "amount_figures_coordinates.y_mm" decimal(18,4) [default: 44]
+    "amount_figures_coordinates.prefix" varchar(255) [default: '**₹ ']
+    "ac_payee_crossing.enabled" boolean [default: true]
+    "ac_payee_crossing.x_mm" decimal(18,4) [default: 18]
+    "ac_payee_crossing.y_mm" decimal(18,4) [default: 8]
+    "ac_payee_crossing.text" varchar(255) [default: 'A/C PAYEE ONLY']
+    status varchar(64) [default: 'ACTIVE']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (bank_account_id)
+        (tenant_id, company_id, layout_name) [unique]
+    }
+}
+
+
+// Table: ChequeRegister
+Table cheque_register {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    bank_account_id uuid [not null, ref: > ledger_accounts.id]
+    cheque_number varchar(255) [not null]
+    cheque_date timestamp [not null]
+    payee_name varchar(255) [not null]
+    amount decimal(18,4) [not null]
+    amount_in_words varchar(255) [not null]
+    voucher_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'ISSUED']
+    printed_at timestamp
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (bank_account_id)
+        (tenant_id, company_id, bank_account_id, cheque_number) [unique]
+    }
+}
+
+
+// Table: BudgetDefinition
+Table budget_definitions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [not null, ref: > companies.id]
+
+    budget_name varchar(255) [not null]
+    fiscal_year varchar(255) [not null]
+    cost_center_dimension_value varchar(255)
+    status varchar(64) [default: 'ACTIVE']
+    notes text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (tenant_id, company_id, budget_name, fiscal_year) [unique]
+    }
+}
+
+
+// Table: BudgetLine
+Table budget_lines {
+    id uuid [pk]
+    budget_id uuid [not null, ref: > budget_definitions.id]
+    ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    annual_budget_amount decimal(18,4) [not null]
+
+    Indexes {
+        (budget_id, ledger_account_id) [unique]
+    }
+}
+
+
+// Table: BudgetMonthlyBreakdown
+Table budget_monthly_breakdowns {
+    id uuid [pk]
+    budget_line_id uuid [not null, ref: > budget_lines.id]
+    month integer [not null]
+    amount decimal(18,4) [not null]
+
+    Indexes {
+        (budget_line_id, month) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 11. BILLING, ACCOUNTS RECEIVABLE & DUNNING OPERATIONS
+// Description: Recurring billing schedules, customer invoicing, payment allocations, payment mandates, refunds, and delinquency dunning.
+// =============================================================================
+
+// Table: BillingPlan
+Table billing_plans {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    plan_code varchar(64) [not null]
+    plan_name varchar(255) [not null]
+    description text [default: '']
+    installment_count integer [not null]
+    down_payment_pct decimal(18,4) [not null]
+    installment_fee decimal(18,4) [not null]
+    interval_months integer [default: 1]
+    status varchar(64) [default: 'ACTIVE']
+    effective_from timestamp
+    effective_to timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (tenant_id, plan_code) [unique]
+    }
+}
+
+
+// Table: BillingAccount
+Table billing_accounts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    account_number varchar(255) [not null]
+    customer_name varchar(255) [not null]
+    customer_email varchar(255) [default: '']
+    "billing_address.street" text [default: '']
+    "billing_address.city" text [default: '']
+    "billing_address.state" text [default: '']
+    "billing_address.postal_code" varchar(64) [default: '']
+    "billing_address.country" text [default: 'USA']
+    currency varchar(64) [default: 'USD']
+    current_balance decimal(18,4)
+    past_due_balance decimal(18,4)
+    unapplied_cash decimal(18,4)
+    default_billing_plan_id uuid [ref: > billing_plans.id]
+    status varchar(64) [default: 'ACTIVE']
+    carrier_id uuid [ref: > counterparty_parties.id]
+    carrier_name varchar(255)
+    broker_id uuid [ref: > counterparty_parties.id]
+    broker_name varchar(255)
+    dimensions json
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (tenant_id, account_number) [unique]
+    }
+}
+
+
+// Table: BillingAccountPolicy
+Table billing_account_policies {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    policy_id uuid [not null]
+    policy_number varchar(255) [not null]
+    carrier_name varchar(255) [default: '']
+    line_of_business varchar(255) [default: 'COMMERCIAL_AUTO']
+    effective_date timestamp [not null]
+    expiration_date timestamp [not null]
+    total_premium decimal(18,4) [not null]
+    total_fees decimal(18,4)
+    total_taxes decimal(18,4)
+    status varchar(64) [default: 'BOUND']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (tenant_id, policy_number)
+        (tenant_id, billing_account_id, policy_id) [unique]
+    }
+}
+
+
+// Table: InstallmentSchedule
+Table installment_schedules {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    policy_id uuid [not null]
+    policy_number varchar(255) [not null]
+    installment_number integer [not null]
+    due_date timestamp [not null]
+    premium_amount decimal(18,4) [not null]
+    fee_amount decimal(18,4)
+    tax_amount decimal(18,4)
+    total_amount decimal(18,4) [not null]
+    paid_amount decimal(18,4)
+    balance_amount decimal(18,4) [not null]
+    status varchar(64) [default: 'SCHEDULED']
+    invoice_id uuid [ref: > invoices.id]
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (policy_id)
+        (status)
+        (invoice_id)
+        (tenant_id, policy_id, installment_number) [unique]
+    }
+}
+
+
+// Table: Invoice
+Table invoices {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    policy_id uuid [not null]
+    invoice_number varchar(255) [not null]
+    invoice_date timestamp [not null]
+    due_date timestamp [not null]
+    installment_number integer [default: 1]
+    total_amount decimal(18,4) [not null]
+    amount_paid decimal(18,4)
+    balance_due decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    status varchar(64) [default: 'DRAFT']
+    journal_id uuid [ref: > journals.id]
+    voided_journal_id uuid [ref: > journals.id]
+    memo text [default: '']
+    carrier_id uuid [ref: > counterparty_parties.id]
+    carrier_name varchar(255)
+    broker_id uuid [ref: > counterparty_parties.id]
+    broker_name varchar(255)
+    dimensions json
+    allocation_status varchar(64) [default: 'UNALLOCATED']
+    is_allocated boolean [default: false]
+    allocation_journal_id uuid [ref: > journals.id]
+    allocation_journal_number varchar(255)
+    allocated_carrier_id uuid
+    allocated_carrier_name varchar(255)
+    allocated_broker_id uuid
+    allocated_broker_name varchar(255)
+    allocated_at timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (policy_id)
+        (status)
+        (tenant_id, invoice_number) [unique]
+    }
+}
+
+
+// Table: InvoiceLine
+Table invoice_lines {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    invoice_id uuid [not null, ref: > invoices.id]
+    line_number integer [not null]
+    line_type varchar(64) [not null]
+    description text [not null]
+    amount decimal(18,4) [not null]
+    ledger_account_code varchar(64) [not null]
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (invoice_id)
+        (tenant_id, invoice_id, line_number) [unique]
+    }
+}
+
+
+// Table: Payment
+Table payments {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    payment_number varchar(255) [not null]
+    payment_date timestamp [not null]
+    payment_method varchar(255) [not null]
+    reference_number varchar(255) [default: '']
+    amount decimal(18,4) [not null]
+    allocated_amount decimal(18,4)
+    unapplied_amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    status varchar(64) [default: 'RECEIVED']
+    journal_id uuid [ref: > journals.id]
+    notes text [default: '']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (status)
+        (tenant_id, payment_number) [unique]
+    }
+}
+
+
+// Table: PaymentAllocation
+Table payment_allocations {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    payment_id uuid [not null, ref: > payments.id]
+    invoice_id uuid [not null, ref: > invoices.id]
+    installment_id uuid [ref: > installment_schedules.id]
+    allocated_amount decimal(18,4) [not null]
+    allocation_date timestamp
+    allocation_type varchar(64) [default: 'WATERFALL']
+    status varchar(64) [default: 'APPLIED']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (payment_id)
+        (invoice_id)
+        (tenant_id, payment_id, invoice_id)
+    }
+}
+
+
+// Table: BillingAdjustment
+Table billing_adjustments {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    invoice_id uuid [ref: > invoices.id]
+    adjustment_number varchar(255) [not null]
+    adjustment_type varchar(64) [not null]
+    amount decimal(18,4) [not null]
+    reason_code varchar(64) [not null]
+    reason_description text [default: '']
+    approved_by_user_id uuid [ref: > app_users.id]
+    approved_at timestamp
+    journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'APPROVED']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (invoice_id)
+        (status)
+        (tenant_id, adjustment_number) [unique]
+    }
+}
+
+
+// Table: PaymentMandate
+Table payment_mandates {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    mandate_code varchar(64) [not null]
+    method_type varchar(64) [not null]
+    provider varchar(255) [default: 'SIMULATED_PROVIDER']
+    external_mandate_token varchar(255) [not null]
+    masked_details varchar(255) [not null]
+    status varchar(64) [default: 'ACTIVE']
+    authorized_at timestamp
+    revoked_at timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (status)
+        (tenant_id, mandate_code) [unique]
+    }
+}
+
+
+// Table: PaymentAttempt
+Table payment_attempts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    mandate_id uuid [ref: > payment_mandates.id]
+    attempt_number varchar(255) [not null]
+    amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    attempt_date timestamp
+    outcome varchar(255) [not null]
+    is_simulated boolean [default: true]
+    provider_response_code varchar(64) [default: 'SIM_200']
+    diagnostic_detail varchar(255) [default: '']
+    billing_payment_id uuid [ref: > payments.id]
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (billing_payment_id)
+        (tenant_id, attempt_number) [unique]
+    }
+}
+
+
+// Table: PaymentReturn
+Table payment_returns {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_payment_id uuid [not null, ref: > payments.id]
+    processor_transaction_id uuid [ref: > processor_transactions.id]
+    return_number varchar(255) [not null]
+    return_amount decimal(18,4) [not null]
+    fee_amount decimal(18,4)
+    return_code varchar(64) [not null]
+    reason_description text [default: 'ACH Dishonor / Insufficient Funds']
+    return_date timestamp
+    journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'SETTLED']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_payment_id)
+        (status)
+        (tenant_id, return_number) [unique]
+    }
+}
+
+
+// Table: Refund
+Table refunds {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    refund_number varchar(255) [not null]
+    refund_amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    refund_method varchar(255) [default: 'ACH']
+    reason text [not null]
+    approved_by_user_id uuid [ref: > app_users.id]
+    approved_at timestamp
+    disbursed_at timestamp
+    journal_id uuid [ref: > journals.id]
+    status varchar(64) [default: 'REQUESTED']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (status)
+        (tenant_id, refund_number) [unique]
+    }
+}
+
+
+// Table: DunningPlan
+Table dunning_plans {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    plan_code varchar(64) [not null]
+    plan_name varchar(255) [not null]
+    description text [default: '']
+    grace_period_days integer [default: 5]
+    cancellation_notice_days integer [default: 10]
+    final_cancellation_days integer [default: 30]
+    status varchar(64) [default: 'ACTIVE']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (tenant_id, plan_code) [unique]
+    }
+}
+
+
+// Table: DelinquencyCase
+Table delinquency_cases {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [not null, ref: > billing_accounts.id]
+    case_number varchar(255) [not null]
+    delinquent_amount decimal(18,4) [not null]
+    current_stage varchar(255) [default: 'GRACE_PERIOD']
+    days_overdue integer [default: 0]
+    dunning_plan_id uuid [ref: > dunning_plans.id]
+    status varchar(64) [default: 'OPEN']
+    opened_date timestamp
+    resolved_date timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (current_stage)
+        (status)
+        (tenant_id, case_number) [unique]
+    }
+}
+
+
+// Table: DunningAction
+Table dunning_actions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    delinquency_case_id uuid [not null, ref: > delinquency_cases.id]
+    action_type varchar(64) [not null]
+    action_step decimal(18,4) [not null]
+    action_date timestamp
+    is_simulated boolean [default: true]
+    delivery_status varchar(64) [default: 'SENT']
+    notes text [default: '']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (delinquency_case_id)
+        (tenant_id, delinquency_case_id, action_step) [unique]
+    }
+}
+
+
+// Table: CollectionAssignment
+Table collection_assignments {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    delinquency_case_id uuid [not null, ref: > delinquency_cases.id]
+    assigned_user_id uuid [not null, ref: > app_users.id]
+    assigned_by_user_id uuid [not null, ref: > app_users.id]
+    priority varchar(255) [default: 'MEDIUM']
+    status varchar(64) [default: 'ASSIGNED']
+    notes text [default: '']
+    assigned_at timestamp
+    resolved_at timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (delinquency_case_id)
+        (assigned_user_id)
+        (status)
+        (tenant_id, delinquency_case_id, assigned_at)
+    }
+}
+
+
+// =============================================================================
+// FLOW: 12. TREASURY, BANKING & CASH RECONCILIATION
+// Description: Electronic bank feed statement lines, payment processor transactions, auto-reconciliation matching, and unapplied cash.
+// =============================================================================
+
+// Table: BankStatementLine
+Table bank_statement_lines {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    import_batch_id uuid [not null]
+    line_number integer [not null]
+    booking_date timestamp [not null]
+    value_date timestamp
+    bank_account_type varchar(64) [default: 'FIDUCIARY_TRUST']
+    bank_account_number varchar(255) [default: 'WF-TX-TRUST-1010']
+    amount decimal(18,4) [not null]
+    direction varchar(255) [not null]
+    currency varchar(64) [default: 'USD']
+    bank_description text [not null]
+    bank_reference varchar(255) [default: '']
+    normalized_reference varchar(255) [default: '']
+    reconciliation_status varchar(64) [default: 'UNMATCHED']
+    matched_amount decimal(18,4)
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (import_batch_id)
+        (booking_date)
+        (normalized_reference)
+        (reconciliation_status)
+        (tenant_id, import_batch_id, line_number) [unique]
+    }
+}
+
+
+// Table: ProcessorTransaction
+Table processor_transactions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_payment_id uuid [ref: > payments.id]
+    processor_name varchar(255) [default: 'SIMULATED_GATEWAY']
+    processor_reference varchar(255) [not null]
+    transaction_type varchar(64) [default: 'CAPTURE']
+    amount decimal(18,4) [not null]
+    processor_fee decimal(18,4)
+    net_amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    settlement_date timestamp
+    status varchar(64) [default: 'SETTLED']
+    reconciliation_status varchar(64) [default: 'UNMATCHED']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_payment_id)
+        (status)
+        (reconciliation_status)
+        (tenant_id, processor_name, processor_reference) [unique]
+    }
+}
+
+
+// Table: CashReconciliationMatch
+Table cash_reconciliation_matches {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    bank_statement_line_id uuid [not null, ref: > bank_statement_lines.id]
+    processor_transaction_id uuid [not null, ref: > processor_transactions.id]
+    match_type varchar(64) [default: 'AUTO']
+    matched_amount decimal(18,4) [not null]
+    matched_by_user_id uuid [ref: > app_users.id]
+    match_date timestamp
+    confidence_score decimal(18,4) [default: 1]
+    unmatch_reason text [default: '']
+    status varchar(64) [default: 'ACTIVE']
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (bank_statement_line_id)
+        (processor_transaction_id)
+        (status)
+        (tenant_id, bank_statement_line_id, processor_transaction_id) [unique]
+    }
+}
+
+
+// Table: UnappliedCash
+Table unapplied_cash {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    billing_account_id uuid [ref: > billing_accounts.id]
+    billing_payment_id uuid [not null, ref: > payments.id]
+    unapplied_number varchar(255) [not null]
+    original_amount decimal(18,4) [not null]
+    remaining_amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    suspense_account_code varchar(64) [default: '2190']
+    status varchar(64) [default: 'OPEN']
+    receipt_date timestamp
+
+    createdAt timestamp
+    updatedAt timestamp
+
+    Indexes {
+        (tenant_id)
+        (billing_account_id)
+        (billing_payment_id)
+        (status)
+        (tenant_id, unapplied_number) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 13. COMMISSIONS, FIDUCIARY TRUST & INSURANCE SETTLEMENT
+// Description: Insurance producer commission agreements, tiered schedules, splits, transactions, statutory trust accounts, bordereaux, and settlements.
+// =============================================================================
+
+// Table: CommissionAgreement
+Table commission_agreements {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    agreement_code varchar(64) [not null]
+    name varchar(255) [not null]
+    contract_reference varchar(255)
+    payer_party_id uuid [not null]
+    payer_party_name varchar(255) [not null]
+    payee_party_id uuid [not null]
+    payee_party_name varchar(255) [not null]
+    agreement_type varchar(64) [not null, default: 'CARRIER_TO_MGA']
+    currency varchar(64) [default: 'USD']
+    effective_from timestamp [not null]
+    effective_to timestamp
+    status varchar(64) [default: 'ACTIVE']
+    terms_version varchar(255) [default: 'v1.0']
+    description text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (tenant_id, agreement_code) [unique]
+    }
+}
+
+
+// Table: CommissionSchedule
+Table commission_schedules {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    agreement_id uuid [not null, ref: > commission_agreements.id]
+    schedule_code varchar(64) [not null]
+    schedule_name varchar(255) [not null]
+    version varchar(255) [default: '1.0']
+    business_type varchar(64) [default: 'NEW']
+    line_of_business varchar(255) [default: 'COMMERCIAL_AUTO']
+    state_jurisdiction varchar(255) [default: 'TX']
+    calculation_basis varchar(255) [default: 'WRITTEN_PREMIUM']
+    calculation_mode varchar(255) [default: 'PERCENTAGE']
+    rate_percentage decimal(18,4) [not null]
+    flat_amount decimal(18,4)
+    priority integer [default: 10]
+    effective_from timestamp [not null]
+    effective_to timestamp
+    is_active boolean [default: true]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (agreement_id)
+        (is_active)
+        (tenant_id, agreement_id, schedule_code) [unique]
+    }
+}
+
+
+// Table: ProfitCommissionSchedule
+Table profit_commission_schedules {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    agreement_id uuid [not null, ref: > commission_agreements.id]
+    schedule_code varchar(64) [not null]
+    schedule_name varchar(255) [not null]
+    version varchar(255) [default: '1.0']
+    eligibility_period_months integer [default: 12]
+    loss_ratio_threshold_pct decimal(18,4)
+    contingent_rate_pct decimal(18,4)
+    max_profit_commission_amount decimal(18,4)
+    currency varchar(64) [default: 'USD']
+    effective_from timestamp [not null]
+    effective_to timestamp
+    status varchar(64) [default: 'NOT_CONFIGURED']
+    description text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (agreement_id)
+        (tenant_id, agreement_id, schedule_code) [unique]
+    }
+}
+
+
+// Table: CommissionSplit
+Table commission_splits {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    schedule_id uuid [not null, ref: > commission_schedules.id]
+    split_code varchar(64) [not null]
+    recipient_party_id uuid [not null]
+    recipient_party_name varchar(255) [not null]
+    parent_recipient_id uuid
+    tier_level decimal(18,4) [default: 1]
+    split_percentage decimal(18,4) [not null]
+    effective_from timestamp [not null]
+    effective_to timestamp
+    is_active boolean [default: true]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (schedule_id)
+        (is_active)
+        (tenant_id, schedule_id, recipient_party_id) [unique]
+    }
+}
+
+
+// Table: CommissionTransaction
+Table commission_transactions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    transaction_number varchar(255) [not null]
+    agreement_id uuid [not null, ref: > commission_agreements.id]
+    schedule_id uuid [not null, ref: > commission_schedules.id]
+    source_event_id uuid [not null]
+    source_entity_type varchar(64) [not null, default: 'POLICY']
+    policy_reference varchar(255) [default: 'POL-TX-8821']
+    payer_party_id uuid [not null]
+    payee_party_id uuid [not null]
+    transaction_kind varchar(255) [default: 'EARNED']
+    basis_amount decimal(18,4) [not null]
+    rate_applied decimal(18,4) [not null]
+    flat_amount_applied decimal(18,4)
+    calculated_amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    effective_date timestamp [not null]
+    accounting_date timestamp [not null]
+    lifecycle_status varchar(64) [default: 'CALCULATED']
+    schedule_version_snapshot varchar(255) [default: '1.0']
+    calculation_basis_snapshot varchar(255) [default: 'WRITTEN_PREMIUM']
+    calculation_notes text [default: '']
+    linked_journal_id uuid [ref: > journals.id]
+    linked_settlement_id uuid [ref: > settlement_statements.id]
+    payment_reference varchar(255)
+    paid_at timestamp
+    idempotency_key varchar(255) [not null]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (agreement_id)
+        (schedule_id)
+        (lifecycle_status)
+        (tenant_id, transaction_number) [unique]
+        (tenant_id, idempotency_key) [unique]
+    }
+}
+
+
+// Table: CommissionAdjustment
+Table commission_adjustments {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    adjustment_number varchar(255) [not null]
+    commission_transaction_id uuid [not null, ref: > commission_transactions.id]
+    policy_reference varchar(255) [not null]
+    adjustment_type varchar(64) [not null]
+    amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    reason text [not null]
+    status varchar(64) [default: 'PENDING_APPROVAL']
+    linked_journal_id uuid [ref: > journals.id]
+    idempotency_key varchar(255) [not null]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (commission_transaction_id)
+        (status)
+        (tenant_id, adjustment_number) [unique]
+        (tenant_id, idempotency_key) [unique]
+    }
+}
+
+
+// Table: CommissionDispute
+Table commission_disputes {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    dispute_number varchar(255) [not null]
+    commission_transaction_id uuid [not null, ref: > commission_transactions.id]
+    claimant_party_id uuid [not null]
+    disputed_amount decimal(18,4) [not null]
+    reason text [not null]
+    status varchar(64) [default: 'OPEN']
+    resolution_notes text
+    resolution_amount decimal(18,4)
+    resolved_by_user_id uuid [ref: > app_users.id]
+    resolved_at timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (commission_transaction_id)
+        (status)
+        (tenant_id, dispute_number) [unique]
+    }
+}
+
+
+// Table: FiduciaryAccount
+Table fiduciary_accounts {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    account_code varchar(64) [not null]
+    account_name varchar(255) [not null]
+    account_type varchar(64) [default: 'PREMIUM_TRUST']
+    jurisdiction_statute varchar(255) [default: 'TEXAS_INS_CODE_4053']
+    gl_account_code varchar(64) [not null, default: '1010']
+    bank_reference_token varchar(255) [not null]
+    bank_name varchar(255) [default: 'Frost Bank, N.A. (Austin, TX)']
+    currency varchar(64) [default: 'USD']
+    fiduciary_hold_days integer [default: 30]
+    status varchar(64) [default: 'ACTIVE']
+    notes text [default: 'Segregated Premium Trust Account per Texas Insurance Code § 4053']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (tenant_id, account_code) [unique]
+    }
+}
+
+
+// Table: BordereauDefinition
+Table bordereau_definitions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    definition_code varchar(64) [not null]
+    name varchar(255) [not null]
+    carrier_party_id uuid [not null]
+    bordereau_type varchar(64) [default: 'PREMIUM']
+    reporting_frequency varchar(255) [default: 'MONTHLY']
+    output_formats varchar(255)[]
+    line_granularity varchar(255) [default: 'POLICY_COVERAGE']
+    required_fields varchar(255)[]
+    is_active boolean [default: true]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (is_active)
+        (tenant_id, definition_code) [unique]
+    }
+}
+
+
+// Table: BordereauRun
+Table bordereau_runs {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    run_number varchar(255) [not null]
+    definition_id uuid [not null, ref: > bordereau_definitions.id]
+    reporting_period varchar(255) [not null]
+    as_of_date timestamp
+    run_version integer [default: 1]
+    status varchar(64) [default: 'GENERATED']
+    total_lines decimal(18,4) [default: 0]
+    total_gross_premium decimal(18,4)
+    total_commission_withheld decimal(18,4)
+    total_net_due_carrier decimal(18,4)
+    validation_errors varchar(255)[]
+    output_hash varchar(255)
+    carrier_party_id uuid [default: 'CARRIER-SUMMIT']
+    carrier_name varchar(255) [default: 'Summit Mutual Insurance']
+    risk_state varchar(255) [default: 'TX']
+    line_of_business varchar(255) [default: 'COMMERCIAL_AUTO']
+    reporting_frequency varchar(255) [default: 'MONTHLY']
+    transmission_protocol varchar(255) [default: 'ACORD_XML_EDI']
+    transmission_status varchar(64) [default: 'NOT_TRANSMITTED']
+    transmitted_at timestamp
+    carrier_ack_id uuid
+    transmission_notes text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (definition_id)
+        (status)
+        (tenant_id, run_number) [unique]
+        (tenant_id, definition_id, reporting_period, run_version) [unique]
+    }
+}
+
+
+// Table: BordereauLine
+Table bordereau_lines {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    run_id uuid [not null, ref: > bordereau_runs.id]
+    line_number integer [not null]
+    source_entity_type varchar(64) [default: 'POLICY_COVERAGE']
+    source_entity_id uuid [not null]
+    policy_number varchar(255) [not null]
+    insured_name varchar(255) [default: 'Lone Pine Trucking LLC']
+    coverage_type varchar(64) [not null]
+    risk_state varchar(255) [default: 'TX']
+    line_of_business varchar(255) [default: 'COMMERCIAL_AUTO']
+    carrier_party_id uuid [default: 'CARRIER-SUMMIT']
+    carrier_name varchar(255) [default: 'Summit Mutual Insurance']
+    broker_party_id uuid [default: 'BROKER-BRIGHTLINE']
+    broker_name varchar(255) [default: 'Brightline Agency']
+    dimensions json
+    effective_date timestamp [not null]
+    expiration_date timestamp [not null]
+    gross_premium decimal(18,4) [not null]
+    mga_commission_pct decimal(18,4) [not null]
+    mga_commission_amount decimal(18,4) [not null]
+    net_due_carrier decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    validation_status varchar(64) [default: 'VALID']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (run_id)
+        (tenant_id, run_id, line_number) [unique]
+        (tenant_id, run_id, source_entity_id) [unique]
+    }
+}
+
+
+// Table: SettlementStatement
+Table settlement_statements {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    statement_number varchar(255) [not null]
+    carrier_party_id uuid [not null]
+    carrier_name varchar(255) [not null]
+    fiduciary_account_id uuid [not null, ref: > fiduciary_accounts.id]
+    period_start timestamp [not null]
+    period_end timestamp [not null]
+    currency varchar(64) [default: 'USD']
+    gross_eligible_premium decimal(18,4) [not null]
+    commission_withheld decimal(18,4) [not null]
+    claims_offset decimal(18,4)
+    other_adjustments decimal(18,4)
+    net_due_carrier decimal(18,4) [not null]
+    status varchar(64) [default: 'DRAFT']
+    linked_bordereau_run_id uuid [ref: > bordereau_runs.id]
+    payment_reference varchar(255)
+    linked_journal_id uuid [ref: > journals.id]
+    paid_at timestamp
+    settlement_formula_notes text [default: 'Net Due = Gross Eligible Premium ($37,650.00) - MGA Commission Withheld ($7,530.00) - Claims Offset ($0.00)']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiduciary_account_id)
+        (status)
+        (tenant_id, statement_number) [unique]
+    }
+}
+
+
+// Table: SettlementLine
+Table settlement_lines {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    statement_id uuid [not null, ref: > settlement_statements.id]
+    line_number integer [not null]
+    line_type varchar(64) [not null]
+    source_entity_type varchar(64) [default: 'POLICY_TRANSACTION']
+    source_entity_id uuid [not null]
+    description text [not null]
+    amount decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (statement_id)
+        (tenant_id, statement_id, line_number) [unique]
+        (tenant_id, statement_id, source_entity_id, line_type) [unique]
+    }
+}
+
+
+// =============================================================================
+// FLOW: 14. DOUBLE-ENTRY JOURNAL ENGINE, FINANCIAL CLOSE & RULES ENGINE
+// Description: Double-entry general ledger journals, lines, event-driven posting rules, rules engine conditions, outbox event messaging, subledger reconciliation, and fiscal period close.
+// =============================================================================
+
+// Table: EventDefinition
+Table event_definitions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    event_code varchar(64) [not null]
+    display_name varchar(255) [not null]
+    description text [default: '']
+    source_module varchar(255) [not null, default: 'COMMERCIAL']
+    category varchar(255) [default: 'TRANSACTION']
+    current_version varchar(255) [not null, default: '1.0.0']
+    status varchar(64) [default: 'ACTIVE']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (status)
+        (tenant_id, event_code) [unique]
+        (tenant_id, status)
+    }
+}
+
+
+// Table: EventSchemaVersion
+Table event_schema_versions {
+    id uuid [pk]
+    event_definition_id uuid [not null, ref: > event_definitions.id]
+    version varchar(32) [not null]
+    json_schema json [not null]
+    sample_payload json
+    description text
+    created_at timestamp
+    created_by_user_id uuid [ref: > app_users.id]
+
+    Indexes {
+        (event_definition_id, version) [unique]
+    }
+}
+
+
+// Table: EventSubscription
+Table event_subscriptions {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    subscription_code varchar(64) [not null]
+    consumer_name varchar(255) [not null]
+    event_type varchar(64) [not null]
+    is_active boolean [default: true]
+    description text [default: '']
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (is_active)
+        (tenant_id, consumer_name, event_type) [unique]
+        (tenant_id, is_active)
+    }
+}
+
+
+// Table: OutboxEvent
+Table outbox_events {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    event_id uuid [not null, unique]
+    event_type varchar(64) [not null]
+    event_version varchar(255) [not null, default: '1.0.0']
+    source_module varchar(255) [not null]
+    source_entity_type varchar(64) [not null]
+    source_entity_id uuid [not null]
+    source_transaction_id uuid
+    correlation_id uuid
+    causation_id uuid
+    occurred_at timestamp
+    recorded_at timestamp
+    payload json [not null]
+    trace_metadata json
+    status varchar(64) [default: 'PENDING']
+    attempt_count integer [default: 0]
+    max_attempts decimal(18,4) [default: 5]
+    next_retry_at timestamp
+    lease_owner varchar(255)
+    lease_expires_at timestamp
+    last_error_category varchar(255)
+    last_error_message varchar(255)
+    published_at timestamp
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (event_id) [unique]
+        (event_type)
+        (source_entity_id)
+        (correlation_id)
+        (status)
+        (next_retry_at)
+        (lease_expires_at)
+        (tenant_id, event_id) [unique]
+        (status, next_retry_at, lease_expires_at)
+        (tenant_id, status)
+        (tenant_id, correlation_id)
+    }
+}
+
+
+// Table: InboxMessage
+Table inbox_messages {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    event_id uuid [not null]
+    consumer_name varchar(255) [not null]
+    event_type varchar(64) [not null]
+    event_version varchar(255) [not null, default: '1.0.0']
+    status varchar(64) [default: 'RECEIVED']
+    attempt_count integer [default: 0]
+    max_attempts decimal(18,4) [default: 5]
+    next_retry_at timestamp
+    lease_owner varchar(255)
+    lease_expires_at timestamp
+    last_error_code varchar(64)
+    last_error_category varchar(255)
+    last_error_message varchar(255)
+    correlation_id uuid
+    causation_id uuid
+    received_at timestamp
+    processed_at timestamp
+    result json
+    replayed_at timestamp
+    replayed_by_user_id uuid [ref: > app_users.id]
+    replay_reason text
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (event_id)
+        (consumer_name)
+        (status)
+        (next_retry_at)
+        (correlation_id)
+        (tenant_id, consumer_name, event_id) [unique]
+        (status, next_retry_at)
+        (tenant_id, status)
+    }
+}
+
+
+// Table: PostingRule
+Table posting_rules {
+    id uuid [pk]
+    tenant_id uuid [ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    rule_code varchar(64) [not null]
+    rule_name varchar(255) [not null]
+    description text [default: '']
+    event_definition_id uuid [ref: > event_definitions.id]
+    event_code varchar(64) [not null]
+    event_version_pattern varchar(255) [default: '1.0.0']
+    event_type varchar(64)
+    applicable_module varchar(255) [default: 'GL']
+    accounting_basis varchar(255) [default: 'GAAP']
+    tenant_type_applicability varchar(255)[]
+    priority integer [default: 100]
+    effective_from timestamp
+    effective_to timestamp
+    status varchar(64) [default: 'DRAFT']
+    version integer [default: 1]
+    parent_rule_id uuid [ref: > posting_rules.id]
+    published_at timestamp
+    published_by_user_id uuid [ref: > app_users.id]
+    retired_at timestamp
+    retired_by_user_id uuid [ref: > app_users.id]
+    retirement_reason text [default: '']
+    "validation_report.is_valid" boolean [default: false]
+    "validation_report.validated_at" timestamp
+    "validation_report.errors" varchar(255)[]
+    "validation_report.warnings" varchar(255)[]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (event_definition_id)
+        (event_code)
+        (status)
+        (tenant_id, company_id, rule_code, version) [unique]
+        (tenant_id, company_id, event_code, status)
+        (tenant_id, company_id, priority)
+    }
+}
+
+
+// Table: PostingRuleCondition
+Table posting_rule_conditions {
+    id uuid [pk]
+    posting_rule_id uuid [not null, ref: > posting_rules.id]
+    field_path varchar(255) [not null]
+    operator varchar(32) [not null]
+    value varchar(255) [not null]
+
+    Indexes {
+        (posting_rule_id)
+    }
+}
+
+
+// Table: PostingRuleLine
+Table posting_rule_lines {
+    id uuid [pk]
+    tenant_id uuid [ref: > tenant_masters.id]
+
+    posting_rule_id uuid [not null, ref: > posting_rules.id]
+    line_number integer [not null]
+    line_key varchar(255)
+    ledger_account_id uuid [ref: > ledger_accounts.id]
+    account_code varchar(64) [not null]
+    direction varchar(255) [not null]
+    amount_expression varchar(255)
+    amount_field varchar(255)
+    amount_ast json
+    rounding_mode varchar(255) [default: 'ROUND_HALF_UP']
+    currency_expression varchar(64) [default: 'USD']
+    dimension_mappings json
+    description_template text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (posting_rule_id)
+        (tenant_id)
+        (posting_rule_id, line_number) [unique]
+    }
+}
+
+
+// Table: PostingRuleTestCase
+Table posting_rule_test_cases {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    posting_rule_id uuid [not null, ref: > posting_rules.id]
+    test_name varchar(255) [not null]
+    description text [default: '']
+    event_definition_id uuid [ref: > event_definitions.id]
+    schema_version varchar(255) [default: '1.0.0']
+    input_payload json [not null]
+    "expected_outcome.matches_rule" boolean [default: true]
+    "expected_outcome.expected_rule_code" varchar(64)
+    "expected_outcome.expected_lines" json
+    "expected_outcome.expected_total_debit" varchar(255)
+    "expected_outcome.expected_total_credit" varchar(255)
+    "last_run_result.status" varchar(64) [default: 'PENDING']
+    "last_run_result.run_at" timestamp
+    "last_run_result.errors" varchar(255)[]
+    "last_run_result.actual_total_debit" varchar(255)
+    "last_run_result.actual_total_credit" varchar(255)
+
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (posting_rule_id)
+        (tenant_id, posting_rule_id)
+    }
+}
+
+
+// Table: Journal
+Table journals {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    journal_number varchar(255) [not null]
+    posting_date timestamp [not null]
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    source_module varchar(255) [not null, default: 'GL_MANUAL']
+    voucher_type varchar(64) [default: 'STANDARD']
+    is_memorandum boolean [default: false]
+    is_optional boolean [default: false]
+    is_reversing boolean [default: false]
+    reversal_date timestamp
+    converted_from_journal_id uuid [ref: > journals.id]
+    converted_at timestamp
+    reference_id uuid
+    commercial_document_id uuid [ref: > commercial_documents.id]
+    reference_type varchar(64) [default: 'NONE']
+    reference_document_number varchar(255)
+    memo text [not null]
+    total_debit decimal(18,4) [not null]
+    total_credit decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    accounting_basis varchar(255) [default: 'GAAP']
+    status varchar(64) [default: 'POSTED']
+    created_by_user_id uuid [ref: > app_users.id]
+    validated_by_user_id uuid [ref: > app_users.id]
+    posted_by_user_id uuid [ref: > app_users.id]
+    posted_at timestamp
+    reversal_of_journal_id uuid [ref: > journals.id]
+    reversed_by_journal_id uuid [ref: > journals.id]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (posting_date)
+        (fiscal_period_id)
+        (reference_id)
+        (commercial_document_id)
+        (tenant_id, company_id, journal_number) [unique]
+        (tenant_id, company_id, posting_date)
+    }
+}
+
+
+// Table: JournalEntry
+Table journal_entries {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+    company_id uuid [ref: > companies.id]
+
+    journal_id uuid [not null, ref: > journals.id]
+    line_number integer [not null]
+    ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    account_code varchar(64) [not null]
+    debit decimal(18,4)
+    credit decimal(18,4)
+    dimensions json
+    memo text [default: '']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (company_id)
+        (journal_id)
+        (ledger_account_id)
+        (tenant_id, journal_id, line_number) [unique]
+        (tenant_id, ledger_account_id)
+        (tenant_id, company_id, ledger_account_id)
+    }
+}
+
+
+// Table: SubledgerBalance
+Table subledger_balances {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    subledger_type varchar(64) [not null]
+    control_account_code varchar(64) [not null]
+    opening_balance decimal(18,4)
+    period_debits decimal(18,4)
+    period_credits decimal(18,4)
+    subledger_closing_balance decimal(18,4) [not null]
+    gl_closing_balance decimal(18,4) [not null]
+    variance decimal(18,4) [not null]
+    reconciliation_status varchar(64) [default: 'BALANCED']
+    snapshot_timestamp timestamp
+    is_certified boolean [default: false]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiscal_period_id)
+        (subledger_type)
+        (tenant_id, fiscal_period_id, subledger_type) [unique]
+    }
+}
+
+
+// Table: ReconciliationCase
+Table reconciliation_cases {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    case_number varchar(255) [not null]
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    subledger_type varchar(64) [not null]
+    control_account_code varchar(64) [not null]
+    expected_amount decimal(18,4) [not null]
+    actual_amount decimal(18,4) [not null]
+    variance decimal(18,4) [not null]
+    currency varchar(64) [default: 'USD']
+    status varchar(64) [default: 'OPEN']
+    description text [not null]
+    assigned_user_id uuid [ref: > app_users.id]
+    resolution_reason text
+    resolved_at timestamp
+    resolved_by_user_id uuid [ref: > app_users.id]
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiscal_period_id)
+        (status)
+        (tenant_id, case_number) [unique]
+    }
+}
+
+
+// Table: TrialBalanceSnapshot
+Table trial_balance_snapshots {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    snapshot_number varchar(255) [not null]
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    as_of_date timestamp [not null]
+    total_debits decimal(18,4) [not null]
+    total_credits decimal(18,4) [not null]
+    difference decimal(18,4) [not null]
+    is_balanced boolean [not null, default: false]
+    status varchar(64) [default: 'DRAFT']
+    version integer [default: 1]
+    snapshot_hash varchar(255)
+    certified_by_user_id uuid [ref: > app_users.id]
+    certified_at timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiscal_period_id)
+        (status)
+        (tenant_id, snapshot_number) [unique]
+        (tenant_id, fiscal_period_id, version) [unique]
+    }
+}
+
+
+// Table: TrialBalanceLine
+Table trial_balance_lines {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    snapshot_id uuid [not null, ref: > trial_balance_snapshots.id]
+    ledger_account_id uuid [not null, ref: > ledger_accounts.id]
+    account_code varchar(64) [not null]
+    account_name varchar(255) [not null]
+    account_type varchar(64) [not null]
+    normal_balance varchar(255) [not null]
+    debit_balance decimal(18,4)
+    credit_balance decimal(18,4)
+    currency varchar(64) [default: 'USD']
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (snapshot_id)
+        (tenant_id, snapshot_id, account_code) [unique]
+    }
+}
+
+
+// Table: PeriodCloseTask
+Table period_close_tasks {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    task_step decimal(18,4) [not null]
+    task_name varchar(255) [not null]
+    description text [default: '']
+    prerequisite_steps json
+    status varchar(64) [default: 'PENDING']
+    evidence_summary varchar(255) [default: '']
+    error_details varchar(255)
+    completed_by_user_id uuid [ref: > app_users.id]
+    completed_at timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiscal_period_id)
+        (status)
+        (tenant_id, fiscal_period_id, task_step) [unique]
+    }
+}
+
+
+// Table: GLExportBatch
+Table gl_export_batches {
+    id uuid [pk]
+    tenant_id uuid [not null, ref: > tenant_masters.id]
+
+    batch_number varchar(255) [not null]
+    fiscal_period_id uuid [not null, ref: > fiscal_periods.id]
+    snapshot_id uuid [not null, ref: > trial_balance_snapshots.id]
+    target_erp varchar(255) [default: 'GENERIC_JSON']
+    format_version varchar(255) [default: 'v1.0']
+    journal_count integer [not null, default: 0]
+    total_debit decimal(18,4) [not null]
+    total_credit decimal(18,4) [not null]
+    checksum varchar(255) [not null]
+    payload_artifact varchar(255)
+    status varchar(64) [default: 'GENERATED']
+    external_acknowledgement_id uuid
+    exported_at timestamp
+
+    row_version integer [default: 1]
+    created_at timestamp
+    updated_at timestamp
+
+    Indexes {
+        (tenant_id)
+        (fiscal_period_id)
+        (status)
+        (tenant_id, batch_number) [unique]
+    }
+}
+
+
